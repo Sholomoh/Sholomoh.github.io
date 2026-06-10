@@ -492,6 +492,14 @@
   footer span { color: var(--green); }
 
   /* SERVICES */
+  .services-section-bg {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(135deg, rgba(0,255,136,0.04) 0%, rgba(88,166,255,0.04) 50%, rgba(255,71,87,0.03) 100%);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
   .services-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -501,29 +509,49 @@
   .service-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 1.8rem;
     position: relative;
     overflow: hidden;
-    transition: border-color 0.2s, transform 0.2s;
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
   }
 
   .service-card:hover {
-    border-color: var(--green);
-    transform: translateY(-3px);
-    box-shadow: 0 12px 40px rgba(0,255,136,0.08);
+    transform: translateY(-5px);
   }
 
-  .service-card::before {
+  /* Individual card accent colors */
+  .service-card:nth-child(1) { border-top: 3px solid #00ff88; }
+  .service-card:nth-child(1):hover { box-shadow: 0 16px 40px rgba(0,255,136,0.15); border-color: #00ff88; }
+
+  .service-card:nth-child(2) { border-top: 3px solid #ff4757; }
+  .service-card:nth-child(2):hover { box-shadow: 0 16px 40px rgba(255,71,87,0.15); border-color: #ff4757; }
+
+  .service-card:nth-child(3) { border-top: 3px solid #58a6ff; }
+  .service-card:nth-child(3):hover { box-shadow: 0 16px 40px rgba(88,166,255,0.15); border-color: #58a6ff; }
+
+  .service-card:nth-child(4) { border-top: 3px solid #ffd700; }
+  .service-card:nth-child(4):hover { box-shadow: 0 16px 40px rgba(255,215,0,0.15); border-color: #ffd700; }
+
+  /* Glow dot per card */
+  .service-card::after {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--green), transparent);
+    top: -40px; right: -40px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    opacity: 0.07;
+    transition: opacity 0.3s;
   }
 
+  .service-card:nth-child(1)::after { background: #00ff88; }
+  .service-card:nth-child(2)::after { background: #ff4757; }
+  .service-card:nth-child(3)::after { background: #58a6ff; }
+  .service-card:nth-child(4)::after { background: #ffd700; }
+  .service-card:hover::after { opacity: 0.15; }
+
   .service-icon {
-    font-size: 2rem;
+    font-size: 2.2rem;
     margin-bottom: 1rem;
     display: block;
   }
@@ -552,41 +580,50 @@
   .audience-tag {
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.65rem;
-    color: var(--green);
-    background: var(--green-dim);
     padding: 0.2rem 0.6rem;
     border-radius: 3px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
 
+  /* Colored audience tags per card */
+  .service-card:nth-child(1) .audience-tag { color: #00ff88; background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.2); }
+  .service-card:nth-child(2) .audience-tag { color: #ff4757; background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.2); }
+  .service-card:nth-child(3) .audience-tag { color: #58a6ff; background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.2); }
+  .service-card:nth-child(4) .audience-tag { color: #ffd700; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.2); }
+
   .service-cta {
     display: inline-block;
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.75rem;
-    color: var(--green);
     text-decoration: none;
-    border-bottom: 1px solid var(--green);
-    padding-bottom: 1px;
-    transition: opacity 0.2s;
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    transition: opacity 0.2s, transform 0.2s;
+    font-weight: 700;
   }
 
-  .service-cta:hover { opacity: 0.7; }
+  .service-cta:hover { opacity: 0.85; transform: translateX(3px); }
+
+  .service-card:nth-child(1) .service-cta { color: #060a0f; background: #00ff88; }
+  .service-card:nth-child(2) .service-cta { color: #fff; background: #ff4757; }
+  .service-card:nth-child(3) .service-cta { color: #fff; background: #58a6ff; }
+  .service-card:nth-child(4) .service-cta { color: #060a0f; background: #ffd700; }
 
   .services-note {
     margin-top: 2rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(0,255,136,0.06), rgba(88,166,255,0.06));
+    border: 1px solid rgba(0,255,136,0.2);
     border-left: 3px solid var(--green);
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 1rem 1.5rem;
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.82rem;
-    color: var(--muted);
+    color: var(--text);
     line-height: 1.7;
   }
 
-  .services-note span { color: var(--green); }
+  .services-note span { color: var(--green); font-weight: 700; }
 
   /* DIVIDER */
   .divider {
@@ -661,7 +698,7 @@
 </div>
 
 <!-- SERVICES -->
-<section id="services">
+<section id="services" class="services-section-bg">
   <div class="section-label">// 01</div>
   <h2 class="section-title">Services</h2>
   <div class="services-grid">
@@ -673,6 +710,8 @@
       <div class="service-audience">
         <span class="audience-tag">Individuals</span>
         <span class="audience-tag">Small Business</span>
+        <span class="audience-tag">📞 Remote</span>
+        <span class="audience-tag">🏠 On-Premise</span>
       </div>
       <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
     </div>
@@ -684,6 +723,8 @@
       <div class="service-audience">
         <span class="audience-tag">Individuals</span>
         <span class="audience-tag">Small Business</span>
+        <span class="audience-tag">📞 Remote</span>
+        <span class="audience-tag">🏠 On-Premise</span>
       </div>
       <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
     </div>
@@ -695,6 +736,7 @@
       <div class="service-audience">
         <span class="audience-tag">Individuals</span>
         <span class="audience-tag">Small Business</span>
+        <span class="audience-tag">🏠 On-Premise</span>
       </div>
       <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
     </div>
@@ -706,13 +748,15 @@
       <div class="service-audience">
         <span class="audience-tag">Individuals</span>
         <span class="audience-tag">Small Business</span>
+        <span class="audience-tag">📞 Remote</span>
+        <span class="audience-tag">🏠 On-Premise</span>
       </div>
       <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
     </div>
 
   </div>
   <div class="services-note">
-    💡 <span>Pricing is flexible</span> — reach out via WhatsApp or email to discuss your specific needs and get a quote. I serve both individuals and small businesses across Nairobi and remotely.
+    💡 <span>Pricing is flexible</span> — reach out via WhatsApp or email to discuss your specific needs and get a quote. Services are available <span>remotely via call</span> or <span>on-premise</span> — I serve both individuals and small businesses across Nakuru and beyond.
   </div>
 </section>
 
