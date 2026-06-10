@@ -491,6 +491,103 @@
 
   footer span { color: var(--green); }
 
+  /* SERVICES */
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .service-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.8rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .service-card:hover {
+    border-color: var(--green);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0,255,136,0.08);
+  }
+
+  .service-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--green), transparent);
+  }
+
+  .service-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .service-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 0.75rem;
+  }
+
+  .service-card p {
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--muted);
+    margin-bottom: 1.2rem;
+  }
+
+  .service-audience {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+  }
+
+  .audience-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--green);
+    background: var(--green-dim);
+    padding: 0.2rem 0.6rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .service-cta {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--green);
+    text-decoration: none;
+    border-bottom: 1px solid var(--green);
+    padding-bottom: 1px;
+    transition: opacity 0.2s;
+  }
+
+  .service-cta:hover { opacity: 0.7; }
+
+  .services-note {
+    margin-top: 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--green);
+    border-radius: 6px;
+    padding: 1rem 1.5rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .services-note span { color: var(--green); }
+
   /* DIVIDER */
   .divider {
     border: none;
@@ -539,6 +636,7 @@
 <nav>
   <div class="nav-logo"><span>~/</span>fidelkenyatta</div>
   <ul>
+    <li><a href="#services">Services</a></li>
     <li><a href="#about">About</a></li>
     <li><a href="#skills">Skills</a></li>
     <li><a href="#projects">Projects</a></li>
@@ -557,14 +655,72 @@
     one fix at a time.
   </p>
   <div class="hero-cta">
-    <a href="#projects" class="btn btn-primary">View My Work</a>
-    <a href="#contact" class="btn btn-ghost">Get In Touch</a>
+    <a href="#projects" class="btn btn-primary" id="view-work-btn">View My Work</a>
+    <a href="https://wa.me/254714550754" class="btn btn-ghost">Get In Touch</a>
   </div>
 </div>
 
+<!-- SERVICES -->
+<section id="services">
+  <div class="section-label">// 01</div>
+  <h2 class="section-title">Services</h2>
+  <div class="services-grid">
+
+    <div class="service-card">
+      <span class="service-icon">🖥️</span>
+      <h3>PC Repair & Troubleshooting</h3>
+      <p>Diagnosing and fixing hardware and software issues — slow machines, boot failures, crashes, driver problems, and general performance optimization.</p>
+      <div class="service-audience">
+        <span class="audience-tag">Individuals</span>
+        <span class="audience-tag">Small Business</span>
+      </div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+
+    <div class="service-card">
+      <span class="service-icon">🦠</span>
+      <h3>Malware Removal & Cleanup</h3>
+      <p>Identifying and removing viruses, ransomware, spyware, and other malicious software from infected devices, followed by security hardening to prevent reinfection.</p>
+      <div class="service-audience">
+        <span class="audience-tag">Individuals</span>
+        <span class="audience-tag">Small Business</span>
+      </div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+
+    <div class="service-card">
+      <span class="service-icon">🌐</span>
+      <h3>Network Setup</h3>
+      <p>Setting up home and small office networks, configuring routers, securing Wi-Fi, and ensuring reliable, safe connectivity for all your devices.</p>
+      <div class="service-audience">
+        <span class="audience-tag">Individuals</span>
+        <span class="audience-tag">Small Business</span>
+      </div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+
+    <div class="service-card">
+      <span class="service-icon">🔐</span>
+      <h3>Cybersecurity Consultation</h3>
+      <p>Advising individuals and small businesses on how to protect their systems and data — covering password policies, safe browsing, phishing awareness, and basic security practices.</p>
+      <div class="service-audience">
+        <span class="audience-tag">Individuals</span>
+        <span class="audience-tag">Small Business</span>
+      </div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+
+  </div>
+  <div class="services-note">
+    💡 <span>Pricing is flexible</span> — reach out via WhatsApp or email to discuss your specific needs and get a quote. I serve both individuals and small businesses across Nairobi and remotely.
+  </div>
+</section>
+
+<hr class="divider"/>
+
 <!-- ABOUT -->
 <section id="about">
-  <div class="section-label">// 01</div>
+  <div class="section-label">// 02</div>
   <h2 class="section-title">About Me</h2>
   <div class="about-grid">
     <div class="about-card">
@@ -604,7 +760,7 @@
 
 <!-- SKILLS -->
 <section id="skills">
-  <div class="section-label">// 02</div>
+  <div class="section-label">// 03</div>
   <h2 class="section-title">Technical Skills</h2>
   <div class="skills-grid">
     <div class="skill-item"><span class="skill-icon">🖥️</span><span>Windows OS</span></div>
@@ -626,7 +782,7 @@
 
 <!-- PROJECTS -->
 <section id="projects">
-  <div class="section-label">// 03</div>
+  <div class="section-label">// 04</div>
   <h2 class="section-title">Projects</h2>
   <div class="projects-grid">
 
@@ -709,7 +865,7 @@
 
 <!-- CERTS -->
 <section id="certs">
-  <div class="section-label">// 04</div>
+  <div class="section-label">// 05</div>
   <h2 class="section-title">Certifications</h2>
   <div class="certs-grid">
 
@@ -748,9 +904,16 @@
 
 <!-- CONTACT -->
 <section id="contact">
-  <div class="section-label">// 05</div>
+  <div class="section-label">// 06</div>
   <h2 class="section-title">Get In Touch</h2>
   <div class="contact-grid">
+    <a href="https://wa.me/254714550754" class="contact-card">
+      <span class="contact-icon">💬</span>
+      <div class="contact-info">
+        <h4>WhatsApp</h4>
+        <p>+254 714 550 754</p>
+      </div>
+    </a>
     <a href="mailto:kenyattafidel@proton.me" class="contact-card">
       <span class="contact-icon">📧</span>
       <div class="contact-info">
