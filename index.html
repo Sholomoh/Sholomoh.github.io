@@ -6,480 +6,103 @@
 <title>Fidel Kenyatta — IT & Cybersecurity</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
 <style>
-  :root {
-    --bg: #060a0f;
-    --surface: #0d1117;
-    --border: #1a2332;
-    --green: #00ff88;
-    --green-dim: #00ff8833;
-    --text: #c9d1d9;
-    --muted: #586069;
-    --white: #f0f6fc;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Glow orbs */
-  body::after {
-    content: '';
-    position: fixed;
-    top: -200px; left: 50%;
-    transform: translateX(-50%);
-    width: 800px; height: 500px;
-    background: radial-gradient(ellipse, rgba(0,255,136,0.06) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* NAV */
-  nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.2rem 2rem;
-    background: rgba(6,10,15,0.85);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .nav-logo {
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--green);
-    font-size: 0.95rem;
-    letter-spacing: 0.05em;
-  }
-
-  .nav-logo span { color: var(--muted); }
-
-  .nav-contact {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--muted);
-    text-decoration: none;
-    border: 1px solid var(--border);
-    padding: 0.4rem 1rem;
-    border-radius: 4px;
-    transition: all 0.2s;
-  }
-
-  .nav-contact:hover {
-    color: var(--green);
-    border-color: var(--green);
-    background: var(--green-dim);
-  }
-
-  /* HERO */
-  .hero {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    padding: 10rem 2rem 4rem;
-  }
-
-  .hero-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--green);
-    background: var(--green-dim);
-    border: 1px solid rgba(0,255,136,0.2);
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    margin-bottom: 2rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-
-  .hero-badge::before {
-    content: '';
-    width: 7px; height: 7px;
-    background: var(--green);
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(0.7); }
-  }
-
-  .hero h1 {
-    font-size: clamp(2.8rem, 9vw, 6rem);
-    font-weight: 800;
-    color: var(--white);
-    line-height: 1.05;
-    margin-bottom: 0.5rem;
-    animation: fadeUp 0.7s ease both;
-  }
-
-  .hero h1 .name-accent { color: var(--green); }
-
-  .hero-title {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: clamp(0.85rem, 2.5vw, 1.1rem);
-    color: var(--muted);
-    margin-bottom: 1rem;
-    letter-spacing: 0.1em;
-    animation: fadeUp 0.7s 0.1s ease both;
-  }
-
-  .hero-location {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--muted);
-    margin-bottom: 3.5rem;
-    animation: fadeUp 0.7s 0.2s ease both;
-  }
-
-  .hero-location span { color: var(--green); }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(24px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  /* GRID */
-  .grid-wrapper {
-    position: relative;
-    z-index: 1;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 1.5rem 6rem;
-  }
-
-  .grid-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.72rem;
-    color: var(--muted);
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    text-align: center;
-    margin-bottom: 2.5rem;
-    animation: fadeUp 0.7s 0.3s ease both;
-  }
-
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: auto auto;
-    gap: 1.2rem;
-    animation: fadeUp 0.7s 0.4s ease both;
-  }
-
-  /* Card base */
-  .card {
-    position: relative;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 2rem 1.8rem;
-    text-decoration: none;
-    overflow: hidden;
-    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 180px;
-    cursor: pointer;
-  }
-
-  .card:hover {
-    transform: translateY(-5px);
-  }
-
-  /* Glow blob inside card */
-  .card::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 160px; height: 160px;
-    border-radius: 50%;
-    opacity: 0;
-    transition: opacity 0.4s;
-  }
-
-  .card:hover::before { opacity: 0.12; }
-
-  /* Card top accent line */
-  .card::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.35s;
-    border-radius: 14px 14px 0 0;
-  }
-
-  .card:hover::after { transform: scaleX(1); }
-
-  /* Individual card colors */
-  .card-services { border-top: 2px solid #00ff88; }
-  .card-services:hover { box-shadow: 0 20px 50px rgba(0,255,136,0.12); border-color: #00ff88; }
-  .card-services::before { background: #00ff88; }
-  .card-services::after { background: #00ff88; }
-  .card-services .card-icon { color: #00ff88; }
-  .card-services .card-arrow { color: #00ff88; }
-
-  .card-about { border-top: 2px solid #58a6ff; }
-  .card-about:hover { box-shadow: 0 20px 50px rgba(88,166,255,0.12); border-color: #58a6ff; }
-  .card-about::before { background: #58a6ff; }
-  .card-about::after { background: #58a6ff; }
-  .card-about .card-icon { color: #58a6ff; }
-  .card-about .card-arrow { color: #58a6ff; }
-
-  .card-skills { border-top: 2px solid #ffd700; }
-  .card-skills:hover { box-shadow: 0 20px 50px rgba(255,215,0,0.12); border-color: #ffd700; }
-  .card-skills::before { background: #ffd700; }
-  .card-skills::after { background: #ffd700; }
-  .card-skills .card-icon { color: #ffd700; }
-  .card-skills .card-arrow { color: #ffd700; }
-
-  .card-projects { border-top: 2px solid #ff9f43; }
-  .card-projects:hover { box-shadow: 0 20px 50px rgba(255,159,67,0.12); border-color: #ff9f43; }
-  .card-projects::before { background: #ff9f43; }
-  .card-projects::after { background: #ff9f43; }
-  .card-projects .card-icon { color: #ff9f43; }
-  .card-projects .card-arrow { color: #ff9f43; }
-
-  .card-certs { border-top: 2px solid #bd93f9; }
-  .card-certs:hover { box-shadow: 0 20px 50px rgba(189,147,249,0.12); border-color: #bd93f9; }
-  .card-certs::before { background: #bd93f9; }
-  .card-certs::after { background: #bd93f9; }
-  .card-certs .card-icon { color: #bd93f9; }
-  .card-certs .card-arrow { color: #bd93f9; }
-
-  .card-contact { border-top: 2px solid #ff4757; }
-  .card-contact:hover { box-shadow: 0 20px 50px rgba(255,71,87,0.12); border-color: #ff4757; }
-  .card-contact::before { background: #ff4757; }
-  .card-contact::after { background: #ff4757; }
-  .card-contact .card-icon { color: #ff4757; }
-  .card-contact .card-arrow { color: #ff4757; }
-
-  /* Featured card - services spans 2 cols */
-  .card-featured {
-    grid-column: span 2;
-    min-height: 200px;
-  }
-
-  .card-icon {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    display: block;
-  }
-
-  .card-content h2 {
-    font-size: 1.15rem;
-    font-weight: 800;
-    color: var(--white);
-    margin-bottom: 0.4rem;
-  }
-
-  .card-content p {
-    font-size: 0.82rem;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-
-  .card-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1.5rem;
-  }
-
-  .card-tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--muted);
-    background: rgba(255,255,255,0.04);
-    border: 1px solid var(--border);
-    padding: 0.2rem 0.6rem;
-    border-radius: 3px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .card-arrow {
-    font-size: 1.1rem;
-    transition: transform 0.25s;
-  }
-
-  .card:hover .card-arrow { transform: translate(3px, -3px); }
-
-  /* FOOTER */
-  footer {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    padding: 1.5rem;
-    border-top: 1px solid var(--border);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.72rem;
-    color: var(--muted);
-  }
-
-  footer a { color: var(--green); text-decoration: none; }
-
-  /* RESPONSIVE */
-  @media (max-width: 700px) {
-    .card-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-    .card-featured { grid-column: span 2; }
-  }
-
-  @media (max-width: 450px) {
-    .card-grid { grid-template-columns: 1fr; }
-    .card-featured { grid-column: span 1; }
-  }
+:root{--bg:#060a0f;--surface:#0d1117;--border:#1a2332;--green:#00ff88;--green-dim:#00ff8833;--text:#c9d1d9;--muted:#586069;--white:#f0f6fc;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:500px;background:radial-gradient(ellipse,rgba(0,255,136,0.06) 0%,transparent 70%);pointer-events:none;z-index:0;}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:rgba(6,10,15,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.5rem;}
+.nav-logo{font-family:'Share Tech Mono',monospace;color:var(--green);font-size:0.95rem;text-decoration:none;}
+.nav-logo span{color:var(--muted);}
+nav ul{list-style:none;display:flex;flex-wrap:wrap;gap:1rem;}
+nav ul a{color:var(--muted);text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;transition:color 0.2s;}
+nav ul a:hover{color:var(--green);}
+.nav-contact{font-family:'Share Tech Mono',monospace;font-size:0.8rem;color:var(--muted);text-decoration:none;border:1px solid var(--border);padding:0.4rem 1rem;border-radius:4px;transition:all 0.2s;}
+.nav-contact:hover{color:var(--green);border-color:var(--green);background:var(--green-dim);}
+.hero{position:relative;z-index:1;text-align:center;padding:10rem 2rem 4rem;}
+.hero-badge{display:inline-flex;align-items:center;gap:0.6rem;font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--green);background:var(--green-dim);border:1px solid rgba(0,255,136,0.2);padding:0.4rem 1rem;border-radius:20px;margin-bottom:2rem;letter-spacing:0.15em;text-transform:uppercase;}
+.hero-badge::before{content:'';width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.3;transform:scale(0.7);}}
+.hero h1{font-size:clamp(2.8rem,9vw,6rem);font-weight:800;color:var(--white);line-height:1.05;margin-bottom:0.5rem;}
+.hero h1 .accent{color:var(--green);}
+.hero-title{font-family:'Share Tech Mono',monospace;font-size:clamp(0.85rem,2.5vw,1.1rem);color:var(--muted);margin-bottom:1rem;letter-spacing:0.1em;}
+.hero-location{font-family:'Share Tech Mono',monospace;font-size:0.8rem;color:var(--muted);margin-bottom:3.5rem;}
+.hero-location span{color:var(--green);}
+.grid-wrapper{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 1.5rem 6rem;}
+.grid-label{font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--muted);letter-spacing:0.25em;text-transform:uppercase;text-align:center;margin-bottom:2.5rem;}
+.card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;}
+.card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:2rem 1.8rem;text-decoration:none;overflow:hidden;transition:transform 0.3s,box-shadow 0.3s,border-color 0.3s;display:flex;flex-direction:column;justify-content:space-between;min-height:180px;cursor:pointer;}
+.card:hover{transform:translateY(-5px);}
+.card::before{content:'';position:absolute;top:-60px;right:-60px;width:160px;height:160px;border-radius:50%;opacity:0;transition:opacity 0.4s;}
+.card:hover::before{opacity:0.12;}
+.card-featured{grid-column:span 2;min-height:200px;}
+.card-services{border-top:2px solid #00ff88;}.card-services:hover{box-shadow:0 20px 50px rgba(0,255,136,0.12);border-color:#00ff88;}.card-services::before{background:#00ff88;}.card-services .card-icon,.card-services .card-arrow{color:#00ff88;}
+.card-skills{border-top:2px solid #ffd700;}.card-skills:hover{box-shadow:0 20px 50px rgba(255,215,0,0.12);border-color:#ffd700;}.card-skills::before{background:#ffd700;}.card-skills .card-icon,.card-skills .card-arrow{color:#ffd700;}
+.card-projects{border-top:2px solid #ff9f43;}.card-projects:hover{box-shadow:0 20px 50px rgba(255,159,67,0.12);border-color:#ff9f43;}.card-projects::before{background:#ff9f43;}.card-projects .card-icon,.card-projects .card-arrow{color:#ff9f43;}
+.card-certs{border-top:2px solid #bd93f9;}.card-certs:hover{box-shadow:0 20px 50px rgba(189,147,249,0.12);border-color:#bd93f9;}.card-certs::before{background:#bd93f9;}.card-certs .card-icon,.card-certs .card-arrow{color:#bd93f9;}
+.card-about{border-top:2px solid #58a6ff;}.card-about:hover{box-shadow:0 20px 50px rgba(88,166,255,0.12);border-color:#58a6ff;}.card-about::before{background:#58a6ff;}.card-about .card-icon,.card-about .card-arrow{color:#58a6ff;}
+.card-contact{border-top:2px solid #ff4757;}.card-contact:hover{box-shadow:0 20px 50px rgba(255,71,87,0.12);border-color:#ff4757;}.card-contact::before{background:#ff4757;}.card-contact .card-icon,.card-contact .card-arrow{color:#ff4757;}
+.card-icon{font-size:2rem;margin-bottom:1rem;display:block;}
+.card-content h2{font-size:1.15rem;font-weight:800;color:var(--white);margin-bottom:0.4rem;}
+.card-content p{font-size:0.82rem;color:var(--muted);line-height:1.6;}
+.card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;}
+.card-tag{font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--muted);background:rgba(255,255,255,0.04);border:1px solid var(--border);padding:0.2rem 0.6rem;border-radius:3px;letter-spacing:0.1em;text-transform:uppercase;}
+.card-arrow{font-size:1.1rem;transition:transform 0.25s;}
+.card:hover .card-arrow{transform:translate(3px,-3px);}
+footer{position:relative;z-index:1;text-align:center;padding:1.5rem;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--muted);}
+footer a,footer span{color:var(--green);text-decoration:none;}
+@media(max-width:700px){.card-grid{grid-template-columns:1fr 1fr;}.card-featured{grid-column:span 2;}}
+@media(max-width:450px){.card-grid{grid-template-columns:1fr;}.card-featured{grid-column:span 1;}}
 </style>
 </head>
 <body>
-
-<!-- NAV -->
 <nav>
-  <div class="nav-logo"><span>~/</span>fidelkenyatta</div>
+  <a href="index.html" class="nav-logo"><span>~/</span>fidelkenyatta</a>
   <a href="https://wa.me/254714550754" class="nav-contact">💬 WhatsApp</a>
 </nav>
-
-<!-- HERO -->
 <div class="hero">
   <div class="hero-badge">Available for hire</div>
-  <h1><span class="name-accent">Fidel</span><br>Kenyatta</h1>
+  <h1><span class="accent">Fidel</span><br>Kenyatta</h1>
   <p class="hero-title">IT Support &nbsp;·&nbsp; Cybersecurity &nbsp;·&nbsp; Tech Solutions</p>
   <p class="hero-location">📍 <span>Nakuru, Kenya</span> &nbsp;·&nbsp; Remote & On-Premise</p>
 </div>
-
-<!-- CARD GRID -->
 <div class="grid-wrapper">
   <p class="grid-label">// select a section to explore</p>
   <div class="card-grid">
-
-    <!-- Services — featured -->
     <a href="services.html" class="card card-services card-featured">
-      <div>
-        <span class="card-icon">🛠️</span>
-        <div class="card-content">
-          <h2>IT Services</h2>
-          <p>PC repair, malware removal, OS installation, network setup, cybersecurity consultation and more — remote or on-premise across Nakuru.</p>
-        </div>
-      </div>
-      <div class="card-footer">
-        <span class="card-tag">7 Services</span>
-        <span class="card-arrow">↗</span>
-      </div>
+      <div><span class="card-icon">🛠️</span><div class="card-content"><h2>IT Services</h2><p>PC repair, malware removal, OS installation, network setup, cybersecurity consultation and more — remote or on-premise across Nakuru.</p></div></div>
+      <div class="card-footer"><span class="card-tag">7 Services</span><span class="card-arrow">↗</span></div>
     </a>
-
-    <!-- About -->
-    <a href="about.html" class="card card-about">
-      <div>
-        <span class="card-icon">👤</span>
-        <div class="card-content">
-          <h2>About Me</h2>
-          <p>Final year IT student at Kabarak University transitioning into cybersecurity.</p>
-        </div>
-      </div>
-      <div class="card-footer">
-        <span class="card-tag">My Story</span>
-        <span class="card-arrow">↗</span>
-      </div>
-    </a>
-
-    <!-- Skills -->
     <a href="skills.html" class="card card-skills">
-      <div>
-        <span class="card-icon">⚡</span>
-        <div class="card-content">
-          <h2>Skills</h2>
-          <p>Networking, Linux, cybersecurity tools, troubleshooting and more.</p>
-        </div>
-      </div>
-      <div class="card-footer">
-        <span class="card-tag">Technical</span>
-        <span class="card-arrow">↗</span>
-      </div>
+      <div><span class="card-icon">⚡</span><div class="card-content"><h2>Skills</h2><p>Networking, Linux, cybersecurity tools, troubleshooting and more.</p></div></div>
+      <div class="card-footer"><span class="card-tag">Technical</span><span class="card-arrow">↗</span></div>
     </a>
-
-    <!-- Projects -->
     <a href="projects.html" class="card card-projects">
-      <div>
-        <span class="card-icon">📁</span>
-        <div class="card-content">
-          <h2>Projects</h2>
-          <p>TryHackMe rooms, hands-on labs and real-world security work.</p>
-        </div>
-      </div>
-      <div class="card-footer">
-        <span class="card-tag">Portfolio</span>
-        <span class="card-arrow">↗</span>
-      </div>
+      <div><span class="card-icon">📁</span><div class="card-content"><h2>Projects</h2><p>TryHackMe rooms, hands-on labs and real-world security work.</p></div></div>
+      <div class="card-footer"><span class="card-tag">Portfolio</span><span class="card-arrow">↗</span></div>
     </a>
-
-    <!-- Certifications -->
     <a href="certs.html" class="card card-certs">
-      <div>
-        <span class="card-icon">🏆</span>
-        <div class="card-content">
-          <h2>Certifications</h2>
-          <p>Kabarak University BSc IT, CompTIA A+ in progress, TryHackMe First Four badge.</p>
-        </div>
-      </div>
-      <div class="card-footer">
-        <span class="card-tag">Credentials</span>
-        <span class="card-arrow">↗</span>
-      </div>
+      <div><span class="card-icon">🏆</span><div class="card-content"><h2>Certifications</h2><p>Kabarak University BSc IT, CompTIA A+ in progress, TryHackMe First Four badge.</p></div></div>
+      <div class="card-footer"><span class="card-tag">Credentials</span><span class="card-arrow">↗</span></div>
     </a>
-
-    <!-- Contact -->
+    <a href="about.html" class="card card-about">
+      <div><span class="card-icon">👤</span><div class="card-content"><h2>About Me</h2><p>Final year IT student at Kabarak University transitioning into cybersecurity.</p></div></div>
+      <div class="card-footer"><span class="card-tag">My Story</span><span class="card-arrow">↗</span></div>
+    </a>
     <a href="contact.html" class="card card-contact">
-      <div>
-        <span class="card-icon">💬</span>
-        <div class="card-content">
-          <h2>Contact</h2>
-          <p>WhatsApp, email, LinkedIn, GitHub and TryHackMe — all in one place.</p>
-        </div>
-      </div>
-      <div class="card-footer">
-        <span class="card-tag">Get In Touch</span>
-        <span class="card-arrow">↗</span>
-      </div>
+      <div><span class="card-icon">💬</span><div class="card-content"><h2>Contact</h2><p>WhatsApp, email, LinkedIn, GitHub and TryHackMe — all in one place.</p></div></div>
+      <div class="card-footer"><span class="card-tag">Get In Touch</span><span class="card-arrow">↗</span></div>
     </a>
-
   </div>
 </div>
-
-<footer>
-  <p>© 2026 <a href="index.html">Fidel Kenyatta</a> &nbsp;·&nbsp; Nakuru, Kenya &nbsp;·&nbsp; <a href="https://wa.me/254714550754">+254 714 550 754</a></p>
-</footer>
-
+<div style="position:relative;z-index:1;text-align:center;padding:0 1.5rem 4rem;max-width:700px;margin:0 auto;">
+  <div style="background:linear-gradient(135deg,rgba(0,255,136,0.05),rgba(88,166,255,0.05));border:1px solid rgba(0,255,136,0.15);border-radius:12px;padding:2rem 2.5rem;">
+    <div style="font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:var(--green);letter-spacing:0.3em;text-transform:uppercase;margin-bottom:1rem;">// Word</div>
+    <p style="font-size:1.05rem;color:var(--white);line-height:1.9;font-style:italic;margin-bottom:1rem;">"If you are uniquely gifted in your work, you will rise and be promoted. You won't be held back — you'll stand before kings!"</p>
+    <p style="font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--green);">Proverbs 22:29 — TPT</p>
+  </div>
+</div>
+<footer><p>© 2026 <a href="index.html">Fidel Kenyatta</a> &nbsp;·&nbsp; Nakuru, Kenya &nbsp;·&nbsp; <a href="https://wa.me/254714550754">+254 714 550 754</a></p></footer>
 </body>
 </html>
