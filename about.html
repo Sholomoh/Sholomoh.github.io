@@ -27,9 +27,27 @@ nav ul a:hover,nav ul a.active{color:var(--green);}
 .about-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent);}
 .about-card h3{font-size:0.72rem;letter-spacing:0.2em;color:var(--green);font-family:'Share Tech Mono',monospace;margin-bottom:0.75rem;text-transform:uppercase;}
 .about-card p{font-size:0.9rem;line-height:1.8;color:var(--text);}
+.experience-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.8rem;position:relative;overflow:hidden;margin-bottom:1rem;}
+.experience-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent);}
+.exp-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;}
+.exp-company{font-size:1.1rem;font-weight:800;color:var(--white);}
+.exp-date{font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--green);background:var(--green-dim);padding:0.2rem 0.7rem;border-radius:3px;}
+.exp-role{font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--green);margin-bottom:0.75rem;letter-spacing:0.05em;}
+.exp-desc{font-size:0.88rem;line-height:1.7;color:var(--muted);margin-bottom:1rem;}
+.exp-tags{display:flex;flex-wrap:wrap;gap:0.5rem;}
 footer{position:relative;z-index:1;text-align:center;padding:2rem;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--muted);}
 footer span{color:var(--green);}
 @media(max-width:600px){.about-grid{grid-template-columns:1fr;}}
+.experience-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.8rem;position:relative;overflow:hidden;margin-bottom:1rem;}
+.experience-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent);}
+.exp-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;}
+.exp-company{font-size:1.1rem;font-weight:800;color:var(--white);}
+.exp-date{font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--green);background:var(--green-dim);padding:0.2rem 0.7rem;border-radius:3px;}
+.exp-role{font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--green);margin-bottom:0.75rem;letter-spacing:0.05em;}
+.exp-desc{font-size:0.88rem;line-height:1.7;color:var(--muted);margin-bottom:1rem;}
+.exp-tags{display:flex;flex-wrap:wrap;gap:0.5rem;}
+.exp-tag{font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:#58a6ff;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.2);padding:0.2rem 0.6rem;border-radius:3px;}
+.section-sub{font-size:1.2rem;font-weight:800;color:var(--white);margin:2.5rem 0 1.2rem;border-left:3px solid var(--green);padding-left:0.75rem;}
 </style>
 </head>
 <body>
@@ -53,6 +71,33 @@ footer span{color:var(--green);}
     <div class="about-card"><h3>Currently</h3><p>Building hands-on cybersecurity skills through TryHackMe, home lab projects, and CompTIA certifications. Actively seeking IT Support roles as I grow toward a career in cybersecurity.</p></div>
     <div class="about-card"><h3>Goal</h3><p>To become a SOC Analyst or Penetration Tester — using my analytical skills to protect organizations from real threats and help people stay safe online.</p></div>
     <div class="about-card"><h3>Values</h3><p>I believe in integrity, continuous learning, and doing work that genuinely serves others. Security isn't just a career to me — it's about protecting people.</p></div>
+  </div>
+
+  <h2 class="section-sub">Work Experience</h2>
+  <div class="experience-card">
+    <div class="exp-header">
+      <div class="exp-company">VGG Connect</div>
+      <span class="exp-date">2024 · 3 Months</span>
+    </div>
+    <div class="exp-role">IT Intern — Internet Service Provider</div>
+    <p class="exp-desc">
+      Gained hands-on field experience at one of Kenya's growing fibre internet providers. 
+      Worked directly on physical network infrastructure and real customer issues, 
+      building practical skills that go beyond the classroom.
+    </p>
+    <ul style="font-size:0.88rem;line-height:1.9;color:var(--muted);padding-left:1.2rem;margin-bottom:1rem;">
+      <li>Installed fibre optic cables for home and business customers across service areas</li>
+      <li>Diagnosed and resolved network connectivity issues for end users</li>
+      <li>Troubleshot hardware and signal problems on the ISP's fibre network</li>
+      <li>Collaborated with field technicians on infrastructure deployment</li>
+    </ul>
+    <div class="exp-tags">
+      <span class="exp-tag">Fibre Installation</span>
+      <span class="exp-tag">Network Troubleshooting</span>
+      <span class="exp-tag">ISP Infrastructure</span>
+      <span class="exp-tag">Field Technician</span>
+      <span class="exp-tag">Nakuru, Kenya</span>
+    </div>
   </div>
 </div>
 <footer><p>© 2026 <span>Fidel Kenyatta</span> · Nakuru, Kenya</p></footer>
