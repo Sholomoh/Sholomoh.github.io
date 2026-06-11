@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IT Services — Fidel Kenyatta</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#060a0f;--surface:#0d1117;--border:#1a2332;--green:#00ff88;--green-dim:#00ff8833;--text:#c9d1d9;--muted:#586069;--white:#f0f6fc;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(0,255,136,0.07) 0%,transparent 70%);pointer-events:none;z-index:0;}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:rgba(6,10,15,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.5rem;}
+.nav-logo{font-family:'Share Tech Mono',monospace;color:var(--green);font-size:0.95rem;text-decoration:none;}
+.nav-logo span{color:var(--muted);}
+nav ul{list-style:none;display:flex;flex-wrap:wrap;gap:1rem;}
+nav ul a{color:var(--muted);text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;transition:color 0.2s;}
+nav ul a:hover,nav ul a.active{color:var(--green);}
+.page{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:7rem 1.5rem 5rem;}
+.back-link{display:inline-flex;align-items:center;gap:0.5rem;font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--muted);text-decoration:none;margin-bottom:2.5rem;transition:color 0.2s;}
+.back-link:hover{color:var(--green);}
+.page-label{font-family:'Share Tech Mono',monospace;color:var(--green);font-size:0.72rem;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:0.4rem;}
+.page-title{font-size:clamp(2rem,6vw,3.5rem);font-weight:800;color:var(--white);border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:3rem;}
+.services-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.5rem;}
+.service-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.8rem;position:relative;overflow:hidden;transition:transform 0.3s,box-shadow 0.3s,border-color 0.3s;}
+.service-card:hover{transform:translateY(-5px);}
+.service-card::after{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;opacity:0.07;transition:opacity 0.3s;}
+.service-card:hover::after{opacity:0.15;}
+.service-card:nth-child(1){border-top:3px solid #00ff88;}.service-card:nth-child(1):hover{box-shadow:0 16px 40px rgba(0,255,136,0.15);border-color:#00ff88;}.service-card:nth-child(1)::after{background:#00ff88;}.service-card:nth-child(1) .audience-tag{color:#00ff88;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);}.service-card:nth-child(1) .service-cta{color:#060a0f;background:#00ff88;}
+.service-card:nth-child(2){border-top:3px solid #ff4757;}.service-card:nth-child(2):hover{box-shadow:0 16px 40px rgba(255,71,87,0.15);border-color:#ff4757;}.service-card:nth-child(2)::after{background:#ff4757;}.service-card:nth-child(2) .audience-tag{color:#ff4757;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.2);}.service-card:nth-child(2) .service-cta{color:#fff;background:#ff4757;}
+.service-card:nth-child(3){border-top:3px solid #58a6ff;}.service-card:nth-child(3):hover{box-shadow:0 16px 40px rgba(88,166,255,0.15);border-color:#58a6ff;}.service-card:nth-child(3)::after{background:#58a6ff;}.service-card:nth-child(3) .audience-tag{color:#58a6ff;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.2);}.service-card:nth-child(3) .service-cta{color:#fff;background:#58a6ff;}
+.service-card:nth-child(4){border-top:3px solid #ffd700;}.service-card:nth-child(4):hover{box-shadow:0 16px 40px rgba(255,215,0,0.15);border-color:#ffd700;}.service-card:nth-child(4)::after{background:#ffd700;}.service-card:nth-child(4) .audience-tag{color:#ffd700;background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.2);}.service-card:nth-child(4) .service-cta{color:#060a0f;background:#ffd700;}
+.service-card:nth-child(5){border-top:3px solid #bd93f9;}.service-card:nth-child(5):hover{box-shadow:0 16px 40px rgba(189,147,249,0.15);border-color:#bd93f9;}.service-card:nth-child(5)::after{background:#bd93f9;}.service-card:nth-child(5) .audience-tag{color:#bd93f9;background:rgba(189,147,249,0.1);border:1px solid rgba(189,147,249,0.2);}.service-card:nth-child(5) .service-cta{color:#060a0f;background:#bd93f9;}
+.service-card:nth-child(6){border-top:3px solid #ff9f43;}.service-card:nth-child(6):hover{box-shadow:0 16px 40px rgba(255,159,67,0.15);border-color:#ff9f43;}.service-card:nth-child(6)::after{background:#ff9f43;}.service-card:nth-child(6) .audience-tag{color:#ff9f43;background:rgba(255,159,67,0.1);border:1px solid rgba(255,159,67,0.2);}.service-card:nth-child(6) .service-cta{color:#060a0f;background:#ff9f43;}
+.service-card:nth-child(7){border-top:3px solid #00d2d3;}.service-card:nth-child(7):hover{box-shadow:0 16px 40px rgba(0,210,211,0.15);border-color:#00d2d3;}.service-card:nth-child(7)::after{background:#00d2d3;}.service-card:nth-child(7) .audience-tag{color:#00d2d3;background:rgba(0,210,211,0.1);border:1px solid rgba(0,210,211,0.2);}.service-card:nth-child(7) .service-cta{color:#060a0f;background:#00d2d3;}
+.service-icon{font-size:2.2rem;margin-bottom:1rem;display:block;}
+.service-card h3{font-size:1rem;font-weight:700;color:var(--white);margin-bottom:0.75rem;}
+.service-card p{font-size:0.85rem;line-height:1.7;color:var(--muted);margin-bottom:1.2rem;}
+.service-audience{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.2rem;}
+.audience-tag{font-family:'Share Tech Mono',monospace;font-size:0.65rem;padding:0.2rem 0.6rem;border-radius:3px;text-transform:uppercase;letter-spacing:0.1em;}
+.service-cta{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:0.75rem;text-decoration:none;padding:0.4rem 1rem;border-radius:4px;transition:opacity 0.2s,transform 0.2s;font-weight:700;}
+.service-cta:hover{opacity:0.85;transform:translateX(3px);}
+.services-note{margin-top:2rem;background:linear-gradient(135deg,rgba(0,255,136,0.06),rgba(88,166,255,0.06));border:1px solid rgba(0,255,136,0.2);border-left:3px solid var(--green);border-radius:8px;padding:1rem 1.5rem;font-family:'Share Tech Mono',monospace;font-size:0.82rem;color:var(--text);line-height:1.7;}
+.services-note span{color:var(--green);font-weight:700;}
+footer{position:relative;z-index:1;text-align:center;padding:2rem;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--muted);}
+footer span{color:var(--green);}
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="nav-logo"><span>~/</span>fidelkenyatta</a>
+  <ul>
+    <li><a href="services.html" class="active">Services</a></li>
+    <li><a href="skills.html">Skills</a></li>
+    <li><a href="projects.html">Projects</a></li>
+    <li><a href="certs.html">Certs</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="contact.html">Contact</a></li>
+  </ul>
+</nav>
+<div class="page">
+  <a href="index.html" class="back-link">← Home</a>
+  <div class="page-label">// 01</div>
+  <h1 class="page-title">IT Services</h1>
+  <div class="services-grid">
+    <div class="service-card">
+      <span class="service-icon">🖥️</span>
+      <h3>PC Repair & Troubleshooting</h3>
+      <p>Diagnosing and fixing hardware and software issues — slow machines, boot failures, crashes, driver problems, and general performance optimization.</p>
+      <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🦠</span>
+      <h3>Malware Removal & Cleanup</h3>
+      <p>Identifying and removing viruses, ransomware, spyware, and other malicious software, followed by security hardening to prevent reinfection.</p>
+      <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🌐</span>
+      <h3>Network Setup</h3>
+      <p>Setting up home and small office networks, configuring routers, securing Wi-Fi, and ensuring reliable, safe connectivity for all your devices.</p>
+      <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">🏠 On-Premise</span></div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🔐</span>
+      <h3>Cybersecurity Consultation</h3>
+      <p>Advising individuals and small businesses on how to protect their systems and data — password policies, safe browsing, phishing awareness, and basic security practices.</p>
+      <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">💿</span>
+      <h3>OS Installation & Setup</h3>
+      <p>Clean installation and configuration of Windows or Linux. Includes driver setup, updates, and basic software installation to get your machine running perfectly.</p>
+      <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">🏠 On-Premise</span><span class="audience-tag">📞 Remote</span></div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">🔧</span>
+      <h3>PC Error Diagnosis & Fix</h3>
+      <p>Identifying and resolving software errors, blue screens, system crashes, corrupted files, and unexpected shutdowns — fixed properly, not just temporarily.</p>
+      <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+    <div class="service-card">
+      <span class="service-icon">💾</span>
+      <h3>Data Backup & Recovery</h3>
+      <p>Recovering lost or deleted files and setting up reliable backup systems so you never lose important data again. Prevention and recovery — both covered.</p>
+      <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
+    </div>
+  </div>
+  <div class="services-note">💡 <span>Pricing is flexible</span> — reach out via WhatsApp or email. Services available <span>remotely via call</span> or <span>on-premise</span> across Nakuru and beyond.</div>
+</div>
+<footer><p>© 2026 <span>Fidel Kenyatta</span> · Nakuru, Kenya</p></footer>
+</body>
+</html>

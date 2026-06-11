@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Portfolio — Cybersecurity & IT</title>
+<title>Fidel Kenyatta — IT & Cybersecurity</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
 <style>
   :root {
@@ -12,26 +12,23 @@
     --border: #1a2332;
     --green: #00ff88;
     --green-dim: #00ff8833;
-    --green-mid: #00cc6a;
     --text: #c9d1d9;
     --muted: #586069;
     --white: #f0f6fc;
-    --red: #ff4757;
-    --blue: #58a6ff;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   html { scroll-behavior: smooth; }
 
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Syne', sans-serif;
+    min-height: 100vh;
     overflow-x: hidden;
   }
 
-  /* Grid noise background */
+  /* Grid background */
   body::before {
     content: '';
     position: fixed;
@@ -44,15 +41,14 @@
     z-index: 0;
   }
 
-  /* Glow orb */
+  /* Glow orbs */
   body::after {
     content: '';
     position: fixed;
-    top: -200px;
-    right: -200px;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(0,255,136,0.07) 0%, transparent 70%);
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 800px; height: 500px;
+    background: radial-gradient(ellipse, rgba(0,255,136,0.06) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
   }
@@ -74,58 +70,56 @@
   .nav-logo {
     font-family: 'Share Tech Mono', monospace;
     color: var(--green);
-    font-size: 1rem;
+    font-size: 0.95rem;
     letter-spacing: 0.05em;
   }
 
   .nav-logo span { color: var(--muted); }
 
-  nav ul {
-    list-style: none;
-    display: flex;
-    gap: 2rem;
-  }
-
-  nav a {
+  .nav-contact {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
     color: var(--muted);
     text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    transition: color 0.2s;
+    border: 1px solid var(--border);
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    transition: all 0.2s;
   }
 
-  nav a:hover { color: var(--green); }
+  .nav-contact:hover {
+    color: var(--green);
+    border-color: var(--green);
+    background: var(--green-dim);
+  }
 
   /* HERO */
   .hero {
     position: relative;
     z-index: 1;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 8rem 2rem 4rem;
-    max-width: 900px;
-    margin: 0 auto;
+    text-align: center;
+    padding: 10rem 2rem 4rem;
   }
 
-  .hero-tag {
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--green);
-    font-size: 0.85rem;
-    letter-spacing: 0.2em;
-    margin-bottom: 1.5rem;
-    display: flex;
+  .hero-badge {
+    display: inline-flex;
     align-items: center;
-    gap: 0.8rem;
+    gap: 0.6rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(0,255,136,0.2);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    margin-bottom: 2rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
   }
 
-  .hero-tag::before {
+  .hero-badge::before {
     content: '';
-    display: inline-block;
-    width: 8px; height: 8px;
+    width: 7px; height: 7px;
     background: var(--green);
     border-radius: 50%;
     animation: pulse 2s infinite;
@@ -133,553 +127,239 @@
 
   @keyframes pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.8); }
+    50% { opacity: 0.3; transform: scale(0.7); }
   }
 
   .hero h1 {
-    font-size: clamp(2.5rem, 8vw, 5.5rem);
+    font-size: clamp(2.8rem, 9vw, 6rem);
     font-weight: 800;
-    line-height: 1.05;
     color: var(--white);
-    margin-bottom: 1.5rem;
+    line-height: 1.05;
+    margin-bottom: 0.5rem;
+    animation: fadeUp 0.7s ease both;
   }
 
-  .hero h1 .accent { color: var(--green); }
+  .hero h1 .name-accent { color: var(--green); }
 
-  .hero-sub {
+  .hero-title {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 1rem;
+    font-size: clamp(0.85rem, 2.5vw, 1.1rem);
     color: var(--muted);
-    max-width: 520px;
-    line-height: 1.8;
-    margin-bottom: 2.5rem;
-  }
-
-  .hero-sub .highlight { color: var(--green-mid); }
-
-  .hero-cta {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .btn {
-    display: inline-block;
-    padding: 0.75rem 1.8rem;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
+    margin-bottom: 1rem;
     letter-spacing: 0.1em;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: all 0.2s;
-    cursor: pointer;
-    border: none;
+    animation: fadeUp 0.7s 0.1s ease both;
   }
 
-  .btn-primary {
-    background: var(--green);
-    color: var(--bg);
-    font-weight: 700;
+  .hero-location {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 3.5rem;
+    animation: fadeUp 0.7s 0.2s ease both;
   }
 
-  .btn-primary:hover {
-    background: var(--green-mid);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,255,136,0.25);
+  .hero-location span { color: var(--green); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  .btn-ghost {
-    background: transparent;
-    color: var(--green);
-    border: 1px solid var(--green);
-  }
-
-  .btn-ghost:hover {
-    background: var(--green-dim);
-    transform: translateY(-2px);
-  }
-
-  /* SECTION WRAPPER */
-  section {
+  /* GRID */
+  .grid-wrapper {
     position: relative;
     z-index: 1;
-    max-width: 900px;
+    max-width: 1100px;
     margin: 0 auto;
-    padding: 5rem 2rem;
+    padding: 0 1.5rem 6rem;
   }
 
-  .section-label {
+  .grid-label {
     font-family: 'Share Tech Mono', monospace;
-    color: var(--green);
-    font-size: 0.75rem;
-    letter-spacing: 0.3em;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.25em;
     text-transform: uppercase;
-    margin-bottom: 0.5rem;
+    text-align: center;
+    margin-bottom: 2.5rem;
+    animation: fadeUp 0.7s 0.3s ease both;
   }
 
-  .section-title {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--white);
-    margin-bottom: 3rem;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 1rem;
-  }
-
-  /* ABOUT */
-  .about-grid {
+  .card-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+    gap: 1.2rem;
+    animation: fadeUp 0.7s 0.4s ease both;
   }
 
-  .about-card {
+  /* Card base */
+  .card {
+    position: relative;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.5rem;
-    position: relative;
+    border-radius: 14px;
+    padding: 2rem 1.8rem;
+    text-decoration: none;
     overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+    cursor: pointer;
   }
 
-  .about-card::before {
+  .card:hover {
+    transform: translateY(-5px);
+  }
+
+  /* Glow blob inside card */
+  .card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .card:hover::before { opacity: 0.12; }
+
+  /* Card top accent line */
+  .card::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 2px;
-    background: linear-gradient(90deg, var(--green), transparent);
-  }
-
-  .about-card h3 {
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    color: var(--green);
-    font-family: 'Share Tech Mono', monospace;
-    margin-bottom: 0.75rem;
-    text-transform: uppercase;
-  }
-
-  .about-card p {
-    font-size: 0.9rem;
-    line-height: 1.8;
-    color: var(--text);
-  }
-
-  /* SKILLS */
-  .skills-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
-  .skill-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 1rem 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    transition: border-color 0.2s, transform 0.2s;
-  }
-
-  .skill-item:hover {
-    border-color: var(--green);
-    transform: translateY(-2px);
-  }
-
-  .skill-icon {
-    font-size: 1.2rem;
-  }
-
-  .skill-item span {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--text);
-  }
-
-  /* PROJECTS */
-  .projects-grid {
-    display: grid;
-    gap: 1.5rem;
-  }
-
-  .project-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.8rem;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.2s, transform 0.2s;
-  }
-
-  .project-card:hover {
-    border-color: var(--green);
-    transform: translateY(-3px);
-    box-shadow: 0 12px 40px rgba(0,255,136,0.08);
-  }
-
-  .project-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, var(--green), transparent);
     transform: scaleX(0);
     transform-origin: left;
-    transition: transform 0.3s;
+    transition: transform 0.35s;
+    border-radius: 14px 14px 0 0;
   }
 
-  .project-card:hover::after { transform: scaleX(1); }
+  .card:hover::after { transform: scaleX(1); }
 
-  .project-header {
+  /* Individual card colors */
+  .card-services { border-top: 2px solid #00ff88; }
+  .card-services:hover { box-shadow: 0 20px 50px rgba(0,255,136,0.12); border-color: #00ff88; }
+  .card-services::before { background: #00ff88; }
+  .card-services::after { background: #00ff88; }
+  .card-services .card-icon { color: #00ff88; }
+  .card-services .card-arrow { color: #00ff88; }
+
+  .card-about { border-top: 2px solid #58a6ff; }
+  .card-about:hover { box-shadow: 0 20px 50px rgba(88,166,255,0.12); border-color: #58a6ff; }
+  .card-about::before { background: #58a6ff; }
+  .card-about::after { background: #58a6ff; }
+  .card-about .card-icon { color: #58a6ff; }
+  .card-about .card-arrow { color: #58a6ff; }
+
+  .card-skills { border-top: 2px solid #ffd700; }
+  .card-skills:hover { box-shadow: 0 20px 50px rgba(255,215,0,0.12); border-color: #ffd700; }
+  .card-skills::before { background: #ffd700; }
+  .card-skills::after { background: #ffd700; }
+  .card-skills .card-icon { color: #ffd700; }
+  .card-skills .card-arrow { color: #ffd700; }
+
+  .card-projects { border-top: 2px solid #ff9f43; }
+  .card-projects:hover { box-shadow: 0 20px 50px rgba(255,159,67,0.12); border-color: #ff9f43; }
+  .card-projects::before { background: #ff9f43; }
+  .card-projects::after { background: #ff9f43; }
+  .card-projects .card-icon { color: #ff9f43; }
+  .card-projects .card-arrow { color: #ff9f43; }
+
+  .card-certs { border-top: 2px solid #bd93f9; }
+  .card-certs:hover { box-shadow: 0 20px 50px rgba(189,147,249,0.12); border-color: #bd93f9; }
+  .card-certs::before { background: #bd93f9; }
+  .card-certs::after { background: #bd93f9; }
+  .card-certs .card-icon { color: #bd93f9; }
+  .card-certs .card-arrow { color: #bd93f9; }
+
+  .card-contact { border-top: 2px solid #ff4757; }
+  .card-contact:hover { box-shadow: 0 20px 50px rgba(255,71,87,0.12); border-color: #ff4757; }
+  .card-contact::before { background: #ff4757; }
+  .card-contact::after { background: #ff4757; }
+  .card-contact .card-icon { color: #ff4757; }
+  .card-contact .card-arrow { color: #ff4757; }
+
+  /* Featured card - services spans 2 cols */
+  .card-featured {
+    grid-column: span 2;
+    min-height: 200px;
+  }
+
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .card-content h2 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--white);
+    margin-bottom: 0.4rem;
+  }
+
+  .card-content p {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .card-footer {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
+    align-items: center;
+    margin-top: 1.5rem;
   }
 
-  .project-type {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    color: var(--green);
-    background: var(--green-dim);
-    padding: 0.3rem 0.7rem;
-    border-radius: 3px;
-    text-transform: uppercase;
-  }
-
-  .project-card h3 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: 0.5rem;
-  }
-
-  .project-card p {
-    font-size: 0.88rem;
-    line-height: 1.7;
-    color: var(--muted);
-    margin-bottom: 1.2rem;
-  }
-
-  .project-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--blue);
-    background: rgba(88,166,255,0.1);
-    border: 1px solid rgba(88,166,255,0.2);
-    padding: 0.25rem 0.6rem;
-    border-radius: 3px;
-  }
-
-  /* CERTS */
-  .certs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1.2rem;
-  }
-
-  .cert-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: border-color 0.2s;
-  }
-
-  .cert-card:hover { border-color: var(--green); }
-
-  .cert-badge {
-    font-size: 2.5rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .cert-card h3 {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: 0.3rem;
-  }
-
-  .cert-card p {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--green);
-  }
-
-  .cert-status {
-    display: inline-block;
-    margin-top: 0.75rem;
+  .card-tag {
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.65rem;
-    letter-spacing: 0.15em;
+    color: var(--muted);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
     padding: 0.2rem 0.6rem;
     border-radius: 3px;
-  }
-
-  .status-earned {
-    color: var(--green);
-    background: var(--green-dim);
-  }
-
-  .status-progress {
-    color: #ffd700;
-    background: rgba(255,215,0,0.1);
-  }
-
-  /* CONTACT */
-  .contact-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.2rem;
-  }
-
-  .contact-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    text-decoration: none;
-    transition: border-color 0.2s, transform 0.2s;
-  }
-
-  .contact-card:hover {
-    border-color: var(--green);
-    transform: translateY(-2px);
-  }
-
-  .contact-icon { font-size: 1.5rem; }
-
-  .contact-info h4 {
-    font-size: 0.8rem;
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--green);
-    margin-bottom: 0.2rem;
-    text-transform: uppercase;
     letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
-  .contact-info p {
-    font-size: 0.85rem;
-    color: var(--text);
+  .card-arrow {
+    font-size: 1.1rem;
+    transition: transform 0.25s;
   }
+
+  .card:hover .card-arrow { transform: translate(3px, -3px); }
 
   /* FOOTER */
   footer {
     position: relative;
     z-index: 1;
     text-align: center;
-    padding: 2rem;
+    padding: 1.5rem;
     border-top: 1px solid var(--border);
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--muted);
   }
 
-  footer span { color: var(--green); }
-
-  /* SERVICES */
-  .services-section-bg {
-    position: relative;
-    z-index: 1;
-    background: linear-gradient(135deg, rgba(0,255,136,0.04) 0%, rgba(88,166,255,0.04) 50%, rgba(255,71,87,0.03) 100%);
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .services-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .service-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.8rem;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
-  }
-
-  .service-card:hover {
-    transform: translateY(-5px);
-  }
-
-  /* Individual card accent colors */
-  .service-card:nth-child(1) { border-top: 3px solid #00ff88; }
-  .service-card:nth-child(1):hover { box-shadow: 0 16px 40px rgba(0,255,136,0.15); border-color: #00ff88; }
-
-  .service-card:nth-child(2) { border-top: 3px solid #ff4757; }
-  .service-card:nth-child(2):hover { box-shadow: 0 16px 40px rgba(255,71,87,0.15); border-color: #ff4757; }
-
-  .service-card:nth-child(3) { border-top: 3px solid #58a6ff; }
-  .service-card:nth-child(3):hover { box-shadow: 0 16px 40px rgba(88,166,255,0.15); border-color: #58a6ff; }
-
-  .service-card:nth-child(4) { border-top: 3px solid #ffd700; }
-  .service-card:nth-child(4):hover { box-shadow: 0 16px 40px rgba(255,215,0,0.15); border-color: #ffd700; }
-
-  /* Glow dot per card */
-  .service-card::after {
-    content: '';
-    position: absolute;
-    top: -40px; right: -40px;
-    width: 120px; height: 120px;
-    border-radius: 50%;
-    opacity: 0.07;
-    transition: opacity 0.3s;
-  }
-
-  .service-card:nth-child(1)::after { background: #00ff88; }
-  .service-card:nth-child(2)::after { background: #ff4757; }
-  .service-card:nth-child(3)::after { background: #58a6ff; }
-  .service-card:nth-child(4)::after { background: #ffd700; }
-  .service-card:nth-child(5)::after { background: #bd93f9; }
-  .service-card:nth-child(6)::after { background: #ff9f43; }
-  .service-card:nth-child(7)::after { background: #00d2d3; }
-  .service-card:hover::after { opacity: 0.15; }
-
-  .service-icon {
-    font-size: 2.2rem;
-    margin-bottom: 1rem;
-    display: block;
-  }
-
-  .service-card h3 {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: 0.75rem;
-  }
-
-  .service-card p {
-    font-size: 0.85rem;
-    line-height: 1.7;
-    color: var(--muted);
-    margin-bottom: 1.2rem;
-  }
-
-  .service-audience {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.2rem;
-  }
-
-  .audience-tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 3px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  /* Colored audience tags per card */
-  .service-card:nth-child(1) .audience-tag { color: #00ff88; background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.2); }
-  .service-card:nth-child(2) .audience-tag { color: #ff4757; background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.2); }
-  .service-card:nth-child(3) .audience-tag { color: #58a6ff; background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.2); }
-  .service-card:nth-child(4) .audience-tag { color: #ffd700; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.2); }
-  .service-card:nth-child(5) .audience-tag { color: #bd93f9; background: rgba(189,147,249,0.1); border: 1px solid rgba(189,147,249,0.2); }
-  .service-card:nth-child(6) .audience-tag { color: #ff9f43; background: rgba(255,159,67,0.1); border: 1px solid rgba(255,159,67,0.2); }
-  .service-card:nth-child(7) .audience-tag { color: #00d2d3; background: rgba(0,210,211,0.1); border: 1px solid rgba(0,210,211,0.2); }
-
-  .service-cta {
-    display: inline-block;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.75rem;
-    text-decoration: none;
-    padding: 0.4rem 1rem;
-    border-radius: 4px;
-    transition: opacity 0.2s, transform 0.2s;
-    font-weight: 700;
-  }
-
-  .service-cta:hover { opacity: 0.85; transform: translateX(3px); }
-
-  .service-card:nth-child(1) .service-cta { color: #060a0f; background: #00ff88; }
-  .service-card:nth-child(2) .service-cta { color: #fff; background: #ff4757; }
-  .service-card:nth-child(3) .service-cta { color: #fff; background: #58a6ff; }
-  .service-card:nth-child(4) .service-cta { color: #060a0f; background: #ffd700; }
-  .service-card:nth-child(5) .service-cta { color: #060a0f; background: #bd93f9; }
-  .service-card:nth-child(6) .service-cta { color: #060a0f; background: #ff9f43; }
-  .service-card:nth-child(7) .service-cta { color: #060a0f; background: #00d2d3; }
-
-  .service-card:nth-child(5) { border-top: 3px solid #bd93f9; }
-  .service-card:nth-child(5):hover { box-shadow: 0 16px 40px rgba(189,147,249,0.15); border-color: #bd93f9; }
-  .service-card:nth-child(6) { border-top: 3px solid #ff9f43; }
-  .service-card:nth-child(6):hover { box-shadow: 0 16px 40px rgba(255,159,67,0.15); border-color: #ff9f43; }
-  .service-card:nth-child(7) { border-top: 3px solid #00d2d3; }
-  .service-card:nth-child(7):hover { box-shadow: 0 16px 40px rgba(0,210,211,0.15); border-color: #00d2d3; }
-
-  .services-note {
-    margin-top: 2rem;
-    background: linear-gradient(135deg, rgba(0,255,136,0.06), rgba(88,166,255,0.06));
-    border: 1px solid rgba(0,255,136,0.2);
-    border-left: 3px solid var(--green);
-    border-radius: 8px;
-    padding: 1rem 1.5rem;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.82rem;
-    color: var(--text);
-    line-height: 1.7;
-  }
-
-  .services-note span { color: var(--green); font-weight: 700; }
-
-  /* DIVIDER */
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-  }
+  footer a { color: var(--green); text-decoration: none; }
 
   /* RESPONSIVE */
-  @media (max-width: 600px) {
-    nav ul { display: none; }
-    .about-grid { grid-template-columns: 1fr; }
-    .contact-grid { grid-template-columns: 1fr; }
-    .certs-grid { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 700px) {
+    .card-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .card-featured { grid-column: span 2; }
   }
 
-  /* ANIMATIONS */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .hero-tag { animation: fadeUp 0.6s ease both; }
-  .hero h1 { animation: fadeUp 0.6s 0.1s ease both; }
-  .hero-sub { animation: fadeUp 0.6s 0.2s ease both; }
-  .hero-cta { animation: fadeUp 0.6s 0.3s ease both; }
-
-  /* Terminal cursor blink */
-  .cursor {
-    display: inline-block;
-    width: 2px;
-    height: 1em;
-    background: var(--green);
-    margin-left: 4px;
-    vertical-align: text-bottom;
-    animation: blink 1s step-end infinite;
-  }
-
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+  @media (max-width: 450px) {
+    .card-grid { grid-template-columns: 1fr; }
+    .card-featured { grid-column: span 1; }
   }
 </style>
 </head>
@@ -688,364 +368,117 @@
 <!-- NAV -->
 <nav>
   <div class="nav-logo"><span>~/</span>fidelkenyatta</div>
-  <ul>
-    <li><a href="#services">Services</a></li>
-    <li><a href="#about">About</a></li>
-    <li><a href="#skills">Skills</a></li>
-    <li><a href="#projects">Projects</a></li>
-    <li><a href="#certs">Certs</a></li>
-    <li><a href="#contact">Contact</a></li>
-  </ul>
+  <a href="https://wa.me/254714550754" class="nav-contact">💬 WhatsApp</a>
 </nav>
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-tag">Available for opportunities</div>
-  <h1>Fidel Kenyatta<br><span class="accent">IT & Cyber</span><br>Professional<span class="cursor"></span></h1>
-  <p class="hero-sub">
-    IT Support specialist transitioning into <span class="highlight">Cybersecurity</span>. 
-    I solve problems, protect systems, and keep things running — 
-    one fix at a time.
-  </p>
-  <div class="hero-cta">
-    <a href="#projects" class="btn btn-primary" id="view-work-btn">View My Work</a>
-    <a href="https://wa.me/254714550754" class="btn btn-ghost">Get In Touch</a>
+  <div class="hero-badge">Available for hire</div>
+  <h1><span class="name-accent">Fidel</span><br>Kenyatta</h1>
+  <p class="hero-title">IT Support &nbsp;·&nbsp; Cybersecurity &nbsp;·&nbsp; Tech Solutions</p>
+  <p class="hero-location">📍 <span>Nakuru, Kenya</span> &nbsp;·&nbsp; Remote & On-Premise</p>
+</div>
+
+<!-- CARD GRID -->
+<div class="grid-wrapper">
+  <p class="grid-label">// select a section to explore</p>
+  <div class="card-grid">
+
+    <!-- Services — featured -->
+    <a href="services.html" class="card card-services card-featured">
+      <div>
+        <span class="card-icon">🛠️</span>
+        <div class="card-content">
+          <h2>IT Services</h2>
+          <p>PC repair, malware removal, OS installation, network setup, cybersecurity consultation and more — remote or on-premise across Nakuru.</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">7 Services</span>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+    <!-- About -->
+    <a href="about.html" class="card card-about">
+      <div>
+        <span class="card-icon">👤</span>
+        <div class="card-content">
+          <h2>About Me</h2>
+          <p>Final year IT student at Kabarak University transitioning into cybersecurity.</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">My Story</span>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+    <!-- Skills -->
+    <a href="skills.html" class="card card-skills">
+      <div>
+        <span class="card-icon">⚡</span>
+        <div class="card-content">
+          <h2>Skills</h2>
+          <p>Networking, Linux, cybersecurity tools, troubleshooting and more.</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">Technical</span>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+    <!-- Projects -->
+    <a href="projects.html" class="card card-projects">
+      <div>
+        <span class="card-icon">📁</span>
+        <div class="card-content">
+          <h2>Projects</h2>
+          <p>TryHackMe rooms, hands-on labs and real-world security work.</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">Portfolio</span>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+    <!-- Certifications -->
+    <a href="certs.html" class="card card-certs">
+      <div>
+        <span class="card-icon">🏆</span>
+        <div class="card-content">
+          <h2>Certifications</h2>
+          <p>Kabarak University BSc IT, CompTIA A+ in progress, TryHackMe First Four badge.</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">Credentials</span>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
+    <!-- Contact -->
+    <a href="contact.html" class="card card-contact">
+      <div>
+        <span class="card-icon">💬</span>
+        <div class="card-content">
+          <h2>Contact</h2>
+          <p>WhatsApp, email, LinkedIn, GitHub and TryHackMe — all in one place.</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="card-tag">Get In Touch</span>
+        <span class="card-arrow">↗</span>
+      </div>
+    </a>
+
   </div>
 </div>
 
-<!-- SERVICES -->
-<section id="services" class="services-section-bg">
-  <div class="section-label">// 01</div>
-  <h2 class="section-title">Services</h2>
-  <div class="services-grid">
-
-    <div class="service-card">
-      <span class="service-icon">🖥️</span>
-      <h3>PC Repair & Troubleshooting</h3>
-      <p>Diagnosing and fixing hardware and software issues — slow machines, boot failures, crashes, driver problems, and general performance optimization.</p>
-      <div class="service-audience">
-        <span class="audience-tag">Individuals</span>
-        <span class="audience-tag">Small Business</span>
-        <span class="audience-tag">📞 Remote</span>
-        <span class="audience-tag">🏠 On-Premise</span>
-      </div>
-      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
-    </div>
-
-    <div class="service-card">
-      <span class="service-icon">🦠</span>
-      <h3>Malware Removal & Cleanup</h3>
-      <p>Identifying and removing viruses, ransomware, spyware, and other malicious software from infected devices, followed by security hardening to prevent reinfection.</p>
-      <div class="service-audience">
-        <span class="audience-tag">Individuals</span>
-        <span class="audience-tag">Small Business</span>
-        <span class="audience-tag">📞 Remote</span>
-        <span class="audience-tag">🏠 On-Premise</span>
-      </div>
-      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
-    </div>
-
-    <div class="service-card">
-      <span class="service-icon">🌐</span>
-      <h3>Network Setup</h3>
-      <p>Setting up home and small office networks, configuring routers, securing Wi-Fi, and ensuring reliable, safe connectivity for all your devices.</p>
-      <div class="service-audience">
-        <span class="audience-tag">Individuals</span>
-        <span class="audience-tag">Small Business</span>
-        <span class="audience-tag">🏠 On-Premise</span>
-      </div>
-      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
-    </div>
-
-    <div class="service-card">
-      <span class="service-icon">🔐</span>
-      <h3>Cybersecurity Consultation</h3>
-      <p>Advising individuals and small businesses on how to protect their systems and data — covering password policies, safe browsing, phishing awareness, and basic security practices.</p>
-      <div class="service-audience">
-        <span class="audience-tag">Individuals</span>
-        <span class="audience-tag">Small Business</span>
-        <span class="audience-tag">📞 Remote</span>
-        <span class="audience-tag">🏠 On-Premise</span>
-      </div>
-      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
-    </div>
-
-    <div class="service-card">
-      <span class="service-icon">💿</span>
-      <h3>OS Installation & Setup</h3>
-      <p>Clean installation and configuration of Windows or Linux operating systems. Includes driver setup, updates, and basic software installation to get your machine running perfectly.</p>
-      <div class="service-audience">
-        <span class="audience-tag">Individuals</span>
-        <span class="audience-tag">Small Business</span>
-        <span class="audience-tag">🏠 On-Premise</span>
-        <span class="audience-tag">📞 Remote</span>
-      </div>
-      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
-    </div>
-
-    <div class="service-card">
-      <span class="service-icon">🔧</span>
-      <h3>PC Error Diagnosis & Fix</h3>
-      <p>Identifying and resolving software errors, blue screens, system crashes, corrupted files, and unexpected shutdowns. I trace the root cause and fix it properly — not just temporarily.</p>
-      <div class="service-audience">
-        <span class="audience-tag">Individuals</span>
-        <span class="audience-tag">Small Business</span>
-        <span class="audience-tag">📞 Remote</span>
-        <span class="audience-tag">🏠 On-Premise</span>
-      </div>
-      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
-    </div>
-
-    <div class="service-card">
-      <span class="service-icon">💾</span>
-      <h3>Data Backup & Recovery</h3>
-      <p>Recovering lost or deleted files and setting up reliable backup systems so you never lose important data again. Prevention and recovery — both covered.</p>
-      <div class="service-audience">
-        <span class="audience-tag">Individuals</span>
-        <span class="audience-tag">Small Business</span>
-        <span class="audience-tag">📞 Remote</span>
-        <span class="audience-tag">🏠 On-Premise</span>
-      </div>
-      <a href="https://wa.me/254714550754" class="service-cta">Get in touch →</a>
-    </div>
-
-  </div>
-  <div class="services-note">
-    💡 <span>Pricing is flexible</span> — reach out via WhatsApp or email to discuss your specific needs and get a quote. Services are available <span>remotely via call</span> or <span>on-premise</span> — I serve both individuals and small businesses across Nakuru and beyond.
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- ABOUT -->
-<section id="about">
-  <div class="section-label">// 02</div>
-  <h2 class="section-title">About Me</h2>
-  <div class="about-grid">
-    <div class="about-card">
-      <h3>Background</h3>
-      <p>
-        Final year IT student at Kabarak University with a passion for problem-solving and a sharp analytical mind. 
-        I thrive when diagnosing complex issues and finding elegant fixes — 
-        whether in hardware, software, or security systems.
-      </p>
-    </div>
-    <div class="about-card">
-      <h3>Currently</h3>
-      <p>
-        Building hands-on cybersecurity skills through TryHackMe, home lab projects, 
-        and CompTIA certifications. Actively seeking IT Support roles as I grow 
-        toward a career in cybersecurity.
-      </p>
-    </div>
-    <div class="about-card">
-      <h3>Goal</h3>
-      <p>
-        To become a SOC Analyst or Penetration Tester — using my analytical 
-        skills to protect organizations from real threats and help people stay safe online.
-      </p>
-    </div>
-    <div class="about-card">
-      <h3>Values</h3>
-      <p>
-        I believe in integrity, continuous learning, and doing work that genuinely 
-        serves others. Security isn't just a career to me — it's about protecting people.
-      </p>
-    </div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- SKILLS -->
-<section id="skills">
-  <div class="section-label">// 03</div>
-  <h2 class="section-title">Technical Skills</h2>
-  <div class="skills-grid">
-    <div class="skill-item"><span class="skill-icon">🖥️</span><span>Windows OS</span></div>
-    <div class="skill-item"><span class="skill-icon">🐧</span><span>Linux (Ubuntu)</span></div>
-    <div class="skill-item"><span class="skill-icon">🌐</span><span>TCP/IP Networking</span></div>
-    <div class="skill-item"><span class="skill-icon">🔍</span><span>Nmap</span></div>
-    <div class="skill-item"><span class="skill-icon">🦈</span><span>Wireshark</span></div>
-    <div class="skill-item"><span class="skill-icon">🔐</span><span>Cybersecurity Basics</span></div>
-    <div class="skill-item"><span class="skill-icon">⚙️</span><span>VirtualBox / VMs</span></div>
-    <div class="skill-item"><span class="skill-icon">💻</span><span>Command Line</span></div>
-    <div class="skill-item"><span class="skill-icon">🛡️</span><span>TryHackMe</span></div>
-    <div class="skill-item"><span class="skill-icon">📋</span><span>IT Troubleshooting</span></div>
-    <div class="skill-item"><span class="skill-icon">🔥</span><span>Firewall Basics</span></div>
-    <div class="skill-item"><span class="skill-icon">📊</span><span>SIEM (Splunk)</span></div>
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- PROJECTS -->
-<section id="projects">
-  <div class="section-label">// 04</div>
-  <h2 class="section-title">Projects</h2>
-  <div class="projects-grid">
-
-    <div class="project-card">
-      <div class="project-header">
-        <span class="project-type">TryHackMe</span>
-      </div>
-      <h3>What is Networking?</h3>
-      <p>
-        Completed the foundational networking module on TryHackMe. Gained hands-on 
-        understanding of how computer networks function, including how devices 
-        communicate, IP addressing, and core networking concepts.
-      </p>
-      <div class="project-tags">
-        <span class="tag">Networking</span>
-        <span class="tag">TCP/IP</span>
-        <span class="tag">TryHackMe</span>
-        <span class="tag">Fundamentals</span>
-      </div>
-    </div>
-
-    <div class="project-card">
-      <div class="project-header">
-        <span class="project-type">TryHackMe</span>
-      </div>
-      <h3>Offensive Security Intro</h3>
-      <p>
-        Hacked my first website legally in a safe environment, experiencing what 
-        an ethical hacker's job looks like in practice. Learned the basics of 
-        offensive security techniques and mindset.
-      </p>
-      <div class="project-tags">
-        <span class="tag">Ethical Hacking</span>
-        <span class="tag">Offensive Security</span>
-        <span class="tag">TryHackMe</span>
-        <span class="tag">Penetration Testing</span>
-      </div>
-    </div>
-
-    <div class="project-card">
-      <div class="project-header">
-        <span class="project-type">TryHackMe</span>
-      </div>
-      <h3>Defensive Security Intro</h3>
-      <p>
-        Practiced defending a simulated bank (FakeBank) from an ongoing cyberattack. 
-        Learned the fundamentals of defensive security including threat monitoring, 
-        incident response, and protection strategies.
-      </p>
-      <div class="project-tags">
-        <span class="tag">Defensive Security</span>
-        <span class="tag">Incident Response</span>
-        <span class="tag">SOC</span>
-        <span class="tag">TryHackMe</span>
-      </div>
-    </div>
-
-    <div class="project-card">
-      <div class="project-header">
-        <span class="project-type">TryHackMe</span>
-      </div>
-      <h3>Careers in Cyber</h3>
-      <p>
-        Explored the different career paths available in cybersecurity — from SOC 
-        Analyst to Penetration Tester. Used this knowledge to map out my own 
-        professional roadmap in the security field.
-      </p>
-      <div class="project-tags">
-        <span class="tag">Career Development</span>
-        <span class="tag">Cybersecurity</span>
-        <span class="tag">TryHackMe</span>
-        <span class="tag">SOC Analyst</span>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- CERTS -->
-<section id="certs">
-  <div class="section-label">// 05</div>
-  <h2 class="section-title">Certifications</h2>
-  <div class="certs-grid">
-
-    <div class="cert-card">
-      <div class="cert-badge">🎓</div>
-      <h3>BSc Information Technology</h3>
-      <p>Kabarak University</p>
-      <span class="cert-status status-progress">AWAITING GRADUATION</span>
-    </div>
-
-    <div class="cert-card">
-      <div class="cert-badge">🏆</div>
-      <h3>CompTIA A+</h3>
-      <p>CompTIA</p>
-      <span class="cert-status status-progress">IN PROGRESS</span>
-    </div>
-
-    <div class="cert-card">
-      <div class="cert-badge">🔒</div>
-      <h3>CompTIA Security+</h3>
-      <p>CompTIA</p>
-      <span class="cert-status status-progress">PLANNED</span>
-    </div>
-
-    <div class="cert-card">
-      <div class="cert-badge">🎯</div>
-      <h3>First Four Badge</h3>
-      <p>TryHackMe — Top 24.5%</p>
-      <span class="cert-status status-earned">EARNED</span>
-    </div>
-
-  </div>
-</section>
-
-<hr class="divider"/>
-
-<!-- CONTACT -->
-<section id="contact">
-  <div class="section-label">// 06</div>
-  <h2 class="section-title">Get In Touch</h2>
-  <div class="contact-grid">
-    <a href="https://wa.me/254714550754" class="contact-card">
-      <span class="contact-icon">💬</span>
-      <div class="contact-info">
-        <h4>WhatsApp</h4>
-        <p>+254 714 550 754</p>
-      </div>
-    </a>
-    <a href="mailto:kenyattafidel@proton.me" class="contact-card">
-      <span class="contact-icon">📧</span>
-      <div class="contact-info">
-        <h4>Email</h4>
-        <p>kenyattafidel@proton.me</p>
-      </div>
-    </a>
-    <a href="https://ke.linkedin.com/in/fidel-kenyatta-97004a287" class="contact-card">
-      <span class="contact-icon">💼</span>
-      <div class="contact-info">
-        <h4>LinkedIn</h4>
-        <p>Fidel Kenyatta</p>
-      </div>
-    </a>
-    <a href="https://github.com/Sholomoh" class="contact-card">
-      <span class="contact-icon">🐙</span>
-      <div class="contact-info">
-        <h4>GitHub</h4>
-        <p>github.com/Sholomoh</p>
-      </div>
-    </a>
-    <a href="https://tryhackme.com/p/kenyattafidel" class="contact-card">
-      <span class="contact-icon">🛡️</span>
-      <div class="contact-info">
-        <h4>TryHackMe</h4>
-        <p>tryhackme.com/p/kenyattafidel</p>
-      </div>
-    </a>
-  </div>
-</section>
-
 <footer>
-  <p>Built with purpose — <span>Fidel Kenyatta</span> © 2026</p>
+  <p>© 2026 <a href="index.html">Fidel Kenyatta</a> &nbsp;·&nbsp; Nakuru, Kenya &nbsp;·&nbsp; <a href="https://wa.me/254714550754">+254 714 550 754</a></p>
 </footer>
 
 </body>

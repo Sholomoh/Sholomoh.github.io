@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Contact — Fidel Kenyatta</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#060a0f;--surface:#0d1117;--border:#1a2332;--green:#00ff88;--green-dim:#00ff8833;--text:#c9d1d9;--muted:#586069;--white:#f0f6fc;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(0,255,136,0.07) 0%,transparent 70%);pointer-events:none;z-index:0;}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:rgba(6,10,15,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.5rem;}
+.nav-logo{font-family:'Share Tech Mono',monospace;color:var(--green);font-size:0.95rem;text-decoration:none;}
+.nav-logo span{color:var(--muted);}
+nav ul{list-style:none;display:flex;flex-wrap:wrap;gap:1rem;}
+nav ul a{color:var(--muted);text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;transition:color 0.2s;}
+nav ul a:hover,nav ul a.active{color:var(--green);}
+.page{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:7rem 1.5rem 5rem;}
+.back-link{display:inline-flex;align-items:center;gap:0.5rem;font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--muted);text-decoration:none;margin-bottom:2.5rem;transition:color 0.2s;}
+.back-link:hover{color:var(--green);}
+.page-label{font-family:'Share Tech Mono',monospace;color:var(--green);font-size:0.72rem;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:0.4rem;}
+.page-title{font-size:clamp(2rem,6vw,3.5rem);font-weight:800;color:var(--white);border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:3rem;}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;}
+.contact-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;display:flex;align-items:center;gap:1rem;text-decoration:none;transition:border-color 0.2s,transform 0.2s;}
+.contact-card:hover{border-color:var(--green);transform:translateY(-2px);}
+.contact-icon{font-size:1.5rem;}
+.contact-info h4{font-size:0.8rem;font-family:'Share Tech Mono',monospace;color:var(--green);margin-bottom:0.2rem;text-transform:uppercase;letter-spacing:0.1em;}
+.contact-info p{font-size:0.85rem;color:var(--text);}
+footer{position:relative;z-index:1;text-align:center;padding:2rem;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--muted);}
+footer span{color:var(--green);}
+@media(max-width:600px){.contact-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html" class="nav-logo"><span>~/</span>fidelkenyatta</a>
+  <ul>
+    <li><a href="services.html">Services</a></li>
+    <li><a href="skills.html">Skills</a></li>
+    <li><a href="projects.html">Projects</a></li>
+    <li><a href="certs.html">Certs</a></li>
+    <li><a href="about.html">About</a></li>
+    <li><a href="contact.html" class="active">Contact</a></li>
+  </ul>
+</nav>
+<div class="page">
+  <a href="index.html" class="back-link">← Home</a>
+  <div class="page-label">// 06</div>
+  <h1 class="page-title">Get In Touch</h1>
+  <div class="contact-grid">
+    <a href="https://wa.me/254714550754" class="contact-card"><span class="contact-icon">💬</span><div class="contact-info"><h4>WhatsApp</h4><p>+254 714 550 754</p></div></a>
+    <a href="mailto:kenyattafidel@proton.me" class="contact-card"><span class="contact-icon">📧</span><div class="contact-info"><h4>Email</h4><p>kenyattafidel@proton.me</p></div></a>
+    <a href="https://ke.linkedin.com/in/fidel-kenyatta-97004a287" class="contact-card"><span class="contact-icon">💼</span><div class="contact-info"><h4>LinkedIn</h4><p>Fidel Kenyatta</p></div></a>
+    <a href="https://github.com/Sholomoh" class="contact-card"><span class="contact-icon">🐙</span><div class="contact-info"><h4>GitHub</h4><p>github.com/Sholomoh</p></div></a>
+    <a href="https://tryhackme.com/p/kenyattafidel" class="contact-card"><span class="contact-icon">🛡️</span><div class="contact-info"><h4>TryHackMe</h4><p>tryhackme.com/p/kenyattafidel</p></div></a>
+  </div>
+</div>
+<footer><p>© 2026 <span>Fidel Kenyatta</span> · Nakuru, Kenya</p></footer>
+</body>
+</html>
