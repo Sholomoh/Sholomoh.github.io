@@ -1,106 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>About — Fidel Kenyatta</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-<style>
-:root{--bg:#060a0f;--surface:#0d1117;--border:#1a2332;--green:#00ff88;--green-dim:#00ff8833;--text:#c9d1d9;--muted:#586069;--white:#f0f6fc;}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
-body::after{content:'';position:fixed;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(0,255,136,0.07) 0%,transparent 70%);pointer-events:none;z-index:0;}
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:rgba(6,10,15,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);flex-wrap:wrap;gap:0.5rem;}
-.nav-logo{font-family:'Share Tech Mono',monospace;color:var(--green);font-size:0.95rem;text-decoration:none;}
-.nav-logo span{color:var(--muted);}
-nav ul{list-style:none;display:flex;flex-wrap:wrap;gap:1rem;}
-nav ul a{color:var(--muted);text-decoration:none;font-size:0.75rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;transition:color 0.2s;}
-nav ul a:hover,nav ul a.active{color:var(--green);}
-.page{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:7rem 1.5rem 5rem;}
-.back-link{display:inline-flex;align-items:center;gap:0.5rem;font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--muted);text-decoration:none;margin-bottom:2.5rem;transition:color 0.2s;}
-.back-link:hover{color:var(--green);}
-.page-label{font-family:'Share Tech Mono',monospace;color:var(--green);font-size:0.72rem;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:0.4rem;}
-.page-title{font-size:clamp(2rem,6vw,3.5rem);font-weight:800;color:var(--white);border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:3rem;}
-.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
-.about-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;position:relative;overflow:hidden;}
-.about-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent);}
-.about-card h3{font-size:0.72rem;letter-spacing:0.2em;color:var(--green);font-family:'Share Tech Mono',monospace;margin-bottom:0.75rem;text-transform:uppercase;}
-.about-card p{font-size:0.9rem;line-height:1.8;color:var(--text);}
-.experience-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.8rem;position:relative;overflow:hidden;margin-bottom:1rem;}
-.experience-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent);}
-.exp-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;}
-.exp-company{font-size:1.1rem;font-weight:800;color:var(--white);}
-.exp-date{font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--green);background:var(--green-dim);padding:0.2rem 0.7rem;border-radius:3px;}
-.exp-role{font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--green);margin-bottom:0.75rem;letter-spacing:0.05em;}
-.exp-desc{font-size:0.88rem;line-height:1.7;color:var(--muted);margin-bottom:1rem;}
-.exp-tags{display:flex;flex-wrap:wrap;gap:0.5rem;}
-footer{position:relative;z-index:1;text-align:center;padding:2rem;border-top:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--muted);}
-footer span{color:var(--green);}
-@media(max-width:600px){.about-grid{grid-template-columns:1fr;}}
-.experience-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.8rem;position:relative;overflow:hidden;margin-bottom:1rem;}
-.experience-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),transparent);}
-.exp-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;}
-.exp-company{font-size:1.1rem;font-weight:800;color:var(--white);}
-.exp-date{font-family:'Share Tech Mono',monospace;font-size:0.72rem;color:var(--green);background:var(--green-dim);padding:0.2rem 0.7rem;border-radius:3px;}
-.exp-role{font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--green);margin-bottom:0.75rem;letter-spacing:0.05em;}
-.exp-desc{font-size:0.88rem;line-height:1.7;color:var(--muted);margin-bottom:1rem;}
-.exp-tags{display:flex;flex-wrap:wrap;gap:0.5rem;}
-.exp-tag{font-family:'Share Tech Mono',monospace;font-size:0.68rem;color:#58a6ff;background:rgba(88,166,255,0.1);border:1px solid rgba(88,166,255,0.2);padding:0.2rem 0.6rem;border-radius:3px;}
-.section-sub{font-size:1.2rem;font-weight:800;color:var(--white);margin:2.5rem 0 1.2rem;border-left:3px solid var(--green);padding-left:0.75rem;}
-</style>
-<script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>About — Fidel Kenyatta</title>
+  <link rel="stylesheet" href="styles.css">
+  <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
-<nav>
-  <a href="index.html" class="nav-logo"><span>~/</span>fidelkenyatta</a>
-  <ul>
-    <li><a href="services.html">Services</a></li>
-    <li><a href="skills.html">Skills</a></li>
-    <li><a href="projects.html">Projects</a></li>
-    <li><a href="certs.html">Certs</a></li>
-    <li><a href="about.html" class="active">About</a></li>
-    <li><a href="contact.html">Contact</a></li>
-  </ul>
-</nav>
-<div class="page">
-  <a href="index.html" class="back-link">← Home</a>
-  <div class="page-label">// 05</div>
-  <h1 class="page-title">About Me</h1>
-  <div class="about-grid">
-    <div class="about-card"><h3>Background</h3><p>Final year IT student at Kabarak University with a passion for problem-solving and a sharp analytical mind. I thrive when diagnosing complex issues and finding elegant fixes — whether in hardware, software, or security systems.</p></div>
-    <div class="about-card"><h3>Currently</h3><p>Building hands-on cybersecurity skills through TryHackMe, home lab projects, and CompTIA certifications. Actively seeking IT Support roles as I grow toward a career in cybersecurity.</p></div>
-    <div class="about-card"><h3>Goal</h3><p>To become a SOC Analyst or Penetration Tester — using my analytical skills to protect organizations from real threats and help people stay safe online.</p></div>
-    <div class="about-card"><h3>Values</h3><p>I believe in integrity, continuous learning, and doing work that genuinely serves others. Security isn't just a career to me — it's about protecting people.</p></div>
+  <nav>
+    <a href="index.html" class="nav-logo"><span>~/</span>fidelkenyatta</a>
+    <ul>
+      <li><a href="services.html">Services</a></li>
+      <li><a href="skills.html">Skills</a></li>
+      <li><a href="projects.html">Projects</a></li>
+      <li><a href="certs.html">Certs</a></li>
+      <li><a href="about.html" class="active">About</a></li>
+      <li><a href="contact.html">Contact</a></li>
+    </ul>
+  </nav>
+
+  <div class="page">
+    <a href="index.html" class="back-link">← Home</a>
+    <div class="page-label">// 05</div>
+    <h1 class="page-title">About Me</h1>
+    <div class="about-grid">
+      <div class="about-card"><h3>Background</h3><p>Final year IT student at Kabarak University with a passion for problem-solving and a sharp analytical mind. I thrive when diagnosing complex issues and finding elegant fixes — whether in hardware, software, or security systems.</p></div>
+      <div class="about-card"><h3>Currently</h3><p>Building hands-on cybersecurity skills through TryHackMe, home lab projects, and CompTIA certifications. Actively seeking IT Support roles as I grow toward a career in cybersecurity.</p></div>
+      <div class="about-card"><h3>Goal</h3><p>To become a SOC Analyst or Penetration Tester — using my analytical skills to protect organizations from real threats and help people stay safe online.</p></div>
+      <div class="about-card"><h3>Values</h3><p>I believe in integrity, continuous learning, and doing work that genuinely serves others. Security isn't just a career to me — it's about protecting people.</p></div>
+    </div>
+
+    <h2 class="section-sub">Work Experience</h2>
+    <div class="experience-card">
+      <div class="exp-header">
+        <div class="exp-company">VGG Connect</div>
+        <span class="exp-date">2023 · 3 Months</span>
+      </div>
+      <div class="exp-role">IT Intern — Internet Service Provider</div>
+      <p class="exp-desc">
+        Gained hands-on field experience at one of Kenya's growing fibre internet providers. 
+        Worked directly on physical network infrastructure and real customer issues, 
+        building practical skills that go beyond the classroom.
+      </p>
+      <ul style="font-size:0.88rem;line-height:1.9;color:var(--muted);padding-left:1.2rem;margin-bottom:1rem;">
+        <li>Installed fibre optic cables for home and business customers across service areas</li>
+        <li>Diagnosed and resolved network connectivity issues for end users</li>
+        <li>Troubleshot hardware and signal problems on the ISP's fibre network</li>
+        <li>Collaborated with field technicians on infrastructure deployment</li>
+      </ul>
+      <div class="exp-tags">
+        <span class="exp-tag">Fibre Installation</span>
+        <span class="exp-tag">Network Troubleshooting</span>
+        <span class="exp-tag">ISP Infrastructure</span>
+        <span class="exp-tag">Field Technician</span>
+        <span class="exp-tag">Nakuru, Kenya</span>
+      </div>
+    </div>
   </div>
 
-  <h2 class="section-sub">Work Experience</h2>
-  <div class="experience-card">
-    <div class="exp-header">
-      <div class="exp-company">VGG Connect</div>
-      <span class="exp-date">2023 · 3 Months</span>
-    </div>
-    <div class="exp-role">IT Intern — Internet Service Provider</div>
-    <p class="exp-desc">
-      Gained hands-on field experience at one of Kenya's growing fibre internet providers. 
-      Worked directly on physical network infrastructure and real customer issues, 
-      building practical skills that go beyond the classroom.
-    </p>
-    <ul style="font-size:0.88rem;line-height:1.9;color:var(--muted);padding-left:1.2rem;margin-bottom:1rem;">
-      <li>Installed fibre optic cables for home and business customers across service areas</li>
-      <li>Diagnosed and resolved network connectivity issues for end users</li>
-      <li>Troubleshot hardware and signal problems on the ISP's fibre network</li>
-      <li>Collaborated with field technicians on infrastructure deployment</li>
-    </ul>
-    <div class="exp-tags">
-      <span class="exp-tag">Fibre Installation</span>
-      <span class="exp-tag">Network Troubleshooting</span>
-      <span class="exp-tag">ISP Infrastructure</span>
-      <span class="exp-tag">Field Technician</span>
-      <span class="exp-tag">Nakuru, Kenya</span>
-    </div>
-  </div>
-</div>
-<footer><p>© 2026 <span>Fidel Kenyatta</span> · Nakuru, Kenya</p></footer>
+  <footer><p>© 2026 <span>Fidel Kenyatta</span> · Nakuru, Kenya</p></footer>
 </body>
 </html>
