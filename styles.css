@@ -535,7 +535,7 @@ body.home::after {
 }
 .btn-primary { background: var(--green); color: #060a0f; }
 .btn-primary:hover { background: #33ffa0; transform: translateY(-2px); }
-.btn-ghost { color: var(--green); background: transparent; }
+.btn-ghost { color: var(--green); background: rgba(6,10,15,0.85); }
 .btn-ghost:hover { background: var(--green-dim); }
 
 .grid-wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 6rem; }
@@ -587,3 +587,11 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* CIRCUIT BACKGROUND (drawn by circuit-bg.js) */
+.circuit-layer {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: -1;
+  opacity: 0; transition: opacity 1.6s ease;
+}
+.circuit-layer.on { opacity: 1; }
