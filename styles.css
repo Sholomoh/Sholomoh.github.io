@@ -73,7 +73,15 @@ nav {
   letter-spacing: 0.05em;
 }
 
-.nav-logo span { color: var(--muted); }
+.nav-logo { display: inline-flex; align-items: center; gap: 0.65rem; }
+.nav-logo .nav-prefix { color: var(--muted); }
+.nav-avatar {
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%; object-fit: cover;
+  background: var(--surface);
+  border: 2px solid var(--green);
+  box-shadow: 0 0 0 3px rgba(0,255,136,0.12), 0 0 16px rgba(0,255,136,0.28);
+}
 
 nav ul {
   list-style: none;
@@ -469,6 +477,8 @@ footer span, footer a { color: var(--green); text-decoration: none; }
 }
 @media (max-width: 600px) {
   nav ul { gap: 0.8rem; }
+  .nav-avatar { width: 34px; height: 34px; }
+  .page { padding-top: 8.5rem; }
   .about-grid { grid-template-columns: 1fr; }
   .contact-grid { grid-template-columns: 1fr; }
   .certs-grid { grid-template-columns: 1fr 1fr; }
