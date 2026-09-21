@@ -49,6 +49,11 @@
     var c = document.createElement('canvas');
     c.className = 'circuit-layer';
     c.setAttribute('aria-hidden', 'true');
+    // Critical styles live here (not only in styles.css) so the layers are
+    // always fixed behind the page, even if an old stylesheet is cached.
+    c.style.cssText =
+      'position:fixed;top:0;left:0;width:100%;height:100%;display:block;' +
+      'pointer-events:none;z-index:-1;opacity:0;transition:opacity 1.6s ease;';
     return c;
   }
 
@@ -465,7 +470,7 @@
     build();
     interval = small ? 1000 / 30 : 0;
     requestAnimationFrame(function () {
-      stat.classList.add('on'); live.classList.add('on');
+      stat.style.opacity = '1'; live.style.opacity = '1';
     });
     start();
 
@@ -488,6 +493,13 @@
     });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  function safeInit() {
+    try { init(); }
+    catch (e) {
+      [stat, live].forEach(function (c) { if (c && c.parentNode) c.parentNode.removeChild(c); });
+      if (window.console) console.warn('circuit-bg disabled:', e);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', safeInit);
+  else safeInit();
 })();
