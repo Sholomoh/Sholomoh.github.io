@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Members — Fidel Kenyatta</title>
+  <meta name="description" content="Sign in or create a free account to read member and partner stories and updates from Fidel Kenyatta."/>
+  <link rel="canonical" href="https://sholomoh.github.io/members.html"/>
+  <meta name="theme-color" content="#060a0f"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Fidel Kenyatta"/>
+  <meta property="og:title" content="Members — Fidel Kenyatta"/>
+  <meta property="og:description" content="Sign in or create a free account to read member and partner stories and updates."/>
+  <meta property="og:url" content="https://sholomoh.github.io/members.html"/>
+  <meta property="og:image" content="https://sholomoh.github.io/og-image.png"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="robots" content="noindex"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css?v=8">
+  <script src="circuit-bg.js?v=3" defer></script>
+  <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="nav-logo"><img src="avatar.jpg?v=1" alt="" class="nav-avatar" width="38" height="38"><span class="nav-name"><span class="nav-prefix">~/</span>fidelkenyatta</span></a>
+    <ul>
+      <li><a href="services.html">Services</a></li>
+      <li><a href="skills.html">Skills</a></li>
+      <li><a href="projects.html">Projects</a></li>
+      <li><a href="certs.html">Certs</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a href="members.html" class="active">Members</a></li>
+    </ul>
+  </nav>
+
+  <div class="page">
+    <a href="index.html" class="back-link">← Home</a>
+    <div class="page-label">// 07</div>
+    <h1 class="page-title">Members</h1>
+    <p class="page-intro">Stories and updates for members and partners. Create a free account to read them — posting is by approval.</p>
+
+    <div id="auth-section">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" data-tab="signin">Sign in</button>
+          <button type="button" class="auth-tab" data-tab="signup">Create account</button>
+        </div>
+        <form id="signin-form" class="auth-form">
+          <input type="email" id="signin-email" placeholder="Email" required autocomplete="email">
+          <input type="password" id="signin-password" placeholder="Password" required autocomplete="current-password">
+          <button type="submit" class="btn btn-primary">Sign in</button>
+        </form>
+        <form id="signup-form" class="auth-form" hidden>
+          <input type="text" id="signup-name" placeholder="Your name" required autocomplete="name">
+          <input type="email" id="signup-email" placeholder="Email" required autocomplete="email">
+          <input type="password" id="signup-password" placeholder="Password (6+ characters)" required minlength="6" autocomplete="new-password">
+          <button type="submit" class="btn btn-primary">Create account</button>
+        </form>
+        <p id="auth-error" class="form-error"></p>
+      </div>
+    </div>
+
+    <div id="app-section" hidden>
+      <div class="member-bar">
+        <span id="who-am-i"></span>
+        <button id="signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+      </div>
+
+      <div id="composer" hidden>
+        <h2>New story</h2>
+        <form id="post-form">
+          <input type="text" id="post-title" placeholder="Title" required>
+          <textarea id="post-body" class="story-input" placeholder="Write your story..." required></textarea>
+          <input type="file" id="post-photo" accept="image/*">
+          <button type="submit" class="btn btn-primary">Post</button>
+          <p id="post-status" class="form-note"></p>
+        </form>
+      </div>
+
+      <div id="request-access" hidden>
+        <p>Want to post stories? <button type="button" id="request-btn" class="btn btn-ghost btn-sm">Request posting access</button></p>
+        <p id="request-status" class="form-note"></p>
+      </div>
+
+      <div id="admin-panel" hidden>
+        <h2>Pending requests</h2>
+        <div id="requests-list"></div>
+      </div>
+
+      <h2>Stories</h2>
+      <div id="feed"></div>
+    </div>
+  </div>
+
+  <footer><p>© 2026 <span>Fidel Kenyatta</span> · Nakuru, Kenya</p></footer>
+
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="members.js"></script>
+</body>
+</html>

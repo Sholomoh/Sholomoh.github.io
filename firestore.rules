@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function isPoster() {
+      return isSignedIn() &&
+        (isAdmin() || exists(/databases/$(database)/documents/posters/$(request.auth.uid)));
+    }
+
+    // Public profile info created on sign-up. Each user manages their own doc.
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Admin allowlist. Add yourself here manually in the Firebase console
+    // after your first sign-up — the app can never write to this collection.
+    match /admins/{uid} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Partners approved to post. Only an admin can grant this.
+    match /posters/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // "Request posting access" requests. A member can create their own;
+    // only an admin can approve (update) or clear (delete) one.
+    match /posterRequests/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Stories. Any signed-in member can read. Only posters/admins can
+    // create. Authors (or admins) can edit or remove their own posts.
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isPoster() && request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if isSignedIn() &&
+        (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+  }
+}
