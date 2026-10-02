@@ -671,6 +671,7 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .story-body h3 { color: var(--white); font-size: 1.05rem; margin-bottom: 0.3rem; }
 .story-meta { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--green); letter-spacing: 0.05em; margin-bottom: 0.8rem; }
 .story-text { font-size: 0.88rem; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+#feed a { color: var(--green); }
 
 @media (max-width: 600px) {
   .auth-card { padding: 1.4rem; }
@@ -721,3 +722,56 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .form-actions { display: flex; gap: 0.7rem; align-items: center; }
 
 #composer .form-actions, .story-body .form-actions { margin-top: 0.3rem; }
+
+/* MEMBERS: top-level tabs, sub-tabs, directory, profile form, avatars */
+.tabs-row {
+  display: flex; gap: 0.5rem; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.3rem; margin-bottom: 1.4rem; border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  flex-shrink: 0; display: flex; align-items: center; gap: 0.4rem;
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; letter-spacing: 0.04em;
+  padding: 0.6rem 0.3rem; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+.tab-btn[hidden] { display: none; }
+.tab-btn .badge { margin-left: 0.1rem; }
+.tab-panel[hidden] { display: none; }
+
+.subtabs-row { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; }
+.subtab-btn {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  color: var(--muted); cursor: pointer; padding: 0.4rem 1rem;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.75rem;
+}
+.subtab-btn.active { color: var(--green); border-color: rgba(0,255,136,0.4); background: var(--green-dim); }
+
+.page-intro-sm { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.2rem; }
+
+.member-row {
+  display: flex; align-items: center; gap: 0.9rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 0.9rem 1rem; margin-bottom: 0.7rem;
+}
+.member-info { flex: 1; min-width: 0; }
+.member-name { color: var(--white); font-size: 0.92rem; }
+.member-sub { color: var(--muted); font-size: 0.78rem; margin-top: 0.1rem; }
+.member-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.friend-tag {
+  font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--green);
+  background: var(--green-dim); border: 1px solid rgba(0,255,136,0.3);
+  padding: 0.25rem 0.6rem; border-radius: 10px;
+}
+
+.avatar-img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+
+.field-label { display: block; font-size: 0.8rem; color: var(--muted); font-family: 'Share Tech Mono', monospace; margin-bottom: 0.9rem; }
+.field-label .field-input, .field-label textarea { margin-top: 0.4rem; }
+#profile-form { max-width: 480px; }
+.mt { margin-top: 1.6rem; }
+
+@media (max-width: 500px) {
+  .tabs-row { gap: 0.3rem; }
+  .tab-btn { font-size: 0.72rem; padding: 0.55rem 0.2rem; }
+}

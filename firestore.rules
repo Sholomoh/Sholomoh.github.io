@@ -11,10 +11,17 @@ service cloud.firestore {
         (isAdmin() || exists(/databases/$(database)/documents/posters/$(request.auth.uid)));
     }
 
-    // Public profile info created on sign-up. Each user manages their own doc.
+    // Public profile info. Each user manages their own doc. Email and
+    // createdAt are locked after creation; date of birth, if set, locks
+    // after its first save too (it's never editable once filled in).
     match /users/{uid} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        (!('dob' in resource.data) || resource.data.dob == null ||
+         request.resource.data.dob == resource.data.dob);
     }
 
     // Admin allowlist. Add yourself here manually in the Firebase console
@@ -36,6 +43,29 @@ service cloud.firestore {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if isSignedIn() && request.auth.uid == uid;
       allow update, delete: if isAdmin();
+    }
+
+    // Friend (connect) requests. Doc id is "{fromUid}_{toUid}". Either
+    // side can read or delete (delete = cancel a pending request, or
+    // unfriend an accepted one). The recipient can accept/decline a
+    // pending request; the original sender can re-send after a decline.
+    match /friendRequests/{reqId} {
+      allow read: if isSignedIn() &&
+        (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUid == request.auth.uid &&
+        request.resource.data.toUid != request.auth.uid &&
+        request.resource.data.status == 'pending';
+      allow update: if isSignedIn() &&
+        request.resource.data.fromUid == resource.data.fromUid &&
+        request.resource.data.toUid == resource.data.toUid && (
+          (resource.data.toUid == request.auth.uid && resource.data.status == 'pending' &&
+           (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined')) ||
+          (resource.data.fromUid == request.auth.uid && resource.data.status == 'declined' &&
+           request.resource.data.status == 'pending')
+        );
+      allow delete: if isSignedIn() &&
+        (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
     }
 
     // Stories. Any signed-in member can read. Only posters/admins can
