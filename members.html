@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
   <script src="circuit-bg.js?v=3" defer></script>
   <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -53,14 +53,14 @@
           <button type="button" class="auth-tab" data-tab="signup">Create account</button>
         </div>
         <form id="signin-form" class="auth-form">
-          <input type="email" id="signin-email" placeholder="Email" required autocomplete="email">
-          <input type="password" id="signin-password" placeholder="Password" required autocomplete="current-password">
+          <input type="email" id="signin-email" class="field-input" placeholder="Email" required autocomplete="email">
+          <input type="password" id="signin-password" class="field-input" placeholder="Password" required autocomplete="current-password">
           <button type="submit" class="btn btn-primary">Sign in</button>
         </form>
         <form id="signup-form" class="auth-form" hidden>
-          <input type="text" id="signup-name" placeholder="Your name" required autocomplete="name">
-          <input type="email" id="signup-email" placeholder="Email" required autocomplete="email">
-          <input type="password" id="signup-password" placeholder="Password (6+ characters)" required minlength="6" autocomplete="new-password">
+          <input type="text" id="signup-name" class="field-input" placeholder="Your name" required autocomplete="name">
+          <input type="email" id="signup-email" class="field-input" placeholder="Email" required autocomplete="email">
+          <input type="password" id="signup-password" class="field-input" placeholder="Password (6+ characters)" required minlength="6" autocomplete="new-password">
           <button type="submit" class="btn btn-primary">Create account</button>
         </form>
         <p id="auth-error" class="form-error"></p>
@@ -73,15 +73,21 @@
         <button id="signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
       </div>
 
-      <div id="composer" hidden>
-        <h2>New story</h2>
-        <form id="post-form">
-          <input type="text" id="post-title" placeholder="Title" required>
-          <textarea id="post-body" class="story-input" placeholder="Write your story..." required></textarea>
-          <input type="file" id="post-photo" accept="image/*">
-          <button type="submit" class="btn btn-primary">Post</button>
-          <p id="post-status" class="form-note"></p>
-        </form>
+      <div id="composer-wrap" hidden>
+        <button type="button" id="composer-toggle" class="btn btn-primary btn-sm composer-toggle-btn">+ New story</button>
+        <div id="composer" hidden>
+          <h2>New story</h2>
+          <form id="post-form">
+            <input type="text" id="post-title" class="field-input" placeholder="Title" required>
+            <textarea id="post-body" class="story-input" placeholder="Write your story..." required></textarea>
+            <label class="file-label">Photo (optional)<input type="file" id="post-photo" accept="image/*"></label>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Post</button>
+              <button type="button" id="composer-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+            </div>
+            <p id="post-status" class="form-note"></p>
+          </form>
+        </div>
       </div>
 
       <div id="request-access" hidden>
@@ -89,12 +95,17 @@
         <p id="request-status" class="form-note"></p>
       </div>
 
-      <div id="admin-panel" hidden>
-        <h2>Pending requests</h2>
-        <div id="requests-list"></div>
+      <div id="admin-section" hidden>
+        <button type="button" id="admin-toggle" class="admin-toggle-btn">
+          <span>⚙ Pending requests</span>
+          <span id="admin-badge" class="badge" hidden>0</span>
+        </button>
+        <div id="admin-panel" hidden>
+          <div id="requests-list"></div>
+        </div>
       </div>
 
-      <h2>Stories</h2>
+      <h2 class="feed-heading">Stories</h2>
       <div id="feed"></div>
     </div>
   </div>

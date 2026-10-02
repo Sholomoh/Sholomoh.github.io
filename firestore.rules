@@ -39,11 +39,16 @@ service cloud.firestore {
     }
 
     // Stories. Any signed-in member can read. Only posters/admins can
-    // create. Authors (or admins) can edit or remove their own posts.
+    // create. Authors (or admins) can edit or remove their own posts —
+    // but editing can never reassign the author or backdate the post.
     match /posts/{postId} {
       allow read: if isSignedIn();
       allow create: if isPoster() && request.resource.data.authorUid == request.auth.uid;
-      allow update, delete: if isSignedIn() &&
+      allow update: if isSignedIn() &&
+        (resource.data.authorUid == request.auth.uid || isAdmin()) &&
+        request.resource.data.authorUid == resource.data.authorUid &&
+        request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isSignedIn() &&
         (resource.data.authorUid == request.auth.uid || isAdmin());
     }
   }
