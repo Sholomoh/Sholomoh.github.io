@@ -68,6 +68,28 @@ service cloud.firestore {
         (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
     }
 
+    // Direct messages. Conversation id is the two participant uids,
+    // sorted and joined with "_", so starting a chat with someone
+    // always resolves to the same thread. Any signed-in member can
+    // message any member — this isn't limited to friends.
+    match /conversations/{convId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn() &&
+        request.auth.uid in request.resource.data.participants &&
+        request.resource.data.participants.size() == 2;
+      allow update: if isSignedIn() &&
+        request.auth.uid in resource.data.participants &&
+        request.resource.data.participants == resource.data.participants;
+
+      match /messages/{msgId} {
+        allow read: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        allow create: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants &&
+          request.resource.data.fromUid == request.auth.uid;
+      }
+    }
+
     // Stories. Any signed-in member can read. Only posters/admins can
     // create. Authors (or admins) can edit or remove their own posts —
     // but editing can never reassign the author or backdate the post.

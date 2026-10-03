@@ -196,6 +196,7 @@
     stories: document.getElementById('tab-stories'),
     members: document.getElementById('tab-members'),
     requests: document.getElementById('tab-requests'),
+    messages: document.getElementById('tab-messages'),
     profile: document.getElementById('tab-profile'),
     admin: document.getElementById('tab-admin')
   };
@@ -518,6 +519,27 @@
   /* ---------- profile ---------- */
 
   var myProfile = null;
+  var profilePreviewAvatar = document.getElementById('profile-preview-avatar');
+  var profilePreviewName = document.getElementById('profile-preview-name');
+  var profilePreviewSub = document.getElementById('profile-preview-sub');
+
+  function renderProfilePreview(overridePhotoUrl) {
+    profilePreviewAvatar.innerHTML = '';
+    var photo = overridePhotoUrl || (myProfile && myProfile.photoURL);
+    if (photo) {
+      var img = document.createElement('img');
+      img.src = photo; img.alt = ''; img.className = 'avatar-img';
+      profilePreviewAvatar.appendChild(img);
+    } else {
+      var span = document.createElement('span');
+      span.className = 'story-avatar';
+      span.textContent = initials((myProfile && myProfile.displayName) || '');
+      profilePreviewAvatar.appendChild(span);
+    }
+    profilePreviewName.textContent = (myProfile && myProfile.displayName) || 'Your profile';
+    var sub = [(myProfile && myProfile.bio), (myProfile && myProfile.location)].filter(Boolean).join(' \u00b7 ');
+    profilePreviewSub.textContent = sub || 'This is how you appear to other members.';
+  }
 
   function loadMyProfile() {
     return db.collection('users').doc(currentUid).get().then(function (doc) {
@@ -529,13 +551,21 @@
       if (myProfile.dob) {
         profileDobWrap.innerHTML = 'Date of birth (private \u2014 shown only to you)<p class="form-note">' + myProfile.dob + ' (can\u2019t be changed)</p>';
       }
+      renderProfilePreview();
     });
   }
+
+  // Instant preview the moment a photo is picked, before it's even uploaded.
+  profilePhoto.addEventListener('change', function () {
+    var file = profilePhoto.files[0];
+    if (file) renderProfilePreview(URL.createObjectURL(file));
+  });
 
   profileForm.addEventListener('submit', function (e) {
     e.preventDefault();
     var saveBtn = profileForm.querySelector('button[type="submit"]');
     saveBtn.disabled = true;
+    profileStatus.className = 'form-note';
     profileStatus.textContent = profilePhoto.files[0] ? 'Uploading photo\u2026' : 'Saving\u2026';
 
     var update = {
@@ -552,11 +582,14 @@
     }).then(function () {
       return auth.currentUser.updateProfile({ displayName: update.displayName });
     }).then(function () {
-      profileStatus.textContent = 'Saved.';
+      profilePhoto.value = '';
+      profileStatus.className = 'form-success';
+      profileStatus.textContent = '\u2713 Saved \u2014 this is now visible to other members.';
       whoAmI.textContent = update.displayName;
-      setTimeout(function () { profileStatus.textContent = ''; }, 2000);
+      setTimeout(function () { profileStatus.textContent = ''; }, 4000);
       return loadMyProfile().then(loadAllUsers).then(renderFeedOnce);
     }).catch(function (err) {
+      profileStatus.className = 'form-error';
       profileStatus.textContent = 'Could not save: ' + (err && err.message ? err.message : 'try again.');
     }).then(function () { saveBtn.disabled = false; });
   });
@@ -599,7 +632,13 @@
         info.appendChild(sub);
       }
       row.appendChild(info);
-      row.appendChild(buildRelationshipControl(u));
+      var actionsWrap = buildRelationshipControl(u);
+      var msgBtn = document.createElement('button');
+      msgBtn.type = 'button'; msgBtn.className = 'btn btn-ghost btn-sm';
+      msgBtn.textContent = '\u2709 Message';
+      msgBtn.addEventListener('click', function () { openConversation(u); });
+      actionsWrap.appendChild(msgBtn);
+      row.appendChild(actionsWrap);
       membersList.appendChild(row);
     });
   }
@@ -744,15 +783,136 @@
     });
   }
 
+  /* ---------- messages ---------- */
+
+  var inboxList = document.getElementById('inbox-list');
+  var inboxView = document.getElementById('inbox-view');
+  var threadView = document.getElementById('thread-view');
+  var threadBack = document.getElementById('thread-back');
+  var threadWith = document.getElementById('thread-with');
+  var threadMessages = document.getElementById('thread-messages');
+  var threadForm = document.getElementById('thread-form');
+  var threadInput = document.getElementById('thread-input');
+
+  var inboxUnsub = null;
+  var threadUnsub = null;
+  var activeConvId = null, activeOtherUid = null;
+
+  function convIdFor(otherUid) {
+    return currentUid < otherUid ? (currentUid + '_' + otherUid) : (otherUid + '_' + currentUid);
+  }
+
+  function loadInbox() {
+    if (inboxUnsub) inboxUnsub();
+    inboxUnsub = db.collection('conversations')
+      .where('participants', 'array-contains', currentUid)
+      .onSnapshot(function (snap) {
+        var convs = [];
+        snap.forEach(function (doc) { convs.push({ id: doc.id, data: doc.data() }); });
+        convs.sort(function (a, b) {
+          var as = (a.data.lastMessageAt && a.data.lastMessageAt.seconds) || 0;
+          var bs = (b.data.lastMessageAt && b.data.lastMessageAt.seconds) || 0;
+          return bs - as;
+        });
+        if (!convs.length) {
+          inboxList.innerHTML = '<p class="form-note">No conversations yet \u2014 message someone from the Members tab.</p>';
+          return;
+        }
+        inboxList.innerHTML = '';
+        convs.forEach(function (c) {
+          var otherUid = c.data.participants[0] === currentUid ? c.data.participants[1] : c.data.participants[0];
+          var other = usersByUid[otherUid];
+          var row = document.createElement('div');
+          row.className = 'member-row inbox-row';
+          row.appendChild(avatarEl(otherUid, other ? other.displayName : 'Member'));
+          var info = document.createElement('div');
+          info.className = 'member-info';
+          var name = document.createElement('p');
+          name.className = 'member-name';
+          name.textContent = (other && other.displayName) || 'Member';
+          var preview = document.createElement('p');
+          preview.className = 'member-sub';
+          var prefix = c.data.lastMessageBy === currentUid ? 'You: ' : '';
+          preview.textContent = prefix + (c.data.lastMessage || '');
+          info.appendChild(name); info.appendChild(preview);
+          row.appendChild(info);
+          row.addEventListener('click', function () { openConversation(other || { id: otherUid, displayName: 'Member' }); });
+          inboxList.appendChild(row);
+        });
+      }, function () {
+        inboxList.innerHTML = '<p class="form-note">Couldn\u2019t load messages.</p>';
+      });
+  }
+
+  function openConversation(otherUser) {
+    document.querySelector('#main-tabs .tab-btn[data-tab="messages"]').click();
+    activeOtherUid = otherUser.id;
+    activeConvId = convIdFor(otherUser.id);
+    threadWith.textContent = otherUser.displayName || 'Member';
+    inboxView.hidden = true;
+    threadView.hidden = false;
+    threadMessages.innerHTML = '<p class="form-note">Loading\u2026</p>';
+
+    db.collection('conversations').doc(activeConvId).set({
+      participants: [currentUid, otherUser.id].sort()
+    }, { merge: true });
+
+    if (threadUnsub) threadUnsub();
+    threadUnsub = db.collection('conversations').doc(activeConvId).collection('messages')
+      .orderBy('createdAt')
+      .onSnapshot(function (snap) {
+        threadMessages.innerHTML = '';
+        if (snap.empty) { threadMessages.innerHTML = '<p class="form-note">Say hello \u2014 no messages yet.</p>'; return; }
+        snap.forEach(function (doc) {
+          var m = doc.data();
+          var bubble = document.createElement('div');
+          bubble.className = 'msg-bubble ' + (m.fromUid === currentUid ? 'mine' : 'theirs');
+          bubble.textContent = m.text || '';
+          threadMessages.appendChild(bubble);
+        });
+        threadMessages.scrollTop = threadMessages.scrollHeight;
+      }, function () {
+        threadMessages.innerHTML = '<p class="form-note">Couldn\u2019t load this conversation.</p>';
+      });
+  }
+
+  threadBack.addEventListener('click', function () {
+    if (threadUnsub) { threadUnsub(); threadUnsub = null; }
+    threadView.hidden = true;
+    inboxView.hidden = false;
+    activeConvId = null; activeOtherUid = null;
+  });
+
+  threadForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = threadInput.value.trim();
+    if (!text || !activeConvId) return;
+    var sendBtn = threadForm.querySelector('button[type="submit"]');
+    sendBtn.disabled = true;
+    threadInput.value = '';
+    db.collection('conversations').doc(activeConvId).collection('messages').add({
+      fromUid: currentUid, text: text, createdAt: FieldValue.serverTimestamp()
+    }).then(function () {
+      return db.collection('conversations').doc(activeConvId).set({
+        lastMessage: text, lastMessageAt: FieldValue.serverTimestamp(), lastMessageBy: currentUid
+      }, { merge: true });
+    }).catch(function () { threadInput.value = text; })
+      .then(function () { sendBtn.disabled = false; threadInput.focus(); });
+  });
+
   /* ---------- auth state ---------- */
 
   auth.onAuthStateChanged(function (user) {
     editingId = null;
     if (!user) {
       if (feedUnsub) { feedUnsub(); feedUnsub = null; }
+      if (inboxUnsub) { inboxUnsub(); inboxUnsub = null; }
+      if (threadUnsub) { threadUnsub(); threadUnsub = null; }
       lastSnap = null;
       currentUid = null; amAdmin = false;
       friendUids = new Set(); outgoingByUid = {}; incomingByUid = {};
+      threadView.hidden = true; inboxView.hidden = false;
+      activeConvId = null; activeOtherUid = null;
       authSection.hidden = false;
       appSection.hidden = true;
       return;
@@ -779,6 +939,9 @@
       renderFeedOnce();
     });
 
-    loadAllUsers().then(loadRelationships);
+    loadAllUsers().then(function () {
+      loadRelationships();
+      loadInbox();
+    });
   });
 })();

@@ -775,3 +775,41 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
   .tabs-row { gap: 0.3rem; }
   .tab-btn { font-size: 0.72rem; padding: 0.55rem 0.2rem; }
 }
+
+/* PROFILE: preview card, compact form card */
+.profile-preview {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 1.2rem 1.4rem; margin-bottom: 1.4rem;
+}
+.profile-preview .story-avatar, .profile-preview .avatar-img { width: 56px; height: 56px; font-size: 0.95rem; }
+.profile-preview-name { color: var(--white); font-size: 1rem; font-weight: 700; }
+.profile-preview-sub { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
+#profile-form {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 1.6rem;
+}
+.profile-bio-input { min-height: 70px; }
+.form-success { color: var(--green); font-size: 0.85rem; min-height: 1.2em; }
+
+/* MESSAGES: inbox rows, thread bubbles, composer */
+.inbox-row { cursor: pointer; transition: border-color 0.15s; }
+.inbox-row:hover { border-color: rgba(0,255,136,0.3); }
+.inbox-row .member-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.thread-with { font-size: 1.05rem; color: var(--white); margin: 1rem 0 1rem; }
+#thread-messages {
+  display: flex; flex-direction: column; gap: 0.6rem;
+  max-height: 55vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 1.2rem; margin-bottom: 1rem;
+}
+.msg-bubble {
+  max-width: 80%; padding: 0.6rem 0.9rem; border-radius: 12px;
+  font-size: 0.88rem; line-height: 1.5; word-break: break-word;
+}
+.msg-bubble.theirs { align-self: flex-start; background: rgba(255,255,255,0.05); color: var(--text); border-bottom-left-radius: 3px; }
+.msg-bubble.mine { align-self: flex-end; background: var(--green-dim); color: var(--white); border: 1px solid rgba(0,255,136,0.25); border-bottom-right-radius: 3px; }
+
+#thread-form { display: flex; gap: 0.6rem; }
+#thread-form .field-input { flex: 1; }
