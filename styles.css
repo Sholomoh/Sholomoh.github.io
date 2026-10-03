@@ -813,3 +813,35 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 
 #thread-form { display: flex; gap: 0.6rem; }
 #thread-form .field-input { flex: 1; }
+
+/* PROFILE: pending photo preview */
+.pending-note { color: #ffd700; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.pending-note[hidden] { display: none; }
+
+/* MESSAGES: unread state, per-bubble timestamps */
+.inbox-row.unread { border-color: rgba(0,255,136,0.35); }
+.inbox-row.unread .member-name { color: var(--green); }
+.unread-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.msg-bubble { display: flex; flex-direction: column; gap: 0.25rem; }
+.msg-time { font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: var(--muted); align-self: flex-end; }
+.msg-bubble.mine .msg-time { color: rgba(255,255,255,0.45); }
+
+/* POSTS: like/comment reaction bar and inline comments */
+.story-reactions { display: flex; gap: 0.8rem; margin-top: 1rem; }
+.reaction-btn {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: none; border: 1px solid var(--border); border-radius: 20px;
+  color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.8rem;
+  padding: 0.35rem 0.8rem; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+}
+.reaction-btn:hover { border-color: rgba(0,255,136,0.4); color: var(--text); }
+.reaction-btn.liked { color: #ff6b81; border-color: rgba(255,107,129,0.4); }
+
+.comments-section { margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+.comments-list { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 0.9rem; }
+.comment-row { font-size: 0.85rem; }
+.comment-meta { font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; color: var(--green); margin-bottom: 0.15rem; }
+.comment-text { color: var(--text); line-height: 1.5; }
+.comment-del { margin-top: 0.3rem; }
+.comment-form { display: flex; gap: 0.6rem; }
+.comment-form .field-input { flex: 1; }

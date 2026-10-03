@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=17">
   <script src="circuit-bg.js?v=3" defer></script>
   <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -77,7 +77,7 @@
         <button type="button" class="tab-btn active" data-tab="stories">Stories</button>
         <button type="button" class="tab-btn" data-tab="members">Members</button>
         <button type="button" class="tab-btn" data-tab="requests">Requests<span id="requests-badge" class="badge" hidden>0</span></button>
-        <button type="button" class="tab-btn" data-tab="messages">Messages</button>
+        <button type="button" class="tab-btn" data-tab="messages">Messages<span id="messages-badge" class="badge" hidden>0</span></button>
         <button type="button" class="tab-btn" data-tab="profile">My Profile</button>
         <button type="button" class="tab-btn" id="admin-tab-btn" data-tab="admin" hidden>Admin<span id="admin-badge" class="badge" hidden>0</span></button>
       </div>
@@ -158,6 +158,7 @@
           <label class="field-label">Bio<textarea id="profile-bio" class="story-input profile-bio-input" placeholder="A line about yourself..."></textarea></label>
           <label class="field-label">Location<input type="text" id="profile-location" class="field-input" placeholder="City, Country"></label>
           <label class="file-label">Profile photo<input type="file" id="profile-photo" accept="image/*"></label>
+          <p id="profile-photo-pending" class="form-note pending-note" hidden>Preview only — not saved yet. <button type="button" id="profile-photo-cancel" class="btn btn-ghost btn-sm">Cancel</button></p>
           <label class="field-label" id="profile-dob-wrap">Date of birth (private — shown only to you, set once)<input type="date" id="profile-dob" class="field-input"></label>
           <p class="form-note">Email: <span id="profile-email"></span> (can't be changed)</p>
           <button type="submit" class="btn btn-primary">Save profile</button>

@@ -96,10 +96,34 @@ service cloud.firestore {
     match /posts/{postId} {
       allow read: if isSignedIn();
       allow create: if isPoster() && request.resource.data.authorUid == request.auth.uid;
-      allow update: if isSignedIn() &&
-        (resource.data.authorUid == request.auth.uid || isAdmin()) &&
-        request.resource.data.authorUid == resource.data.authorUid &&
-        request.resource.data.createdAt == resource.data.createdAt;
+      // Either the author/admin editing real content (author and date
+      // locked), or any signed-in member bumping only the like/comment
+      // counters — nothing else can change on that second path.
+      allow update: if isSignedIn() && (
+        (
+          (resource.data.authorUid == request.auth.uid || isAdmin()) &&
+          request.resource.data.authorUid == resource.data.authorUid &&
+          request.resource.data.createdAt == resource.data.createdAt
+        ) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount'])
+      );
+      allow delete: if isSignedIn() &&
+        (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    // One like per member per post. The post's own likeCount field is
+    // bumped separately (see the posts update rule above).
+    match /postLikes/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Comments on a post. Any signed-in member can comment; the author
+    // or an admin can remove one.
+    match /postComments/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
       allow delete: if isSignedIn() &&
         (resource.data.authorUid == request.auth.uid || isAdmin());
     }

@@ -239,6 +239,126 @@
   var currentUid = null, amAdmin = false;
   var editingId = null;
   var lastSnap = null;
+  var myLikedPostIds = new Set();
+  var expandedComments = new Set();
+  var commentsCache = {};
+
+  function toggleLike(postId, alreadyLiked) {
+    var likeDocId = postId + '_' + currentUid;
+    var postRef = db.collection('posts').doc(postId);
+    if (alreadyLiked) {
+      myLikedPostIds.delete(postId);
+      renderFeedOnce();
+      return db.collection('postLikes').doc(likeDocId).delete().then(function () {
+        return postRef.update({ likeCount: FieldValue.increment(-1) });
+      });
+    }
+    myLikedPostIds.add(postId);
+    renderFeedOnce();
+    return db.collection('postLikes').doc(likeDocId).set({
+      postId: postId, uid: currentUid, createdAt: FieldValue.serverTimestamp()
+    }).then(function () { return postRef.update({ likeCount: FieldValue.increment(1) }); });
+  }
+
+  function loadMyLikes() {
+    return db.collection('postLikes').where('uid', '==', currentUid).get().then(function (snap) {
+      myLikedPostIds = new Set();
+      snap.forEach(function (doc) { myLikedPostIds.add(doc.data().postId); });
+      renderFeedOnce();
+    });
+  }
+
+  function fetchComments(postId) {
+    return db.collection('postComments').where('postId', '==', postId).get().then(function (snap) {
+      var arr = [];
+      snap.forEach(function (doc) { var d = doc.data(); d.id = doc.id; arr.push(d); });
+      arr.sort(function (a, b) {
+        return ((a.createdAt && a.createdAt.seconds) || 0) - ((b.createdAt && b.createdAt.seconds) || 0);
+      });
+      commentsCache[postId] = arr;
+      renderFeedOnce();
+    });
+  }
+
+  function toggleComments(postId) {
+    if (expandedComments.has(postId)) {
+      expandedComments.delete(postId);
+      renderFeedOnce();
+      return;
+    }
+    expandedComments.add(postId);
+    renderFeedOnce();
+    if (!commentsCache[postId]) fetchComments(postId);
+  }
+
+  function buildCommentsSection(postId) {
+    var wrap = document.createElement('div');
+    wrap.className = 'comments-section';
+    var list = document.createElement('div');
+    list.className = 'comments-list';
+    var cached = commentsCache[postId];
+    if (!cached) {
+      list.innerHTML = '<p class="form-note">Loading comments\u2026</p>';
+    } else if (!cached.length) {
+      list.innerHTML = '<p class="form-note">No comments yet \u2014 be the first.</p>';
+    } else {
+      cached.forEach(function (c) {
+        var row = document.createElement('div');
+        row.className = 'comment-row';
+        var head = document.createElement('p');
+        head.className = 'comment-meta';
+        var when = c.createdAt && c.createdAt.toDate ? relTime(c.createdAt.toDate()) : '';
+        head.textContent = (c.authorName || 'Member') + (when ? ' \u00b7 ' + when : '');
+        var ctext = document.createElement('p');
+        ctext.className = 'comment-text';
+        ctext.textContent = c.text || '';
+        row.appendChild(head); row.appendChild(ctext);
+        if (currentUid && (c.authorUid === currentUid || amAdmin)) {
+          var del = document.createElement('button');
+          del.type = 'button'; del.className = 'btn btn-ghost btn-sm btn-danger comment-del';
+          del.textContent = 'Delete';
+          del.addEventListener('click', function () {
+            del.disabled = true;
+            db.collection('postComments').doc(c.id).delete().then(function () {
+              return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(-1) });
+            }).then(function () {
+              commentsCache[postId] = (commentsCache[postId] || []).filter(function (x) { return x.id !== c.id; });
+              renderFeedOnce();
+            }).catch(function () { del.disabled = false; });
+          });
+          row.appendChild(del);
+        }
+        list.appendChild(row);
+      });
+    }
+    wrap.appendChild(list);
+
+    if (currentUid) {
+      var form = document.createElement('form');
+      form.className = 'comment-form';
+      var input = document.createElement('input');
+      input.type = 'text'; input.className = 'field-input'; input.placeholder = 'Add a comment...'; input.required = true;
+      var btn = document.createElement('button');
+      btn.type = 'submit'; btn.className = 'btn btn-ghost btn-sm'; btn.textContent = 'Post';
+      form.appendChild(input); form.appendChild(btn);
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var val = input.value.trim();
+        if (!val) return;
+        btn.disabled = true;
+        db.collection('postComments').add({
+          postId: postId, authorUid: currentUid,
+          authorName: (myProfile && myProfile.displayName) || auth.currentUser.email,
+          text: val, createdAt: FieldValue.serverTimestamp()
+        }).then(function () {
+          return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(1) });
+        }).then(function () { return fetchComments(postId); })
+          .catch(function () {}).then(function () { btn.disabled = false; });
+      });
+      wrap.appendChild(form);
+    }
+    return wrap;
+  }
 
   function buildStoryCard(id, p) {
     var card = document.createElement('article');
@@ -277,6 +397,32 @@
     text.className = 'story-text';
     text.textContent = p.body || '';
     body.appendChild(text);
+
+    var reactions = document.createElement('div');
+    reactions.className = 'story-reactions';
+    var liked = myLikedPostIds.has(id);
+    var likeBtn = document.createElement('button');
+    likeBtn.type = 'button';
+    likeBtn.className = 'reaction-btn' + (liked ? ' liked' : '');
+    likeBtn.textContent = (liked ? '\u2764' : '\u2661') + ' ' + (p.likeCount || 0);
+    likeBtn.addEventListener('click', function () {
+      if (!currentUid) return;
+      likeBtn.disabled = true;
+      toggleLike(id, liked).catch(function () {}).then(function () { likeBtn.disabled = false; });
+    });
+    reactions.appendChild(likeBtn);
+    var commentBtn = document.createElement('button');
+    commentBtn.type = 'button';
+    commentBtn.className = 'reaction-btn';
+    var cc = p.commentCount || 0;
+    commentBtn.textContent = '\ud83d\udcac ' + cc + (cc === 1 ? ' comment' : ' comments');
+    commentBtn.addEventListener('click', function () { toggleComments(id); });
+    reactions.appendChild(commentBtn);
+    body.appendChild(reactions);
+
+    if (expandedComments.has(id)) {
+      body.appendChild(buildCommentsSection(id));
+    }
 
     if (currentUid && (p.authorUid === currentUid || amAdmin)) {
       var actions = document.createElement('div');
@@ -504,6 +650,8 @@
         photoURL: url,
         authorUid: user.uid,
         authorName: user.displayName || user.email,
+        likeCount: 0,
+        commentCount: 0,
         createdAt: FieldValue.serverTimestamp()
       });
     }).then(function () {
@@ -551,14 +699,28 @@
       if (myProfile.dob) {
         profileDobWrap.innerHTML = 'Date of birth (private \u2014 shown only to you)<p class="form-note">' + myProfile.dob + ' (can\u2019t be changed)</p>';
       }
+      document.getElementById('profile-photo-pending').hidden = true;
       renderProfilePreview();
     });
   }
 
-  // Instant preview the moment a photo is picked, before it's even uploaded.
+  // Instant preview the moment a photo is picked, before it's even uploaded
+  // or saved — clearly marked as a pending preview, with a way to back out
+  // so an unsaved choice never looks like it already took effect.
+  var profilePhotoPending = document.getElementById('profile-photo-pending');
+  var profilePhotoCancel = document.getElementById('profile-photo-cancel');
+
   profilePhoto.addEventListener('change', function () {
     var file = profilePhoto.files[0];
-    if (file) renderProfilePreview(URL.createObjectURL(file));
+    if (file) {
+      renderProfilePreview(URL.createObjectURL(file));
+      profilePhotoPending.hidden = false;
+    }
+  });
+  profilePhotoCancel.addEventListener('click', function () {
+    profilePhoto.value = '';
+    profilePhotoPending.hidden = true;
+    renderProfilePreview();
   });
 
   profileForm.addEventListener('submit', function (e) {
@@ -583,6 +745,7 @@
       return auth.currentUser.updateProfile({ displayName: update.displayName });
     }).then(function () {
       profilePhoto.value = '';
+      profilePhotoPending.hidden = true;
       profileStatus.className = 'form-success';
       profileStatus.textContent = '\u2713 Saved \u2014 this is now visible to other members.';
       whoAmI.textContent = update.displayName;
@@ -797,9 +960,28 @@
   var inboxUnsub = null;
   var threadUnsub = null;
   var activeConvId = null, activeOtherUid = null;
+  var messagesBadge = document.getElementById('messages-badge');
 
   function convIdFor(otherUid) {
     return currentUid < otherUid ? (currentUid + '_' + otherUid) : (otherUid + '_' + currentUid);
+  }
+
+  // Unread tracking uses two fixed fields (lastReadAt0/lastReadAt1) keyed
+  // to each conversation's sorted participants array, rather than a map
+  // field — simpler to write safely under Firestore rules.
+  function myReadField(participants) {
+    return participants[0] === currentUid ? 'lastReadAt0' : 'lastReadAt1';
+  }
+  function isUnread(c) {
+    if (c.lastMessageBy === currentUid || !c.lastMessageAt) return false;
+    var mine = c[myReadField(c.participants)];
+    return !mine || mine.seconds < c.lastMessageAt.seconds;
+  }
+  function markRead(convId, participants) {
+    var field = myReadField(participants);
+    var payload = {};
+    payload[field] = FieldValue.serverTimestamp();
+    return db.collection('conversations').doc(convId).set(payload, { merge: true });
   }
 
   function loadInbox() {
@@ -814,6 +996,11 @@
           var bs = (b.data.lastMessageAt && b.data.lastMessageAt.seconds) || 0;
           return bs - as;
         });
+
+        var unreadCount = convs.filter(function (c) { return isUnread(c.data); }).length;
+        messagesBadge.hidden = unreadCount === 0;
+        if (unreadCount) messagesBadge.textContent = String(unreadCount);
+
         if (!convs.length) {
           inboxList.innerHTML = '<p class="form-note">No conversations yet \u2014 message someone from the Members tab.</p>';
           return;
@@ -822,8 +1009,9 @@
         convs.forEach(function (c) {
           var otherUid = c.data.participants[0] === currentUid ? c.data.participants[1] : c.data.participants[0];
           var other = usersByUid[otherUid];
+          var unread = isUnread(c.data);
           var row = document.createElement('div');
-          row.className = 'member-row inbox-row';
+          row.className = 'member-row inbox-row' + (unread ? ' unread' : '');
           row.appendChild(avatarEl(otherUid, other ? other.displayName : 'Member'));
           var info = document.createElement('div');
           info.className = 'member-info';
@@ -836,6 +1024,11 @@
           preview.textContent = prefix + (c.data.lastMessage || '');
           info.appendChild(name); info.appendChild(preview);
           row.appendChild(info);
+          if (unread) {
+            var dot = document.createElement('span');
+            dot.className = 'unread-dot';
+            row.appendChild(dot);
+          }
           row.addEventListener('click', function () { openConversation(other || { id: otherUid, displayName: 'Member' }); });
           inboxList.appendChild(row);
         });
@@ -848,14 +1041,15 @@
     document.querySelector('#main-tabs .tab-btn[data-tab="messages"]').click();
     activeOtherUid = otherUser.id;
     activeConvId = convIdFor(otherUser.id);
+    var participants = [currentUid, otherUser.id].sort();
     threadWith.textContent = otherUser.displayName || 'Member';
     inboxView.hidden = true;
     threadView.hidden = false;
     threadMessages.innerHTML = '<p class="form-note">Loading\u2026</p>';
 
     db.collection('conversations').doc(activeConvId).set({
-      participants: [currentUid, otherUser.id].sort()
-    }, { merge: true });
+      participants: participants
+    }, { merge: true }).then(function () { markRead(activeConvId, participants); });
 
     if (threadUnsub) threadUnsub();
     threadUnsub = db.collection('conversations').doc(activeConvId).collection('messages')
@@ -867,10 +1061,18 @@
           var m = doc.data();
           var bubble = document.createElement('div');
           bubble.className = 'msg-bubble ' + (m.fromUid === currentUid ? 'mine' : 'theirs');
-          bubble.textContent = m.text || '';
+          var text = document.createElement('span');
+          text.textContent = m.text || '';
+          bubble.appendChild(text);
+          var time = document.createElement('span');
+          time.className = 'msg-time';
+          time.textContent = m.createdAt && m.createdAt.toDate ? relTime(m.createdAt.toDate()) : '';
+          bubble.appendChild(time);
           threadMessages.appendChild(bubble);
         });
         threadMessages.scrollTop = threadMessages.scrollHeight;
+        // Still looking at this thread when a new message lands -> stays read.
+        if (activeConvId) markRead(activeConvId, participants);
       }, function () {
         threadMessages.innerHTML = '<p class="form-note">Couldn\u2019t load this conversation.</p>';
       });
@@ -911,6 +1113,7 @@
       lastSnap = null;
       currentUid = null; amAdmin = false;
       friendUids = new Set(); outgoingByUid = {}; incomingByUid = {};
+      myLikedPostIds = new Set(); expandedComments = new Set(); commentsCache = {};
       threadView.hidden = true; inboxView.hidden = false;
       activeConvId = null; activeOtherUid = null;
       authSection.hidden = false;
@@ -923,6 +1126,7 @@
     whoAmI.textContent = user.displayName || user.email;
     renderFeed();
     loadMyProfile();
+    loadMyLikes();
 
     Promise.all([
       db.collection('admins').doc(user.uid).get().catch(function () { return { exists: false }; }),
