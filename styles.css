@@ -549,6 +549,16 @@ body.home::after {
   border: 1px solid var(--green);
   transition: background 0.2s, color 0.2s, transform 0.2s;
 }
+/* Any element styled with display:flex/inline-flex (buttons, tabs, form
+   rows, etc.) silently cancels the browser's native [hidden] behavior,
+   since author CSS always wins over the UA stylesheet. Rather than patch
+   each case as it's found, every such class gets its [hidden] rule
+   restored here in one place. */
+.btn[hidden],
+.auth-form[hidden],
+.tab-btn[hidden],
+.tab-panel[hidden],
+.pending-note[hidden] { display: none; }
 .btn-primary { background: var(--green); color: #060a0f; }
 .btn-primary:hover { background: #33ffa0; transform: translateY(-2px); }
 .btn-ghost { color: var(--green); background: rgba(6,10,15,0.85); }
@@ -613,7 +623,6 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 }
 .circuit-layer.on { opacity: 1; }
 
-
 /* MEMBERS PAGE */
 .auth-card {
   max-width: 420px;
@@ -630,7 +639,6 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 }
 .auth-tab.active { color: var(--green); border-bottom-color: var(--green); }
 .auth-form { display: flex; flex-direction: column; gap: 0.9rem; }
-.auth-form[hidden] { display: none; }
 .field-input, .story-input {
   width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.75rem 0.9rem; color: var(--white); font-family: 'Syne', sans-serif; font-size: 0.9rem;
@@ -735,9 +743,7 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
   padding: 0.6rem 0.3rem; border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
-.tab-btn[hidden] { display: none; }
 .tab-btn .badge { margin-left: 0.1rem; }
-.tab-panel[hidden] { display: none; }
 
 .subtabs-row { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; }
 .subtab-btn {
@@ -778,13 +784,15 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 
 /* PROFILE: preview card, compact form card */
 .profile-preview {
-  display: flex; align-items: center; gap: 1rem;
+  display: flex; flex-direction: column; gap: 1rem; align-items: flex-start;
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  padding: 1.2rem 1.4rem; margin-bottom: 1.4rem;
+  padding: 1.3rem 1.4rem; margin-bottom: 1.4rem;
 }
-.profile-preview .story-avatar, .profile-preview .avatar-img { width: 56px; height: 56px; font-size: 0.95rem; }
-.profile-preview-name { color: var(--white); font-size: 1rem; font-weight: 700; }
-.profile-preview-sub { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
+.profile-preview-header { display: flex; align-items: center; gap: 1rem; width: 100%; }
+.profile-preview .story-avatar, .profile-preview .avatar-img { width: 56px; height: 56px; font-size: 0.95rem; flex-shrink: 0; }
+.profile-preview-text { flex: 1; min-width: 0; }
+.profile-preview-name { color: var(--white); font-size: 1.05rem; font-weight: 700; }
+.profile-preview-sub { color: var(--muted); font-size: 0.82rem; margin-top: 0.25rem; line-height: 1.5; }
 #profile-form {
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
   padding: 1.6rem;
@@ -816,7 +824,6 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 
 /* PROFILE: pending photo preview */
 .pending-note { color: #ffd700; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.5rem; }
-.pending-note[hidden] { display: none; }
 
 /* MESSAGES: unread state, per-bubble timestamps */
 .inbox-row.unread { border-color: rgba(0,255,136,0.35); }

@@ -704,6 +704,29 @@
     });
   }
 
+  // Normal profile view by default; "Edit profile" reveals the form below
+  // the (still-live) preview card, Cancel discards any unsaved typing.
+  var profileEditBtn = document.getElementById('profile-edit-btn');
+  var profileCancelBtn = document.getElementById('profile-cancel-btn');
+
+  function closeEditForm() {
+    profileForm.hidden = true;
+    profileEditBtn.hidden = false;
+    profileName.value = myProfile.displayName || '';
+    profileBio.value = myProfile.bio || '';
+    profileLocation.value = myProfile.location || '';
+    profilePhoto.value = '';
+    document.getElementById('profile-photo-pending').hidden = true;
+    renderProfilePreview();
+  }
+
+  profileEditBtn.addEventListener('click', function () {
+    profileForm.hidden = false;
+    profileEditBtn.hidden = true;
+    profileName.focus();
+  });
+  profileCancelBtn.addEventListener('click', closeEditForm);
+
   // Instant preview the moment a photo is picked, before it's even uploaded
   // or saved — clearly marked as a pending preview, with a way to back out
   // so an unsaved choice never looks like it already took effect.
@@ -749,7 +772,11 @@
       profileStatus.className = 'form-success';
       profileStatus.textContent = '\u2713 Saved \u2014 this is now visible to other members.';
       whoAmI.textContent = update.displayName;
-      setTimeout(function () { profileStatus.textContent = ''; }, 4000);
+      setTimeout(function () {
+        profileStatus.textContent = '';
+        profileForm.hidden = true;
+        profileEditBtn.hidden = false;
+      }, 2200);
       return loadMyProfile().then(loadAllUsers).then(renderFeedOnce);
     }).catch(function (err) {
       profileStatus.className = 'form-error';
