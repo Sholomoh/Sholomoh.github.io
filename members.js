@@ -80,7 +80,7 @@
 
   /* ---------- small helpers ---------- */
 
-  function showAuthError(msg) { authError.textContent = msg || ''; }
+  function showAuthError(msg) { authError.className = 'form-error'; authError.textContent = msg || ''; }
 
   function initials(name) {
     var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -165,6 +165,20 @@
     });
   });
 
+  document.getElementById('forgot-password-btn').addEventListener('click', function () {
+    var email = document.getElementById('signin-email').value.trim();
+    if (!email) {
+      showAuthError('Enter your email above first, then tap "Forgot password?" again.');
+      document.getElementById('signin-email').focus();
+      return;
+    }
+    showAuthError('');
+    auth.sendPasswordResetEmail(email).then(function () {
+      authError.className = 'form-success';
+      authError.textContent = '\u2713 Password reset email sent to ' + email + '.';
+    }).catch(function (err) { showAuthError(friendlyError(err)); });
+  });
+
   signupForm.addEventListener('submit', function (e) {
     e.preventDefault();
     showAuthError('');
@@ -242,8 +256,9 @@
   var myLikedPostIds = new Set();
   var expandedComments = new Set();
   var commentsCache = {};
+  var commentUnsubs = {};
 
-  function toggleLike(postId, alreadyLiked) {
+  function toggleLike(postId, alreadyLiked, postAuthorUid, postTitle) {
     var likeDocId = postId + '_' + currentUid;
     var postRef = db.collection('posts').doc(postId);
     if (alreadyLiked) {
@@ -257,7 +272,8 @@
     renderFeedOnce();
     return db.collection('postLikes').doc(likeDocId).set({
       postId: postId, uid: currentUid, createdAt: FieldValue.serverTimestamp()
-    }).then(function () { return postRef.update({ likeCount: FieldValue.increment(1) }); });
+    }).then(function () { return postRef.update({ likeCount: FieldValue.increment(1) }); })
+      .then(function () { return notifyIfNotSelf(postAuthorUid, 'like', { postId: postId, postTitle: postTitle }); });
   }
 
   function loadMyLikes() {
@@ -268,30 +284,35 @@
     });
   }
 
-  function fetchComments(postId) {
-    return db.collection('postComments').where('postId', '==', postId).get().then(function (snap) {
-      var arr = [];
-      snap.forEach(function (doc) { var d = doc.data(); d.id = doc.id; arr.push(d); });
-      arr.sort(function (a, b) {
-        return ((a.createdAt && a.createdAt.seconds) || 0) - ((b.createdAt && b.createdAt.seconds) || 0);
+  // Comments stay subscribed live only while their section is expanded, so
+  // a new comment from someone else appears without reopening the post.
+  function subscribeComments(postId) {
+    if (commentUnsubs[postId]) return;
+    commentUnsubs[postId] = db.collection('postComments').where('postId', '==', postId)
+      .onSnapshot(function (snap) {
+        var arr = [];
+        snap.forEach(function (doc) { var d = doc.data(); d.id = doc.id; arr.push(d); });
+        arr.sort(function (a, b) {
+          return ((a.createdAt && a.createdAt.seconds) || 0) - ((b.createdAt && b.createdAt.seconds) || 0);
+        });
+        commentsCache[postId] = arr;
+        renderFeedOnce();
       });
-      commentsCache[postId] = arr;
-      renderFeedOnce();
-    });
   }
 
   function toggleComments(postId) {
     if (expandedComments.has(postId)) {
       expandedComments.delete(postId);
+      if (commentUnsubs[postId]) { commentUnsubs[postId](); delete commentUnsubs[postId]; }
       renderFeedOnce();
       return;
     }
     expandedComments.add(postId);
     renderFeedOnce();
-    if (!commentsCache[postId]) fetchComments(postId);
+    subscribeComments(postId);
   }
 
-  function buildCommentsSection(postId) {
+  function buildCommentsSection(postId, postAuthorUid, postTitle) {
     var wrap = document.createElement('div');
     wrap.className = 'comments-section';
     var list = document.createElement('div');
@@ -346,14 +367,14 @@
         var val = input.value.trim();
         if (!val) return;
         btn.disabled = true;
+        input.value = '';
         db.collection('postComments').add({
           postId: postId, authorUid: currentUid,
           authorName: (myProfile && myProfile.displayName) || auth.currentUser.email,
           text: val, createdAt: FieldValue.serverTimestamp()
         }).then(function () {
           return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(1) });
-        }).then(function () { return fetchComments(postId); })
-          .catch(function () {}).then(function () { btn.disabled = false; });
+        }).catch(function () { input.value = val; }).then(function () { btn.disabled = false; });
       });
       wrap.appendChild(form);
     }
@@ -408,7 +429,7 @@
     likeBtn.addEventListener('click', function () {
       if (!currentUid) return;
       likeBtn.disabled = true;
-      toggleLike(id, liked).catch(function () {}).then(function () { likeBtn.disabled = false; });
+      toggleLike(id, liked, p.authorUid, p.title).catch(function () {}).then(function () { likeBtn.disabled = false; });
     });
     reactions.appendChild(likeBtn);
     var commentBtn = document.createElement('button');
@@ -421,7 +442,7 @@
     body.appendChild(reactions);
 
     if (expandedComments.has(id)) {
-      body.appendChild(buildCommentsSection(id));
+      body.appendChild(buildCommentsSection(id, p.authorUid, p.title));
     }
 
     if (currentUid && (p.authorUid === currentUid || amAdmin)) {
@@ -1125,8 +1146,99 @@
       return db.collection('conversations').doc(activeConvId).set({
         lastMessage: text, lastMessageAt: FieldValue.serverTimestamp(), lastMessageBy: currentUid
       }, { merge: true });
+    }).then(function () {
+      return notifyIfNotSelf(activeOtherUid, 'message', { convId: activeConvId });
     }).catch(function () { threadInput.value = text; })
       .then(function () { sendBtn.disabled = false; threadInput.focus(); });
+  });
+
+  /* ---------- notifications ---------- */
+
+  var notifBell = document.getElementById('notif-bell');
+  var notifBadge = document.getElementById('notif-badge');
+  var notifPanel = document.getElementById('notif-panel');
+  var notifList = document.getElementById('notif-list');
+  var notifUnsub = null;
+  var lastNotifs = [];
+
+  // Writes a notification doc for toUid, unless toUid is me (liking or
+  // messaging yourself shouldn't notify you). Never blocks the caller on
+  // failure — a missed notification isn't worth surfacing an error for.
+  function notifyIfNotSelf(toUid, type, extra) {
+    if (!toUid || toUid === currentUid) return Promise.resolve();
+    var payload = Object.assign({
+      toUid: toUid, type: type, fromUid: currentUid,
+      fromName: (myProfile && myProfile.displayName) || auth.currentUser.email,
+      read: false, createdAt: FieldValue.serverTimestamp()
+    }, extra || {});
+    return db.collection('notifications').add(payload).catch(function () {});
+  }
+
+  function notifText(n) {
+    if (n.type === 'like') return (n.fromName || 'Someone') + ' liked your story \u201c' + (n.postTitle || '') + '\u201d';
+    if (n.type === 'message') return (n.fromName || 'Someone') + ' sent you a message';
+    return (n.fromName || 'Someone') + ' did something';
+  }
+
+  function renderNotifList() {
+    var unread = lastNotifs.filter(function (n) { return !n.data.read; }).length;
+    notifBadge.hidden = unread === 0;
+    if (unread) notifBadge.textContent = String(unread > 9 ? '9+' : unread);
+
+    if (!lastNotifs.length) {
+      notifList.innerHTML = '<p class="form-note">No notifications yet.</p>';
+      return;
+    }
+    notifList.innerHTML = '';
+    lastNotifs.slice(0, 25).forEach(function (n) {
+      var row = document.createElement('div');
+      row.className = 'notif-row' + (n.data.read ? '' : ' unread');
+      var text = document.createElement('div');
+      var main = document.createElement('span');
+      main.textContent = notifText(n.data);
+      var time = document.createElement('span');
+      time.className = 'notif-time';
+      time.textContent = n.data.createdAt && n.data.createdAt.toDate ? relTime(n.data.createdAt.toDate()) : '';
+      text.appendChild(main); text.appendChild(time);
+      row.appendChild(text);
+      if (n.data.type === 'message') {
+        row.classList.add('clickable');
+        row.addEventListener('click', function () {
+          notifPanel.hidden = true;
+          var other = usersByUid[n.data.fromUid] || { id: n.data.fromUid, displayName: n.data.fromName };
+          openConversation(other);
+        });
+      }
+      notifList.appendChild(row);
+    });
+  }
+
+  function loadNotifications() {
+    if (notifUnsub) notifUnsub();
+    notifUnsub = db.collection('notifications').where('toUid', '==', currentUid)
+      .onSnapshot(function (snap) {
+        var arr = [];
+        snap.forEach(function (doc) { arr.push({ id: doc.id, data: doc.data() }); });
+        arr.sort(function (a, b) {
+          return ((b.data.createdAt && b.data.createdAt.seconds) || 0) - ((a.data.createdAt && a.data.createdAt.seconds) || 0);
+        });
+        lastNotifs = arr;
+        renderNotifList();
+      }, function () {
+        notifList.innerHTML = '<p class="form-note">Couldn\u2019t load notifications.</p>';
+      });
+  }
+
+  function markAllNotifsRead() {
+    var unread = lastNotifs.filter(function (n) { return !n.data.read; });
+    unread.forEach(function (n) {
+      db.collection('notifications').doc(n.id).update({ read: true }).catch(function () {});
+    });
+  }
+
+  notifBell.addEventListener('click', function () {
+    notifPanel.hidden = !notifPanel.hidden;
+    if (!notifPanel.hidden) markAllNotifsRead();
   });
 
   /* ---------- auth state ---------- */
@@ -1137,12 +1249,16 @@
       if (feedUnsub) { feedUnsub(); feedUnsub = null; }
       if (inboxUnsub) { inboxUnsub(); inboxUnsub = null; }
       if (threadUnsub) { threadUnsub(); threadUnsub = null; }
-      lastSnap = null;
+      if (notifUnsub) { notifUnsub(); notifUnsub = null; }
+      Object.keys(commentUnsubs).forEach(function (k) { commentUnsubs[k](); });
+      commentUnsubs = {};
+      lastSnap = null; lastNotifs = [];
       currentUid = null; amAdmin = false;
       friendUids = new Set(); outgoingByUid = {}; incomingByUid = {};
       myLikedPostIds = new Set(); expandedComments = new Set(); commentsCache = {};
       threadView.hidden = true; inboxView.hidden = false;
       activeConvId = null; activeOtherUid = null;
+      notifPanel.hidden = true; notifBadge.hidden = true;
       authSection.hidden = false;
       appSection.hidden = true;
       return;
@@ -1154,6 +1270,7 @@
     renderFeed();
     loadMyProfile();
     loadMyLikes();
+    loadNotifications();
 
     Promise.all([
       db.collection('admins').doc(user.uid).get().catch(function () { return { exists: false }; }),

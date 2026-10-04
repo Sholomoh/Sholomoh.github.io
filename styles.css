@@ -852,3 +852,37 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .comment-del { margin-top: 0.3rem; }
 .comment-form { display: flex; gap: 0.6rem; }
 .comment-form .field-input { flex: 1; }
+
+/* AUTH: forgot password link */
+.forgot-link {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.78rem;
+  text-decoration: underline; padding: 0.2rem 0; align-self: flex-start;
+}
+.forgot-link:hover { color: var(--green); }
+
+/* NOTIFICATIONS: bell, badge, dropdown panel */
+.member-bar-right { display: flex; align-items: center; gap: 0.6rem; }
+.notif-bell { position: relative; font-size: 1rem; padding: 0.5rem 0.8rem; }
+.notif-badge {
+  position: absolute; top: -6px; right: -6px;
+  background: #ff4757; color: var(--white);
+}
+.notif-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 1rem 1.2rem; margin: -1.4rem 0 2rem;
+  max-height: 60vh; overflow-y: auto;
+}
+.notif-panel-head p { font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.8rem; }
+.notif-row {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  padding: 0.7rem 0; border-bottom: 1px solid var(--border);
+  font-size: 0.85rem; color: var(--text);
+}
+.notif-row:last-child { border-bottom: none; }
+.notif-row.unread { color: var(--white); }
+.notif-row.unread::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #ff4757; flex-shrink: 0; margin-top: 0.4rem; }
+.notif-row:not(.unread)::before { content: ''; width: 7px; flex-shrink: 0; }
+.notif-time { display: block; font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; }
+.notif-row.clickable { cursor: pointer; }
+.notif-row.clickable:hover { color: var(--green); }

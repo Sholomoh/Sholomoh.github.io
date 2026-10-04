@@ -68,6 +68,21 @@ service cloud.firestore {
         (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
     }
 
+    // Activity notifications (new message, a like on your post). Only the
+    // recipient can ever read their own notifications. Senders can create
+    // one for someone else but never for themselves; the recipient can
+    // only flip "read" and nothing else about an entry they didn't send.
+    match /notifications/{id} {
+      allow read: if isSignedIn() && resource.data.toUid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUid == request.auth.uid &&
+        request.resource.data.toUid != request.auth.uid;
+      allow update: if isSignedIn() && resource.data.toUid == request.auth.uid &&
+        request.resource.data.toUid == resource.data.toUid &&
+        request.resource.data.fromUid == resource.data.fromUid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
     // Direct messages. Conversation id is the two participant uids,
     // sorted and joined with "_", so starting a chat with someone
     // always resolves to the same thread. Any signed-in member can

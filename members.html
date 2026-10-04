@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=20">
+  <link rel="stylesheet" href="styles.css?v=21">
   <script src="circuit-bg.js?v=3" defer></script>
   <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -56,6 +56,7 @@
           <input type="email" id="signin-email" class="field-input" placeholder="Email" required autocomplete="email">
           <input type="password" id="signin-password" class="field-input" placeholder="Password" required autocomplete="current-password">
           <button type="submit" class="btn btn-primary">Sign in</button>
+          <button type="button" id="forgot-password-btn" class="forgot-link">Forgot password?</button>
         </form>
         <form id="signup-form" class="auth-form" hidden>
           <input type="text" id="signup-name" class="field-input" placeholder="Your name" required autocomplete="name">
@@ -70,7 +71,16 @@
     <div id="app-section" hidden>
       <div class="member-bar">
         <span id="who-am-i"></span>
-        <button id="signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+        <div class="member-bar-right">
+          <button type="button" id="notif-bell" class="btn btn-ghost btn-sm notif-bell">🔔<span id="notif-badge" class="badge notif-badge" hidden>0</span></button>
+          <button id="signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+        </div>
+      </div>
+      <div id="notif-panel" class="notif-panel" hidden>
+        <div class="notif-panel-head">
+          <p>Notifications</p>
+        </div>
+        <div id="notif-list"></div>
       </div>
 
       <div class="tabs-row" id="main-tabs">
