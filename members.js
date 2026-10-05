@@ -374,6 +374,8 @@
           text: val, createdAt: FieldValue.serverTimestamp()
         }).then(function () {
           return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(1) });
+        }).then(function () {
+          return notifyIfNotSelf(postAuthorUid, 'comment', { postId: postId, postTitle: postTitle });
         }).catch(function () { input.value = val; }).then(function () { btn.disabled = false; });
       });
       wrap.appendChild(form);
@@ -1176,6 +1178,7 @@
 
   function notifText(n) {
     if (n.type === 'like') return (n.fromName || 'Someone') + ' liked your story \u201c' + (n.postTitle || '') + '\u201d';
+    if (n.type === 'comment') return (n.fromName || 'Someone') + ' commented on your story \u201c' + (n.postTitle || '') + '\u201d';
     if (n.type === 'message') return (n.fromName || 'Someone') + ' sent you a message';
     return (n.fromName || 'Someone') + ' did something';
   }
