@@ -203,7 +203,6 @@
     auth.createUserWithEmailAndPassword(email, pw).then(function (cred) {
       return cred.user.updateProfile({ displayName: name }).then(function () {
         return db.collection('users').doc(cred.user.uid).set({
-          email: email,
           displayName: name,
           bio: '',
           location: '',
@@ -381,9 +380,47 @@
   }
 
   var editingCommentId = null;
+  var replyingToId = null;
+  var replyValue = '';
   var editingCommentValue = null;
 
   function buildCommentsSection(postId, postAuthorUid, postTitle) {
+    function buildReplyForm(parent) {
+      var rform = document.createElement('form');
+      rform.className = 'comment-form reply-form';
+      var rinput = document.createElement('input');
+      rinput.type = 'text'; rinput.className = 'field-input'; rinput.maxLength = 1000; rinput.required = true;
+      rinput.placeholder = 'Reply to ' + (parent.authorName || 'comment') + '...';
+      rinput.value = replyValue;
+      rinput.addEventListener('input', function () { replyValue = rinput.value; });
+      var rpost = document.createElement('button');
+      rpost.type = 'submit'; rpost.className = 'btn btn-ghost btn-sm'; rpost.textContent = 'Reply';
+      var rcancel = document.createElement('button');
+      rcancel.type = 'button'; rcancel.className = 'btn btn-ghost btn-sm'; rcancel.textContent = 'Cancel';
+      rcancel.addEventListener('click', function () { replyingToId = null; replyValue = ''; renderFeedOnce(); });
+      rform.appendChild(rinput); rform.appendChild(rpost); rform.appendChild(rcancel);
+      rform.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var val = rinput.value.trim();
+        if (!val) return;
+        rpost.disabled = true;
+        db.collection('postComments').add({
+          postId: postId, parentId: parent.id, authorUid: currentUid,
+          authorName: (myProfile && myProfile.displayName) || 'Member',
+          text: val, createdAt: FieldValue.serverTimestamp()
+        }).then(function () {
+          return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(1) });
+        }).then(function () {
+          replyingToId = null; replyValue = '';
+          var jobs = [notifyIfNotSelf(parent.authorUid, 'reply', { postId: postId, postTitle: postTitle })];
+          if (postAuthorUid !== parent.authorUid) jobs.push(notifyIfNotSelf(postAuthorUid, 'comment', { postId: postId, postTitle: postTitle }));
+          return Promise.all(jobs);
+        }).catch(function () { rpost.disabled = false; });
+      });
+      setTimeout(function () { rinput.focus(); }, 0);
+      return rform;
+    }
+
     var wrap = document.createElement('div');
     wrap.className = 'comments-section';
     var list = document.createElement('div');
@@ -394,9 +431,9 @@
     } else if (!cached.length) {
       list.innerHTML = '<p class="form-note">No comments yet \u2014 be the first.</p>';
     } else {
-      cached.forEach(function (c) {
+      var renderOne = function (c, isReply) {
         var row = document.createElement('div');
-        row.className = 'comment-row';
+        row.className = 'comment-row' + (isReply ? ' reply' : '');
         var head = document.createElement('p');
         head.className = 'comment-meta';
         var when = c.createdAt && c.createdAt.toDate ? relTime(c.createdAt.toDate()) : '';
@@ -433,6 +470,13 @@
         ctext.className = 'comment-text';
         ctext.textContent = c.text || '';
         row.appendChild(ctext);
+        if (currentUid && !isReply) {
+          var replyBtn = document.createElement('button');
+          replyBtn.type = 'button'; replyBtn.className = 'btn btn-ghost btn-sm comment-del';
+          replyBtn.textContent = 'Reply';
+          replyBtn.addEventListener('click', function () { replyingToId = c.id; replyValue = ''; renderFeedOnce(); });
+          row.appendChild(replyBtn);
+        }
         if (currentUid && c.authorUid === currentUid) {
           var edit = document.createElement('button');
           edit.type = 'button'; edit.className = 'btn btn-ghost btn-sm comment-del';
@@ -456,6 +500,18 @@
           row.appendChild(del);
         }
         list.appendChild(row);
+        if (replyingToId === c.id) list.appendChild(buildReplyForm(c));
+      };
+      var byId = {};
+      cached.forEach(function (c) { byId[c.id] = c; });
+      var kids = {};
+      var tops = cached.filter(function (c) {
+        if (c.parentId && byId[c.parentId]) { (kids[c.parentId] = kids[c.parentId] || []).push(c); return false; }
+        return true; // top-level, or a reply whose parent was deleted
+      });
+      tops.forEach(function (c) {
+        renderOne(c, false);
+        (kids[c.id] || []).forEach(function (r) { renderOne(r, true); });
       });
     }
     wrap.appendChild(list);
@@ -476,7 +532,7 @@
         input.value = '';
         db.collection('postComments').add({
           postId: postId, authorUid: currentUid,
-          authorName: (myProfile && myProfile.displayName) || auth.currentUser.email,
+          authorName: (myProfile && myProfile.displayName) || 'Member',
           text: val, createdAt: FieldValue.serverTimestamp()
         }).then(function () {
           return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(1) });
@@ -514,6 +570,47 @@
     link.className = 'story-file-link';
     link.textContent = '\ud83d\udcce ' + (p.attachmentName || 'Download attachment');
     return link;
+  }
+
+  /* ---------- who liked a story ---------- */
+  var likesModal = document.getElementById('likes-modal');
+  var likesList = document.getElementById('likes-list');
+  function closeLikes() { likesModal.hidden = true; }
+  document.getElementById('likes-close').addEventListener('click', closeLikes);
+  likesModal.addEventListener('click', function (e) { if (e.target === likesModal) closeLikes(); });
+
+  function openLikes(postId) {
+    likesList.innerHTML = '<p class="form-note">Loading\u2026</p>';
+    likesModal.hidden = false;
+    document.getElementById('likes-close').focus();
+    db.collection('postLikes').where('postId', '==', postId).get().then(function (snap) {
+      var rows = [];
+      snap.forEach(function (doc) { rows.push(doc.data()); });
+      rows.sort(function (a, b) {
+        var ad = toDate(a.createdAt), bd = toDate(b.createdAt);
+        return (bd ? bd.getTime() : 0) - (ad ? ad.getTime() : 0);
+      });
+      likesList.innerHTML = '';
+      if (!rows.length) { likesList.innerHTML = '<p class="form-note">No likes yet.</p>'; return; }
+      rows.forEach(function (r) {
+        var u = usersByUid[r.uid];
+        var row = document.createElement('div');
+        row.className = 'likes-row';
+        var name = (u && u.displayName) || 'Member';
+        var av = avatarEl(r.uid, name);
+        row.appendChild(av);
+        var label = document.createElement('span');
+        label.textContent = r.uid === currentUid ? name + ' (you)' : name;
+        row.appendChild(label);
+        if (u) {
+          makeActivatable(row, function () { closeLikes(); goToAuthor(r.uid); }, 'View ' + name + '\u2019s profile');
+          row.classList.add('clickable');
+        }
+        likesList.appendChild(row);
+      });
+    }).catch(function () {
+      likesList.innerHTML = '<p class="form-note">Couldn\u2019t load the list.</p>';
+    });
   }
 
   /* ---------- single story view (opened from notifications) ---------- */
@@ -650,6 +747,14 @@
     commentBtn.textContent = '\ud83d\udcac ' + cc + (cc === 1 ? ' comment' : ' comments');
     commentBtn.addEventListener('click', function () { toggleComments(id); });
     reactions.appendChild(commentBtn);
+    if ((p.likeCount || 0) > 0) {
+      var whoBtn = document.createElement('button');
+      whoBtn.type = 'button';
+      whoBtn.className = 'reaction-btn';
+      whoBtn.textContent = 'Who liked';
+      whoBtn.addEventListener('click', function () { openLikes(id); });
+      reactions.appendChild(whoBtn);
+    }
     body.appendChild(reactions);
 
     if (expandedComments.has(id)) {
@@ -892,7 +997,7 @@
     requestBtn.disabled = true;
     db.collection('posterRequests').doc(user.uid).set({
       email: user.email,
-      displayName: user.displayName || user.email,
+      displayName: user.displayName || 'Member',
       status: 'pending',
       requestedAt: FieldValue.serverTimestamp()
     }).then(function () {
@@ -906,39 +1011,79 @@
 
   /* ---------- admin: approve posting requests ---------- */
 
+  function adminRow(nameText, subText, buttons) {
+    var row = document.createElement('div');
+    row.className = 'request-row';
+    var label = document.createElement('span');
+    label.textContent = nameText + ' ';
+    if (subText) {
+      var sub = document.createElement('span');
+      sub.className = 'muted-inline';
+      sub.textContent = subText;
+      label.appendChild(sub);
+    }
+    row.appendChild(label);
+    var wrap = document.createElement('span');
+    wrap.className = 'request-actions';
+    buttons.forEach(function (bt) { wrap.appendChild(bt); });
+    row.appendChild(wrap);
+    return row;
+  }
+
+  function adminBtn(text, danger, onClick) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-ghost btn-sm' + (danger ? ' btn-danger' : '');
+    btn.textContent = text;
+    btn.addEventListener('click', function () {
+      if (danger && !window.confirm(text + '? This can be undone later.')) return;
+      btn.disabled = true;
+      onClick().then(loadPosterRequests).catch(function () {
+        btn.disabled = false; btn.textContent = 'Retry';
+      });
+    });
+    return btn;
+  }
+
   function loadPosterRequests() {
-    db.collection('posterRequests').where('status', '==', 'pending').get().then(function (snap) {
+    var postersList = document.getElementById('posters-list');
+    Promise.all([
+      db.collection('posterRequests').where('status', '==', 'pending').get(),
+      db.collection('posters').get()
+    ]).then(function (r) {
+      var snap = r[0], posters = r[1];
       adminBadge.hidden = snap.empty;
       if (!snap.empty) adminBadge.textContent = String(snap.size);
-      if (snap.empty) { requestsList.innerHTML = '<p class="form-note">No pending requests.</p>'; return; }
+
       requestsList.innerHTML = '';
+      if (snap.empty) requestsList.innerHTML = '<p class="form-note">No pending requests.</p>';
       snap.forEach(function (doc) {
-        var r = doc.data();
-        var row = document.createElement('div');
-        row.className = 'request-row';
-        var label = document.createElement('span');
-        label.textContent = (r.displayName || r.email) + ' ';
-        var sub = document.createElement('span');
-        sub.className = 'muted-inline';
-        sub.textContent = '(' + r.email + ')';
-        label.appendChild(sub);
-        var btn = document.createElement('button');
-        btn.className = 'btn btn-ghost btn-sm';
-        btn.textContent = 'Approve';
-        btn.addEventListener('click', function () {
-          btn.disabled = true;
-          Promise.all([
-            db.collection('posters').doc(doc.id).set({
-              approvedAt: FieldValue.serverTimestamp(),
-              approvedBy: auth.currentUser.uid
-            }),
-            db.collection('posterRequests').doc(doc.id).update({ status: 'approved' })
-          ]).then(function () { loadPosterRequests(); }).catch(function () { btn.disabled = false; });
+        var rq = doc.data();
+        var approve = adminBtn('Approve', false, function () {
+          // Grant first; only mark the request approved once the grant exists.
+          return db.collection('posters').doc(doc.id).set({
+            approvedAt: FieldValue.serverTimestamp(), approvedBy: auth.currentUser.uid
+          }).then(function () { return db.collection('posterRequests').doc(doc.id).update({ status: 'approved' }); });
         });
-        row.appendChild(label);
-        row.appendChild(btn);
-        requestsList.appendChild(row);
+        var decline = adminBtn('Decline', true, function () {
+          // Deleting the request lets the member apply again later.
+          return db.collection('posterRequests').doc(doc.id).delete();
+        });
+        requestsList.appendChild(adminRow(rq.displayName || 'Member', rq.email ? '(' + rq.email + ')' : '', [approve, decline]));
       });
+
+      postersList.innerHTML = '';
+      if (posters.empty) postersList.innerHTML = '<p class="form-note">No approved posters yet.</p>';
+      posters.forEach(function (doc) {
+        var u = usersByUid[doc.id];
+        var when = toDate(doc.data().approvedAt);
+        var revoke = adminBtn('Revoke', true, function () {
+          return db.collection('posters').doc(doc.id).delete();
+        });
+        postersList.appendChild(adminRow((u && u.displayName) || 'Member', when ? 'since ' + when.toLocaleDateString() : '', [revoke]));
+      });
+    }).catch(function () {
+      requestsList.innerHTML = '<p class="form-error">Couldn\u2019t load admin data. Check your connection and try again.</p>';
     });
   }
 
@@ -963,7 +1108,7 @@
         attachmentType: result ? result.resourceType : null,
         attachmentName: result ? result.name : null,
         authorUid: user.uid,
-        authorName: user.displayName || user.email,
+        authorName: user.displayName || 'Member',
         likeCount: 0,
         commentCount: 0,
         createdAt: FieldValue.serverTimestamp()
@@ -1346,7 +1491,8 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (!cropModal.hidden) { document.getElementById('crop-cancel').click(); }
+    if (!likesModal.hidden) { closeLikes(); }
+    else if (!cropModal.hidden) { document.getElementById('crop-cancel').click(); }
     else if (typeof notifPanel !== 'undefined' && !notifPanel.hidden) { notifPanel.hidden = true; notifBell.setAttribute('aria-expanded', 'false'); notifBell.focus(); }
   });
   document.getElementById('crop-cancel').addEventListener('click', function () {
@@ -1541,6 +1687,7 @@
       var legacyLoc = p.hideLocation && p.location ? p.location : null;
       var cleanup = {};
       var jobs = [];
+      if (p.email) cleanup.email = FieldValue.delete();
       p.dob = (dobDoc && dobDoc.exists && dobDoc.data().dob) || legacyDob || null;
       if (p.hideLocation) p.location = (locDoc && locDoc.exists && locDoc.data().location) || legacyLoc || '';
       if (legacyDob && !(dobDoc && dobDoc.exists)) {
@@ -1567,7 +1714,7 @@
       profileHideStats.checked = !!myProfile.hideStats;
       updateBioCount();
       profileLocation.value = myProfile.location || '';
-      profileEmail.textContent = myProfile.email || auth.currentUser.email || '';
+      profileEmail.textContent = auth.currentUser.email || '';
       if (myProfile.dob) {
         profileDobWrap.innerHTML = 'Date of birth (private \u2014 shown only to you)<p class="form-note">' + myProfile.dob + ' (can\u2019t be changed)</p>';
       }
@@ -1760,7 +1907,7 @@
       var name = document.createElement('p');
       name.className = 'member-name clickable';
       makeActivatable(name, function () { openMemberProfile(u); });
-      name.textContent = u.displayName || u.email || 'Member';
+      name.textContent = u.displayName || 'Member';
       info.appendChild(name);
       var shownLoc = locationOf(u);
       if (u.bio || shownLoc) {
@@ -1846,8 +1993,8 @@
         });
       }
       return db.collection('friendRequests').doc(forwardId).set({
-        fromUid: me, fromName: myProfile.displayName || auth.currentUser.email,
-        toUid: u.id, toName: u.displayName || u.email,
+        fromUid: me, fromName: myProfile.displayName || 'Member',
+        toUid: u.id, toName: u.displayName || 'Member',
         status: 'pending', createdAt: FieldValue.serverTimestamp()
       }).then(function () { return notifyIfNotSelf(u.id, 'friendRequest'); });
     }).then(loadRelationships);
@@ -2121,6 +2268,19 @@
       }
       time.textContent = stamp;
       bubble.appendChild(time);
+      if (m.fromUid === currentUid && m._id) {
+        var del = document.createElement('button');
+        del.type = 'button'; del.className = 'msg-del';
+        del.textContent = 'Delete';
+        del.setAttribute('aria-label', 'Delete this message');
+        del.addEventListener('click', function () {
+          if (!window.confirm('Delete this message for everyone?')) return;
+          del.disabled = true;
+          db.collection('conversations').doc(activeConvId).collection('messages').doc(m._id).delete()
+            .catch(function () { del.disabled = false; del.textContent = 'Retry'; });
+        });
+        bubble.appendChild(del);
+      }
       threadMessages.appendChild(bubble);
     });
     if (loadingEarlier) {
@@ -2136,7 +2296,7 @@
       .orderBy('createdAt', 'desc').limit(msgLimit)
       .onSnapshot(function (snap) {
         var arr = [];
-        snap.forEach(function (doc) { arr.push(doc.data()); });
+        snap.forEach(function (doc) { var d = doc.data(); d._id = doc.id; arr.push(d); });
         arr.reverse();
         lastThreadDocs = arr;
         threadHasMore = snap.size >= msgLimit;
@@ -2217,7 +2377,7 @@
     if (!toUid || toUid === currentUid) return Promise.resolve();
     var payload = Object.assign({
       toUid: toUid, type: type, fromUid: currentUid,
-      fromName: (myProfile && myProfile.displayName) || auth.currentUser.email,
+      fromName: (myProfile && myProfile.displayName) || 'Member',
       read: false, createdAt: FieldValue.serverTimestamp()
     }, extra || {});
     return db.collection('notifications').add(payload).catch(function () {});
@@ -2247,6 +2407,7 @@
     var title = '\u201c' + (g.sample.postTitle || '') + '\u201d';
     if (g.type === 'like') return who + ' liked your story ' + title;
     if (g.type === 'comment') return who + ' commented on your story ' + title;
+    if (g.type === 'reply') return who + ' replied to your comment on ' + title;
     if (g.type === 'message') return g.items.length > 1 ? who + ' sent you ' + g.items.length + ' messages' : who + ' sent you a message';
     if (g.type === 'friendRequest') return who + ' sent you a friend request';
     if (g.type === 'friendAccept') return who + ' accepted your friend request';
@@ -2259,7 +2420,7 @@
     });
     notifPanel.hidden = true;
     var d = g.sample;
-    if ((g.type === 'like' || g.type === 'comment') && d.postId) {
+    if ((g.type === 'like' || g.type === 'comment' || g.type === 'reply') && d.postId) {
       openStoryFocus(d.postId);
     } else if (g.type === 'message') {
       openConversation(usersByUid[d.fromUid] || { id: d.fromUid, displayName: d.fromName });

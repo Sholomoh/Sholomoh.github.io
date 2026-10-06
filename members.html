@@ -22,7 +22,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=32">
+  <link rel="stylesheet" href="styles.css?v=34">
+  <div class="crop-modal" id="likes-modal" role="dialog" aria-modal="true" aria-labelledby="likes-title" hidden>
+    <div class="crop-box likes-box">
+      <p class="crop-title" id="likes-title">Liked by</p>
+      <div id="likes-list"></div>
+      <div class="form-actions"><button type="button" id="likes-close" class="btn btn-ghost btn-sm">Close</button></div>
+    </div>
+  </div>
   <div class="crop-modal" id="crop-modal" role="dialog" aria-modal="true" aria-labelledby="crop-title" hidden>
     <div class="crop-box">
       <p class="crop-title" id="crop-title">Adjust your photo</p>
@@ -265,6 +272,8 @@
       <div class="tab-panel" id="tab-admin" hidden>
         <h2>Pending posting requests</h2>
         <div id="requests-list"></div>
+        <h2 class="mt">Approved posters</h2>
+        <div id="posters-list"></div>
       </div>
     </div>
   </div>
@@ -275,6 +284,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=11"></script>
+  <script src="members.js?v=14"></script>
 </body>
 </html>

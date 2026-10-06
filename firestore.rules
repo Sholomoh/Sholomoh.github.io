@@ -19,15 +19,16 @@ service cloud.firestore {
               get(/databases/$(database)/documents/friendRequests/$(b + '_' + a)).data.status == 'accepted');
     }
 
-    // Public profile info. Each user manages their own doc. Email and
-    // createdAt are locked after creation; date of birth, if set, locks
-    // after its first save too (it's never editable once filled in).
+    // Public profile info. Each user manages their own doc. Email addresses
+    // are no longer stored here (existing ones can only be removed, never
+    // changed or added); createdAt is locked after creation.
     match /users/{uid} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == uid;
       allow update: if isSignedIn() && request.auth.uid == uid &&
-        request.resource.data.email == resource.data.email &&
-        request.resource.data.createdAt == resource.data.createdAt &&
+        (request.resource.data.get('email', null) == null ||
+         request.resource.data.get('email', null) == resource.data.get('email', null)) &&
+        request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null) &&
         (!('dob' in resource.data) || resource.data.dob == null ||
          !('dob' in request.resource.data) ||
          request.resource.data.dob == resource.data.dob);
@@ -138,6 +139,8 @@ service cloud.firestore {
         allow create: if isSignedIn() &&
           request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants &&
           request.resource.data.fromUid == request.auth.uid;
+        // NEW: you can delete your own messages
+        allow delete: if isSignedIn() && resource.data.fromUid == request.auth.uid;
       }
     }
 

@@ -1067,3 +1067,22 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
   .profile-complete-bar span, .new-pill { transition: none !important; }
   html { scroll-behavior: auto; }
 }
+
+/* LIKES LIST + MESSAGE DELETE */
+.likes-box { max-height: 80vh; display: flex; flex-direction: column; text-align: left; }
+#likes-list { overflow-y: auto; margin-bottom: 0.8rem; }
+.likes-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0.2rem; color: var(--text); border-bottom: 1px solid var(--border); }
+.likes-row.clickable:hover { color: var(--green); }
+.likes-box .form-actions { justify-content: center; }
+.msg-del {
+  display: block; margin-top: 0.3rem; background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; opacity: 0.8;
+}
+.msg-del:hover { color: var(--red); opacity: 1; }
+@media (pointer: coarse) { .msg-del { min-height: 32px; } }
+
+/* COMMENT REPLIES + ADMIN */
+.comment-row.reply { margin-left: 1.3rem; padding-left: 0.7rem; border-left: 2px solid var(--border); }
+.reply-form { margin-left: 1.3rem; margin-bottom: 0.6rem; }
+.request-row { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.request-actions { display: flex; gap: 0.4rem; }
