@@ -266,6 +266,16 @@
   /* ---------- feed (with edit/delete for author or admin) ---------- */
 
   var feedUnsub = null;
+  var heldBack = {};          // new stories from others, hidden until the pill is tapped
+  var newestSeen = 0;         // newest createdAt (ms) already accounted for
+  var feedInitialised = false;
+  var feedSearch = document.getElementById('feed-search');
+  var feedSort = document.getElementById('feed-sort');
+  var feedFilter = document.getElementById('feed-filter');
+  var newPill = document.getElementById('new-stories-pill');
+  var FEED_PAGE = 50;
+  var feedLimit = FEED_PAGE;
+  var expandedStories = new Set();
   var currentUid = null, amAdmin = false;
   var editingId = null;
   var lastSnap = null;
@@ -426,6 +436,18 @@
     return link;
   }
 
+  function goToAuthor(uid) {
+    if (!uid) return;
+    if (uid === currentUid) {
+      document.querySelector('#main-tabs .tab-btn[data-tab="profile"]').click();
+      return;
+    }
+    var u = usersByUid[uid];
+    if (!u) return;
+    document.querySelector('#main-tabs .tab-btn[data-tab="members"]').click();
+    openMemberProfile(u);
+  }
+
   function buildStoryCard(id, p) {
     var card = document.createElement('article');
     card.className = 'story-card';
@@ -442,7 +464,10 @@
 
     var head = document.createElement('div');
     head.className = 'story-head';
-    head.appendChild(avatarEl(p.authorUid, p.authorName));
+    var headAv = avatarEl(p.authorUid, p.authorName);
+    headAv.classList.add('clickable');
+    headAv.addEventListener('click', function () { goToAuthor(p.authorUid); });
+    head.appendChild(headAv);
     var headText = document.createElement('div');
     var h3 = document.createElement('h3');
     h3.textContent = p.title || '';
@@ -450,7 +475,12 @@
     meta.className = 'story-meta';
     var when = p.createdAt && p.createdAt.toDate ? relTime(p.createdAt.toDate()) : '';
     var edited = p.updatedAt && p.createdAt && p.updatedAt.seconds !== p.createdAt.seconds;
-    meta.textContent = (p.authorName || '') + (when ? ' \u00b7 ' + when : '') + (edited ? ' \u00b7 edited' : '');
+    var authorLink = document.createElement('span');
+    authorLink.className = 'author-link';
+    authorLink.textContent = p.authorName || '';
+    authorLink.addEventListener('click', function () { goToAuthor(p.authorUid); });
+    meta.appendChild(authorLink);
+    meta.appendChild(document.createTextNode((when ? ' \u00b7 ' + when : '') + (edited ? ' \u00b7 edited' : '')));
     headText.appendChild(h3); headText.appendChild(meta);
     head.appendChild(headText);
     body.appendChild(head);
@@ -459,6 +489,20 @@
     text.className = 'story-text';
     text.textContent = p.body || '';
     body.appendChild(text);
+    var fullText = String(p.body || '');
+    if (fullText.length > 300 || fullText.split('\n').length > 6) {
+      var open = expandedStories.has(id);
+      if (!open) text.classList.add('clamped');
+      var more = document.createElement('button');
+      more.type = 'button'; more.className = 'read-more-btn';
+      more.textContent = open ? 'Show less' : 'Read more';
+      more.addEventListener('click', function () {
+        var nowOpen = text.classList.toggle('clamped') === false;
+        if (nowOpen) expandedStories.add(id); else expandedStories.delete(id);
+        more.textContent = nowOpen ? 'Show less' : 'Read more';
+      });
+      body.appendChild(more);
+    }
 
     var reactions = document.createElement('div');
     reactions.className = 'story-reactions';
@@ -584,6 +628,51 @@
     return wrap;
   }
 
+  function updatePill() {
+    var n = Object.keys(heldBack).length;
+    newPill.hidden = n === 0;
+    if (n) newPill.textContent = '\u2191 ' + n + ' new ' + (n === 1 ? 'story' : 'stories');
+  }
+
+  function trackNewStories(snap) {
+    var ids = {};
+    var maxMs = newestSeen;
+    var reading = window.scrollY > 150;
+    snap.forEach(function (doc) {
+      ids[doc.id] = true;
+      var d = doc.data();
+      var cd = toDate(d.createdAt);
+      var ms = cd ? cd.getTime() : 0;
+      if (feedInitialised && ms > newestSeen && d.authorUid !== currentUid && reading) heldBack[doc.id] = true;
+      if (ms > maxMs) maxMs = ms;
+    });
+    Object.keys(heldBack).forEach(function (id) { if (!ids[id]) delete heldBack[id]; });
+    newestSeen = maxMs;
+    feedInitialised = true;
+  }
+
+  newPill.addEventListener('click', function () {
+    heldBack = {};
+    renderFeedOnce();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  feedSearch.addEventListener('input', function () { renderFeedOnce(); });
+  feedSort.addEventListener('change', function () { renderFeedOnce(); });
+  feedFilter.addEventListener('change', function () { renderFeedOnce(); });
+
+  function appendLoadMore() {
+    if (!lastSnap || lastSnap.size < feedLimit) return;
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn btn-ghost load-more-btn';
+    btn.textContent = 'Load older stories';
+    btn.addEventListener('click', function () {
+      btn.disabled = true; btn.textContent = 'Loading\u2026';
+      feedLimit += FEED_PAGE;
+      renderFeed();
+    });
+    feed.appendChild(btn);
+  }
+
   function renderFeedOnce() {
     if (!lastSnap) return;
     var docs = [];
@@ -591,7 +680,33 @@
     if (activeSubtab === 'friends') {
       docs = docs.filter(function (doc) { return friendUids.has(doc.data().authorUid); });
     }
+    docs = docs.filter(function (doc) { return !heldBack[doc.id]; });
+    var q = feedSearch.value.trim().toLowerCase();
+    var filtersActive = !!q || feedFilter.value !== 'all';
+    if (q) {
+      docs = docs.filter(function (doc) {
+        var d = doc.data();
+        return [d.title, d.body, d.authorName].join(' ').toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    if (feedFilter.value === 'media') {
+      docs = docs.filter(function (doc) { var d = doc.data(); return !!(d.attachmentURL || d.photoURL); });
+    }
+    if (feedSort.value === 'liked') {
+      docs.sort(function (a, b) {
+        var diff = num(b.data().likeCount) - num(a.data().likeCount);
+        if (diff) return diff;
+        var ad = toDate(a.data().createdAt), bd = toDate(b.data().createdAt);
+        return (bd ? bd.getTime() : 0) - (ad ? ad.getTime() : 0);
+      });
+    }
+    updatePill();
     feed.innerHTML = '';
+    if (!docs.length && filtersActive) {
+      feed.innerHTML = '<p class="form-note">No loaded stories match. Try \u201cLoad older stories\u201d below.</p>';
+      appendLoadMore();
+      return;
+    }
     if (!docs.length) {
       if (activeSubtab === 'friends') {
         var p1 = document.createElement('p');
@@ -610,16 +725,19 @@
       } else {
         feed.innerHTML = '<p class="form-note">No stories yet.</p>';
       }
+      appendLoadMore();
       return;
     }
     docs.forEach(function (doc) { feed.appendChild(buildStoryCard(doc.id, doc.data())); });
+    appendLoadMore();
   }
 
   function renderFeed() {
     if (feedUnsub) feedUnsub();
-    feedUnsub = db.collection('posts').orderBy('createdAt', 'desc').limit(50)
+    feedUnsub = db.collection('posts').orderBy('createdAt', 'desc').limit(feedLimit)
       .onSnapshot(function (snap) {
         lastSnap = snap;
+        trackNewStories(snap);
         renderFeedOnce();
       }, function () {
         feed.innerHTML = '<p class="form-note">Couldn\u2019t load stories.</p>';
@@ -1825,6 +1943,8 @@
       currentUid = null; amAdmin = false;
       friendUids = new Set(); outgoingByUid = {}; incomingByUid = {};
       myLikedPostIds = new Set(); expandedComments = new Set(); commentsCache = {};
+      expandedStories = new Set(); feedLimit = FEED_PAGE;
+      heldBack = {}; newestSeen = 0; feedInitialised = false; newPill.hidden = true;
       threadView.hidden = true; inboxView.hidden = false;
       activeConvId = null; activeOtherUid = null;
       notifPanel.hidden = true; notifBadge.hidden = true;

@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=26">
+  <link rel="stylesheet" href="styles.css?v=28">
   <div class="crop-modal" id="crop-modal" hidden>
     <div class="crop-box">
       <p class="crop-title">Adjust your photo</p>
@@ -133,6 +133,18 @@
           <button type="button" class="subtab-btn" data-subtab="friends">Friends</button>
         </div>
 
+        <div class="member-tools feed-tools" id="feed-tools">
+          <input type="search" id="feed-search" class="field-input" placeholder="Search stories or authors..." autocomplete="off">
+          <select id="feed-sort" class="field-input" aria-label="Sort stories">
+            <option value="new">Newest</option>
+            <option value="liked">Most liked</option>
+          </select>
+          <select id="feed-filter" class="field-input" aria-label="Filter stories">
+            <option value="all">All</option>
+            <option value="media">With media</option>
+          </select>
+        </div>
+        <button type="button" id="new-stories-pill" class="new-pill" hidden></button>
         <div id="feed"></div>
       </div>
 
@@ -254,6 +266,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=5"></script>
+  <script src="members.js?v=7"></script>
 </body>
 </html>

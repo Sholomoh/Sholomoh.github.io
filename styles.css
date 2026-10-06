@@ -1012,3 +1012,26 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .mini-pin-btn { margin-top: 0.6rem; }
 .check-label { display: flex; align-items: center; gap: 0.55rem; margin: 0.5rem 0; color: var(--text); font-size: 0.88rem; cursor: pointer; }
 .check-label input { accent-color: var(--green); }
+
+/* FEED: read more, author links, load more */
+.story-text.clamped { display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.read-more-btn {
+  background: none; border: none; padding: 0.3rem 0; margin-top: 0.2rem; cursor: pointer;
+  color: var(--green); font-family: 'Share Tech Mono', monospace; font-size: 0.78rem;
+}
+.read-more-btn:hover { text-decoration: underline; }
+.author-link { cursor: pointer; }
+.author-link:hover { color: var(--green); text-decoration: underline; }
+.load-more-btn { display: block; margin: 1.2rem auto 0.5rem; }
+
+/* FEED: tools row, new-stories pill */
+.feed-tools { margin-top: 0.4rem; }
+.feed-tools #feed-sort, .feed-tools #feed-filter { width: auto; flex-shrink: 0; }
+.new-pill {
+  position: sticky; top: 0.6rem; z-index: 20; display: block; margin: 0 auto 0.8rem;
+  background: var(--green); color: #04110a; border: none; border-radius: 20px;
+  padding: 0.45rem 1.1rem; font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; font-weight: 700;
+  cursor: pointer; box-shadow: 0 4px 18px rgba(0,255,136,0.35);
+}
+.new-pill[hidden] { display: none; }
+@media (max-width: 500px) { .feed-tools { flex-wrap: wrap; } .feed-tools #feed-search { flex-basis: 100%; } }
