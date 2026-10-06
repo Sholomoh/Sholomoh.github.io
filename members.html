@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=31">
+  <link rel="stylesheet" href="styles.css?v=32">
   <div class="crop-modal" id="crop-modal" role="dialog" aria-modal="true" aria-labelledby="crop-title" hidden>
     <div class="crop-box">
       <p class="crop-title" id="crop-title">Adjust your photo</p>
@@ -231,7 +231,7 @@
           <label class="file-label">Profile photo<input type="file" id="profile-photo" accept="image/*"></label>
           <p id="profile-photo-pending" class="form-note pending-note" hidden>Preview only — not saved yet. <button type="button" id="profile-photo-cancel" class="btn btn-ghost btn-sm">Cancel</button></p>
           <label class="check-label"><input type="checkbox" id="profile-hide-location"> Only friends can see my location</label>
-          <label class="check-label"><input type="checkbox" id="profile-hide-stats"> Only friends can see my stats</label>
+          <label class="check-label"><input type="checkbox" id="profile-hide-stats"> Hide my stats card from non-friends</label>
           <label class="field-label" id="profile-dob-wrap">Date of birth (private — shown only to you, set once)<input type="date" id="profile-dob" class="field-input"></label>
           <p class="form-note">Email: <span id="profile-email"></span> (can't be changed)</p>
           <div class="form-actions">
@@ -275,6 +275,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=10"></script>
+  <script src="members.js?v=11"></script>
 </body>
 </html>

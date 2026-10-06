@@ -11,6 +11,14 @@ service cloud.firestore {
         (isAdmin() || exists(/databases/$(database)/documents/posters/$(request.auth.uid)));
     }
 
+    // True when a and b have an accepted friend request in either direction.
+    function isAcceptedFriend(a, b) {
+      return (exists(/databases/$(database)/documents/friendRequests/$(a + '_' + b)) &&
+              get(/databases/$(database)/documents/friendRequests/$(a + '_' + b)).data.status == 'accepted') ||
+             (exists(/databases/$(database)/documents/friendRequests/$(b + '_' + a)) &&
+              get(/databases/$(database)/documents/friendRequests/$(b + '_' + a)).data.status == 'accepted');
+    }
+
     // Public profile info. Each user manages their own doc. Email and
     // createdAt are locked after creation; date of birth, if set, locks
     // after its first save too (it's never editable once filled in).
@@ -21,8 +29,31 @@ service cloud.firestore {
         request.resource.data.email == resource.data.email &&
         request.resource.data.createdAt == resource.data.createdAt &&
         (!('dob' in resource.data) || resource.data.dob == null ||
+         !('dob' in request.resource.data) ||
          request.resource.data.dob == resource.data.dob);
       // Members can delete their own profile (account deletion).
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Date of birth: readable and writable only by its owner, set once.
+    match /userDob/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['dob']);
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.dob == resource.data.dob;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Friends-only location: used when a member hides their location on
+    // the public users doc. Readable by the owner and accepted friends.
+    match /userLocations/{uid} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == uid || isAcceptedFriend(request.auth.uid, uid));
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['location']) &&
+        request.resource.data.location is string &&
+        request.resource.data.location.size() <= 100;
       allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 

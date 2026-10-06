@@ -1034,7 +1034,9 @@
         deleteQueryDocs(db.collection('posts').where('authorUid', '==', uid)),
         deleteQueryDocs(db.collection('friendRequests').where('fromUid', '==', uid)),
         deleteQueryDocs(db.collection('friendRequests').where('toUid', '==', uid)),
-        db.collection('posterRequests').doc(uid).delete().catch(quiet)
+        db.collection('posterRequests').doc(uid).delete().catch(quiet),
+        db.collection('userDob').doc(uid).delete().catch(quiet),
+        db.collection('userLocations').doc(uid).delete().catch(quiet)
       ]);
     }).then(function () {
       return db.collection('users').doc(uid).delete();
@@ -1210,9 +1212,9 @@
     var name = document.createElement('p'); name.className = 'profile-preview-name';
     name.textContent = u.displayName || 'Member';
     body.appendChild(name);
-    if (u.location && canSee(u, 'hideLocation')) {
+    if (locationOf(u)) {
       var loc = document.createElement('p'); loc.className = 'profile-preview-location';
-      loc.textContent = '\ud83d\udccd ' + u.location;
+      loc.textContent = '\ud83d\udccd ' + locationOf(u);
       body.appendChild(loc);
     }
     var bio = document.createElement('p');
@@ -1366,6 +1368,23 @@
   /* ---------- privacy + pinned story helpers ---------- */
   function canSee(u, flag) { return !u[flag] || friendUids.has(u.id); }
 
+  // Friends-only locations live in userLocations/{uid} (rules enforce who can read them).
+  var friendLocations = {};
+  function locationOf(u) {
+    return u.hideLocation ? (friendLocations[u.id] || '') : (u.location || '');
+  }
+  function loadFriendLocations() {
+    var jobs = [];
+    friendUids.forEach(function (fid) {
+      var fu = usersByUid[fid];
+      if (!fu || !fu.hideLocation || friendLocations[fid] !== undefined) return;
+      jobs.push(db.collection('userLocations').doc(fid).get().then(function (d) {
+        friendLocations[fid] = d.exists ? (d.data().location || '') : '';
+      }).catch(function () {}));
+    });
+    return Promise.all(jobs);
+  }
+
   function pinFirst(posts, pinnedId) {
     if (!pinnedId) return posts;
     var hit = posts.filter(function (p) { return p.id === pinnedId; });
@@ -1508,9 +1527,39 @@
     document.getElementById('profile-cover-remove').hidden = !(myProfile && myProfile.coverURL) || removeCoverFlag;
   }
 
+  // Date of birth -> userDob/{uid} (owner-only). Hidden location -> userLocations/{uid}
+  // (owner + friends). Legacy values still sitting in the public users doc are moved
+  // across here, and only removed from the public doc once the private write succeeded.
+  function loadMyPrivate(p) {
+    var ref = function (c) { return db.collection(c).doc(currentUid); };
+    return Promise.all([
+      ref('userDob').get().catch(function () { return null; }),
+      ref('userLocations').get().catch(function () { return null; })
+    ]).then(function (r) {
+      var dobDoc = r[0], locDoc = r[1];
+      var legacyDob = p.dob || null;
+      var legacyLoc = p.hideLocation && p.location ? p.location : null;
+      var cleanup = {};
+      var jobs = [];
+      p.dob = (dobDoc && dobDoc.exists && dobDoc.data().dob) || legacyDob || null;
+      if (p.hideLocation) p.location = (locDoc && locDoc.exists && locDoc.data().location) || legacyLoc || '';
+      if (legacyDob && !(dobDoc && dobDoc.exists)) {
+        jobs.push(ref('userDob').set({ dob: legacyDob }).then(function () { cleanup.dob = FieldValue.delete(); }));
+      } else if (legacyDob) { cleanup.dob = FieldValue.delete(); }
+      if (legacyLoc) {
+        jobs.push(ref('userLocations').set({ location: legacyLoc }).then(function () { cleanup.location = ''; }));
+      }
+      return Promise.all(jobs.map(function (jb) { return jb.catch(function () {}); })).then(function () {
+        if (Object.keys(cleanup).length) return ref('users').update(cleanup).catch(function () {});
+      });
+    }).catch(function () {});
+  }
+
   function loadMyProfile() {
     return db.collection('users').doc(currentUid).get().then(function (doc) {
       myProfile = doc.exists ? doc.data() : {};
+      return loadMyPrivate(myProfile);
+    }).then(function () {
       profileName.value = myProfile.displayName || '';
       profileBio.value = myProfile.bio || '';
       profileInterests.value = interestsOf(myProfile).join(', ');
@@ -1607,12 +1656,14 @@
     var update = {
       displayName: profileName.value.trim(),
       bio: profileBio.value.trim(),
-      location: profileLocation.value.trim(),
+      location: profileHideLocation.checked ? '' : profileLocation.value.trim(),
       interests: parseInterests(profileInterests.value),
       hideLocation: profileHideLocation.checked,
       hideStats: profileHideStats.checked
     };
-    if (!myProfile.dob && profileDob.value) update.dob = profileDob.value;
+    var locVal = profileLocation.value.trim();
+    var hideLoc = profileHideLocation.checked;
+    var dobVal = (!myProfile.dob && profileDob.value) ? profileDob.value : null;
 
     var photoWork = croppedPhotoFile ? uploadToCloudinary(croppedPhotoFile) : Promise.resolve(undefined);
     var coverWork = profileCover.files[0] ? uploadToCloudinary(profileCover.files[0]) : Promise.resolve(undefined);
@@ -1620,7 +1671,14 @@
       if (rs[0]) update.photoURL = rs[0].url;
       if (rs[1]) update.coverURL = rs[1].url;
       else if (removeCoverFlag) update.coverURL = null;
+      var pre = [];
+      if (hideLoc) pre.push(db.collection('userLocations').doc(currentUid).set({ location: locVal }));
+      if (dobVal) pre.push(db.collection('userDob').doc(currentUid).set({ dob: dobVal }));
+      return Promise.all(pre);
+    }).then(function () {
       return db.collection('users').doc(currentUid).update(update);
+    }).then(function () {
+      if (!hideLoc) return db.collection('userLocations').doc(currentUid).delete().catch(function () {});
     }).then(function () {
       return auth.currentUser.updateProfile({ displayName: update.displayName });
     }).then(function () {
@@ -1671,7 +1729,7 @@
     var q = memberSearch.value.trim().toLowerCase();
     var list = allUsers.filter(function (u) {
       if (!q) return true;
-      var hay = [u.displayName, canSee(u, 'hideLocation') ? u.location : '', u.bio].concat(interestsOf(u)).join(' ').toLowerCase();
+      var hay = [u.displayName, locationOf(u), u.bio].concat(interestsOf(u)).join(' ').toLowerCase();
       return hay.indexOf(q) !== -1;
     });
     if (memberSort.value === 'new') {
@@ -1704,7 +1762,7 @@
       makeActivatable(name, function () { openMemberProfile(u); });
       name.textContent = u.displayName || u.email || 'Member';
       info.appendChild(name);
-      var shownLoc = canSee(u, 'hideLocation') ? u.location : '';
+      var shownLoc = locationOf(u);
       if (u.bio || shownLoc) {
         var sub = document.createElement('p');
         sub.className = 'member-sub';
@@ -1839,15 +1897,22 @@
       renderMembersList();
       renderFeedOnce();
       refreshMyProfileExtras();
-      if (openProfileUid && usersByUid[openProfileUid]) {
-        var cu = usersByUid[openProfileUid];
-        var keep = document.getElementById('member-profile-stats');
-        var oldStats = keep ? keep.innerHTML : '';
-        memberProfileCard.innerHTML = '';
-        memberProfileCard.appendChild(buildPublicProfileCard(cu));
-        document.getElementById('member-profile-stats').innerHTML = oldStats;
-      }
+      rerenderOpenProfileCard();
+      return loadFriendLocations().then(function () {
+        renderMembersList();
+        rerenderOpenProfileCard();
+      });
     });
+  }
+
+  function rerenderOpenProfileCard() {
+    if (!openProfileUid || !usersByUid[openProfileUid]) return;
+    var cu = usersByUid[openProfileUid];
+    var keep = document.getElementById('member-profile-stats');
+    var oldStats = keep ? keep.innerHTML : '';
+    memberProfileCard.innerHTML = '';
+    memberProfileCard.appendChild(buildPublicProfileCard(cu));
+    document.getElementById('member-profile-stats').innerHTML = oldStats;
   }
 
   function renderRequestRows(container, list, isIncoming) {
