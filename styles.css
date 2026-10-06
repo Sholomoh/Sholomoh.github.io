@@ -955,3 +955,16 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 @media (max-width: 500px) {
   .profile-preview-top { flex-wrap: wrap; }
 }
+
+/* PROFILE: custom cover, completeness bar */
+.profile-banner.has-cover { background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-color: #0a1420; }
+.profile-complete {
+  margin-top: 1rem; padding: 0.8rem 0.9rem; border-radius: 10px;
+  background: var(--green-dim); border: 1px solid rgba(0,255,136,0.25);
+}
+.profile-complete-head {
+  display: flex; justify-content: space-between; gap: 0.8rem;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--green);
+}
+.profile-complete-bar { height: 5px; margin-top: 0.55rem; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.profile-complete-bar span { display: block; height: 100%; width: 0; background: var(--green); border-radius: 4px; transition: width 0.4s; }

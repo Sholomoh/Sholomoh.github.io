@@ -919,6 +919,7 @@
     var card = document.createElement('div');
     card.className = 'profile-preview';
     var banner = document.createElement('div'); banner.className = 'profile-banner';
+    applyCover(banner, u.coverURL);
     var body = document.createElement('div'); body.className = 'profile-preview-body';
     var top = document.createElement('div'); top.className = 'profile-preview-top';
     var av = document.createElement('span'); av.className = 'profile-avatar-wrap';
@@ -985,7 +986,38 @@
   var profilePreviewLocation = document.getElementById('profile-preview-location');
   var profilePreviewBio = document.getElementById('profile-preview-bio');
 
-  function renderProfilePreview(overridePhotoUrl) {
+  function applyCover(bannerEl, url) {
+    if (url) {
+      bannerEl.style.backgroundImage = 'url("' + String(url).replace(/"/g, '%22') + '")';
+      bannerEl.classList.add('has-cover');
+    } else {
+      bannerEl.style.backgroundImage = '';
+      bannerEl.classList.remove('has-cover');
+    }
+  }
+
+  function renderCompleteness() {
+    var p = myProfile || {};
+    var steps = [
+      [!!p.photoURL, 'a profile photo'],
+      [!!(p.bio && p.bio.trim()), 'a bio'],
+      [!!(p.location && p.location.trim()), 'your location'],
+      [!!p.coverURL, 'a cover photo']
+    ];
+    var done = steps.filter(function (s) { return s[0]; }).length;
+    var box = document.getElementById('profile-complete');
+    if (done === steps.length) { box.hidden = true; return; }
+    var missing = steps.filter(function (s) { return !s[0]; }).map(function (s) { return s[1]; });
+    var pct = Math.round(done / steps.length * 100);
+    document.getElementById('profile-complete-text').textContent = 'Add ' + missing[0] + (missing.length > 1 ? ' (+' + (missing.length - 1) + ' more)' : '') + ' to finish your profile';
+    document.getElementById('profile-complete-pct').textContent = pct + '%';
+    document.getElementById('profile-complete-fill').style.width = pct + '%';
+    box.hidden = false;
+  }
+
+  var removeCoverFlag = false;
+
+  function renderProfilePreview(overridePhotoUrl, overrideCoverUrl) {
     profilePreviewAvatar.innerHTML = '';
     var photo = overridePhotoUrl || (myProfile && myProfile.photoURL);
     if (photo) {
@@ -998,6 +1030,8 @@
       span.textContent = initials((myProfile && myProfile.displayName) || '');
       profilePreviewAvatar.appendChild(span);
     }
+    var coverUrl = overrideCoverUrl !== undefined ? overrideCoverUrl : (removeCoverFlag ? null : (myProfile && myProfile.coverURL));
+    applyCover(document.getElementById('profile-banner'), coverUrl);
     profilePreviewName.textContent = (myProfile && myProfile.displayName) || 'Your profile';
     var loc = (myProfile && myProfile.location) || '';
     profilePreviewLocation.textContent = loc ? '\ud83d\udccd ' + loc : '';
@@ -1005,6 +1039,8 @@
     var bio = (myProfile && myProfile.bio) || '';
     profilePreviewBio.textContent = bio || 'No bio yet \u2014 tap Edit profile to add one.';
     profilePreviewBio.classList.toggle('is-empty', !bio);
+    renderCompleteness();
+    document.getElementById('profile-cover-remove').hidden = !(myProfile && myProfile.coverURL) || removeCoverFlag;
   }
 
   function loadMyProfile() {
@@ -1018,6 +1054,7 @@
         profileDobWrap.innerHTML = 'Date of birth (private \u2014 shown only to you)<p class="form-note">' + myProfile.dob + ' (can\u2019t be changed)</p>';
       }
       document.getElementById('profile-photo-pending').hidden = true;
+      removeCoverFlag = false;
       renderProfilePreview();
       refreshMyProfileExtras();
     });
@@ -1028,7 +1065,32 @@
   var profileEditBtn = document.getElementById('profile-edit-btn');
   var profileCancelBtn = document.getElementById('profile-cancel-btn');
 
+  var profileCover = document.getElementById('profile-cover');
+  var profileCoverPending = document.getElementById('profile-cover-pending');
+  profileCover.addEventListener('change', function () {
+    var file = profileCover.files[0];
+    if (file) {
+      removeCoverFlag = false;
+      renderProfilePreview(undefined, URL.createObjectURL(file));
+      profileCoverPending.hidden = false;
+    }
+  });
+  document.getElementById('profile-cover-cancel').addEventListener('click', function () {
+    profileCover.value = '';
+    profileCoverPending.hidden = true;
+    renderProfilePreview();
+  });
+  document.getElementById('profile-cover-remove').addEventListener('click', function () {
+    removeCoverFlag = true;
+    profileCover.value = '';
+    profileCoverPending.hidden = true;
+    renderProfilePreview();
+  });
+
   function closeEditForm() {
+    removeCoverFlag = false;
+    profileCover.value = '';
+    profileCoverPending.hidden = true;
     profileForm.hidden = true;
     profileEditBtn.hidden = false;
     profileName.value = myProfile.displayName || '';
@@ -1070,7 +1132,7 @@
     var saveBtn = profileForm.querySelector('button[type="submit"]');
     saveBtn.disabled = true;
     profileStatus.className = 'form-note';
-    profileStatus.textContent = profilePhoto.files[0] ? 'Uploading photo\u2026' : 'Saving\u2026';
+    profileStatus.textContent = (profilePhoto.files[0] || profileCover.files[0]) ? 'Uploading\u2026' : 'Saving\u2026';
 
     var update = {
       displayName: profileName.value.trim(),
@@ -1080,14 +1142,20 @@
     if (!myProfile.dob && profileDob.value) update.dob = profileDob.value;
 
     var photoWork = profilePhoto.files[0] ? uploadToCloudinary(profilePhoto.files[0]) : Promise.resolve(undefined);
-    photoWork.then(function (result) {
-      if (result) update.photoURL = result.url;
+    var coverWork = profileCover.files[0] ? uploadToCloudinary(profileCover.files[0]) : Promise.resolve(undefined);
+    Promise.all([photoWork, coverWork]).then(function (rs) {
+      if (rs[0]) update.photoURL = rs[0].url;
+      if (rs[1]) update.coverURL = rs[1].url;
+      else if (removeCoverFlag) update.coverURL = null;
       return db.collection('users').doc(currentUid).update(update);
     }).then(function () {
       return auth.currentUser.updateProfile({ displayName: update.displayName });
     }).then(function () {
       profilePhoto.value = '';
       profilePhotoPending.hidden = true;
+      profileCover.value = '';
+      profileCoverPending.hidden = true;
+      removeCoverFlag = false;
       profileStatus.className = 'form-success';
       profileStatus.textContent = '\u2713 Saved \u2014 this is now visible to other members.';
       whoAmI.textContent = update.displayName;
