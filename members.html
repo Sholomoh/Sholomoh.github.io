@@ -22,7 +22,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
+  <div class="crop-modal" id="crop-modal" hidden>
+    <div class="crop-box">
+      <p class="crop-title">Adjust your photo</p>
+      <canvas id="crop-canvas" width="280" height="280"></canvas>
+      <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1" aria-label="Zoom">
+      <p class="form-note">Drag to reposition, slider to zoom.</p>
+      <div class="form-actions">
+        <button type="button" id="crop-apply" class="btn btn-primary btn-sm">Use photo</button>
+        <button type="button" id="crop-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+    </div>
+  </div>
   <script src="circuit-bg.js?v=3" defer></script>
   <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -197,6 +209,8 @@
           <p class="form-note"><button type="button" id="profile-cover-remove" class="btn btn-ghost btn-sm" hidden>Remove cover photo</button></p>
           <label class="file-label">Profile photo<input type="file" id="profile-photo" accept="image/*"></label>
           <p id="profile-photo-pending" class="form-note pending-note" hidden>Preview only — not saved yet. <button type="button" id="profile-photo-cancel" class="btn btn-ghost btn-sm">Cancel</button></p>
+          <label class="check-label"><input type="checkbox" id="profile-hide-location"> Only friends can see my location</label>
+          <label class="check-label"><input type="checkbox" id="profile-hide-stats"> Only friends can see my stats</label>
           <label class="field-label" id="profile-dob-wrap">Date of birth (private — shown only to you, set once)<input type="date" id="profile-dob" class="field-input"></label>
           <p class="form-note">Email: <span id="profile-email"></span> (can't be changed)</p>
           <div class="form-actions">
@@ -240,6 +254,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=4"></script>
+  <script src="members.js?v=5"></script>
 </body>
 </html>

@@ -77,6 +77,8 @@
   var profileDob = document.getElementById('profile-dob');
   var profileEmail = document.getElementById('profile-email');
   var profileInterests = document.getElementById('profile-interests');
+  var profileHideLocation = document.getElementById('profile-hide-location');
+  var profileHideStats = document.getElementById('profile-hide-stats');
   var profileStatus = document.getElementById('profile-status');
 
   /* ---------- small helpers ---------- */
@@ -873,10 +875,12 @@
     });
   }
 
-  function buildMiniStory(item) {
+  function buildMiniStory(item, opts) {
+    opts = opts || {};
     var p = item.data;
+    var isPinned = !!opts.pinnedId && item.id === opts.pinnedId;
     var card = document.createElement('article');
-    card.className = 'mini-story';
+    card.className = 'mini-story' + (isPinned ? ' is-pinned' : '');
     var url = p.attachmentURL || p.photoURL;
     var type = p.attachmentType || (p.photoURL ? 'image' : null);
     if (url && type === 'image') {
@@ -886,7 +890,7 @@
     }
     var body = document.createElement('div');
     body.className = 'mini-story-body';
-    var h = document.createElement('h3'); h.textContent = String(p.title || 'Untitled');
+    var h = document.createElement('h3'); h.textContent = (isPinned ? '\ud83d\udccc ' : '') + String(p.title || 'Untitled');
     var meta = document.createElement('p'); meta.className = 'story-meta';
     var cd = toDate(p.createdAt);
     var when = cd ? relTime(cd) : '';
@@ -896,21 +900,37 @@
     var t = String(p.body || '');
     snip.textContent = t.length > 140 ? t.slice(0, 140).trim() + '\u2026' : t;
     body.appendChild(h); body.appendChild(meta); body.appendChild(snip);
+    if (opts.canPin) {
+      var pin = document.createElement('button');
+      pin.type = 'button'; pin.className = 'btn btn-ghost btn-sm mini-pin-btn';
+      pin.textContent = isPinned ? 'Unpin' : 'Pin to profile';
+      pin.addEventListener('click', function () { pin.disabled = true; opts.onPin(isPinned ? null : item.id); });
+      body.appendChild(pin);
+    }
     card.appendChild(body);
     return card;
   }
 
-  function renderMiniStories(el, posts, emptyMsg) {
+  function renderMiniStories(el, posts, emptyMsg, opts) {
     el.innerHTML = '';
     if (!posts.length) { el.innerHTML = '<p class="form-note"></p>'; el.firstChild.textContent = emptyMsg; return; }
-    posts.forEach(function (it) { el.appendChild(buildMiniStory(it)); });
+    posts.forEach(function (it) { el.appendChild(buildMiniStory(it, opts)); });
   }
 
   function refreshMyProfileExtras() {
     if (!currentUid) return;
     loadUserPosts(currentUid).then(function (posts) {
       renderStats(profileStatsEl, posts, myProfile || {}, friendUids.size);
-      renderMiniStories(profileStoriesEl, posts, 'You haven\u2019t posted any stories yet.');
+      var pinnedId = myProfile && myProfile.pinnedPostId;
+      renderMiniStories(profileStoriesEl, pinFirst(posts, pinnedId), 'You haven\u2019t posted any stories yet.', {
+        pinnedId: pinnedId, canPin: true,
+        onPin: function (id) {
+          db.collection('users').doc(currentUid).update({ pinnedPostId: id }).then(function () {
+            if (myProfile) myProfile.pinnedPostId = id;
+            refreshMyProfileExtras();
+          }).catch(function () { refreshMyProfileExtras(); });
+        }
+      });
     }).catch(function () {
       profileStoriesEl.innerHTML = '<p class="form-note">Couldn\u2019t load your stories.</p>';
     });
@@ -937,7 +957,7 @@
     var name = document.createElement('p'); name.className = 'profile-preview-name';
     name.textContent = u.displayName || 'Member';
     body.appendChild(name);
-    if (u.location) {
+    if (u.location && canSee(u, 'hideLocation')) {
       var loc = document.createElement('p'); loc.className = 'profile-preview-location';
       loc.textContent = '\ud83d\udccd ' + u.location;
       body.appendChild(loc);
@@ -966,8 +986,13 @@
     memberProfileStories.innerHTML = '<p class="form-note">Loading\u2026</p>';
     loadUserPosts(u.id).then(function (posts) {
       if (openProfileUid !== u.id) return;
-      renderStats(document.getElementById('member-profile-stats'), posts, u, null);
-      renderMiniStories(memberProfileStories, posts, 'No stories yet.');
+      var statsEl = document.getElementById('member-profile-stats');
+      if (canSee(u, 'hideStats')) {
+        renderStats(statsEl, posts, u, null);
+      } else {
+        statsEl.innerHTML = '<p class="form-note">Stats are visible to friends only.</p>';
+      }
+      renderMiniStories(memberProfileStories, pinFirst(posts, u.pinnedPostId), 'No stories yet.', { pinnedId: u.pinnedPostId });
     }).catch(function () {
       memberProfileStories.innerHTML = '<p class="form-note">Couldn\u2019t load stories.</p>';
     });
@@ -989,6 +1014,91 @@
   var profilePreviewName = document.getElementById('profile-preview-name');
   var profilePreviewLocation = document.getElementById('profile-preview-location');
   var profilePreviewBio = document.getElementById('profile-preview-bio');
+
+  /* ---------- photo crop ---------- */
+  var croppedPhotoFile = null;
+  var cropModal = document.getElementById('crop-modal');
+  var cropCanvas = document.getElementById('crop-canvas');
+  var cropCtx = cropCanvas.getContext('2d');
+  var cropZoom = document.getElementById('crop-zoom');
+  var CROP = { img: null, ox: 0, oy: 0, dragging: false, lx: 0, ly: 0 };
+  var CROP_VIEW = 280, CROP_OUT = 512;
+
+  function cropScale() { return Math.max(CROP_VIEW / CROP.img.width, CROP_VIEW / CROP.img.height) * parseFloat(cropZoom.value); }
+  function clampCrop() {
+    var s = cropScale();
+    var maxX = Math.max(0, (CROP.img.width * s - CROP_VIEW) / 2);
+    var maxY = Math.max(0, (CROP.img.height * s - CROP_VIEW) / 2);
+    CROP.ox = Math.min(maxX, Math.max(-maxX, CROP.ox));
+    CROP.oy = Math.min(maxY, Math.max(-maxY, CROP.oy));
+  }
+  function drawCrop(ctx, size, withMask) {
+    var k = size / CROP_VIEW, s = cropScale() * k;
+    var w = CROP.img.width * s, h = CROP.img.height * s;
+    ctx.clearRect(0, 0, size, size);
+    ctx.fillStyle = '#0a1420'; ctx.fillRect(0, 0, size, size);
+    ctx.drawImage(CROP.img, (size - w) / 2 + CROP.ox * k, (size - h) / 2 + CROP.oy * k, w, h);
+    if (withMask) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath(); ctx.rect(0, 0, size, size);
+      ctx.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2, true);
+      ctx.fill('evenodd');
+      ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  function openCrop(file) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      CROP.img = img; CROP.ox = 0; CROP.oy = 0; cropZoom.value = 1;
+      drawCrop(cropCtx, CROP_VIEW, true);
+      cropModal.hidden = false;
+    };
+    img.onerror = function () { profilePhoto.value = ''; };
+    img.src = url;
+  }
+  cropZoom.addEventListener('input', function () { clampCrop(); drawCrop(cropCtx, CROP_VIEW, true); });
+  cropCanvas.addEventListener('pointerdown', function (e) {
+    CROP.dragging = true; CROP.lx = e.clientX; CROP.ly = e.clientY;
+    cropCanvas.setPointerCapture(e.pointerId);
+  });
+  cropCanvas.addEventListener('pointermove', function (e) {
+    if (!CROP.dragging) return;
+    CROP.ox += e.clientX - CROP.lx; CROP.oy += e.clientY - CROP.ly;
+    CROP.lx = e.clientX; CROP.ly = e.clientY;
+    clampCrop(); drawCrop(cropCtx, CROP_VIEW, true);
+  });
+  ['pointerup', 'pointercancel'].forEach(function (ev) {
+    cropCanvas.addEventListener(ev, function () { CROP.dragging = false; });
+  });
+  document.getElementById('crop-cancel').addEventListener('click', function () {
+    cropModal.hidden = true; profilePhoto.value = ''; croppedPhotoFile = null;
+  });
+  document.getElementById('crop-apply').addEventListener('click', function () {
+    var out = document.createElement('canvas');
+    out.width = CROP_OUT; out.height = CROP_OUT;
+    drawCrop(out.getContext('2d'), CROP_OUT, false);
+    out.toBlob(function (blob) {
+      cropModal.hidden = true;
+      if (!blob) { profilePhoto.value = ''; return; }
+      croppedPhotoFile = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+      renderProfilePreview(URL.createObjectURL(blob));
+      profilePhotoPending.hidden = false;
+    }, 'image/jpeg', 0.9);
+  });
+
+  /* ---------- privacy + pinned story helpers ---------- */
+  function canSee(u, flag) { return !u[flag] || friendUids.has(u.id); }
+
+  function pinFirst(posts, pinnedId) {
+    if (!pinnedId) return posts;
+    var hit = posts.filter(function (p) { return p.id === pinnedId; });
+    if (!hit.length) return posts;
+    return hit.concat(posts.filter(function (p) { return p.id !== pinnedId; }));
+  }
 
   var BIO_MAX = 160;
 
@@ -1088,6 +1198,8 @@
       profileName.value = myProfile.displayName || '';
       profileBio.value = myProfile.bio || '';
       profileInterests.value = interestsOf(myProfile).join(', ');
+      profileHideLocation.checked = !!myProfile.hideLocation;
+      profileHideStats.checked = !!myProfile.hideStats;
       updateBioCount();
       profileLocation.value = myProfile.location || '';
       profileEmail.textContent = myProfile.email || auth.currentUser.email || '';
@@ -1139,7 +1251,9 @@
     profileInterests.value = interestsOf(myProfile).join(', ');
     updateBioCount();
     profileLocation.value = myProfile.location || '';
-    profilePhoto.value = '';
+    profileHideLocation.checked = !!myProfile.hideLocation;
+    profileHideStats.checked = !!myProfile.hideStats;
+    profilePhoto.value = ''; croppedPhotoFile = null;
     document.getElementById('profile-photo-pending').hidden = true;
     renderProfilePreview();
   }
@@ -1159,13 +1273,10 @@
 
   profilePhoto.addEventListener('change', function () {
     var file = profilePhoto.files[0];
-    if (file) {
-      renderProfilePreview(URL.createObjectURL(file));
-      profilePhotoPending.hidden = false;
-    }
+    if (file) openCrop(file);
   });
   profilePhotoCancel.addEventListener('click', function () {
-    profilePhoto.value = '';
+    profilePhoto.value = ''; croppedPhotoFile = null;
     profilePhotoPending.hidden = true;
     renderProfilePreview();
   });
@@ -1175,17 +1286,19 @@
     var saveBtn = profileForm.querySelector('button[type="submit"]');
     saveBtn.disabled = true;
     profileStatus.className = 'form-note';
-    profileStatus.textContent = (profilePhoto.files[0] || profileCover.files[0]) ? 'Uploading\u2026' : 'Saving\u2026';
+    profileStatus.textContent = (croppedPhotoFile || profileCover.files[0]) ? 'Uploading\u2026' : 'Saving\u2026';
 
     var update = {
       displayName: profileName.value.trim(),
       bio: profileBio.value.trim(),
       location: profileLocation.value.trim(),
-      interests: parseInterests(profileInterests.value)
+      interests: parseInterests(profileInterests.value),
+      hideLocation: profileHideLocation.checked,
+      hideStats: profileHideStats.checked
     };
     if (!myProfile.dob && profileDob.value) update.dob = profileDob.value;
 
-    var photoWork = profilePhoto.files[0] ? uploadToCloudinary(profilePhoto.files[0]) : Promise.resolve(undefined);
+    var photoWork = croppedPhotoFile ? uploadToCloudinary(croppedPhotoFile) : Promise.resolve(undefined);
     var coverWork = profileCover.files[0] ? uploadToCloudinary(profileCover.files[0]) : Promise.resolve(undefined);
     Promise.all([photoWork, coverWork]).then(function (rs) {
       if (rs[0]) update.photoURL = rs[0].url;
@@ -1195,7 +1308,7 @@
     }).then(function () {
       return auth.currentUser.updateProfile({ displayName: update.displayName });
     }).then(function () {
-      profilePhoto.value = '';
+      profilePhoto.value = ''; croppedPhotoFile = null;
       profilePhotoPending.hidden = true;
       profileCover.value = '';
       profileCoverPending.hidden = true;
@@ -1242,7 +1355,7 @@
     var q = memberSearch.value.trim().toLowerCase();
     var list = allUsers.filter(function (u) {
       if (!q) return true;
-      var hay = [u.displayName, u.location, u.bio].concat(interestsOf(u)).join(' ').toLowerCase();
+      var hay = [u.displayName, canSee(u, 'hideLocation') ? u.location : '', u.bio].concat(interestsOf(u)).join(' ').toLowerCase();
       return hay.indexOf(q) !== -1;
     });
     if (memberSort.value === 'new') {
@@ -1275,10 +1388,11 @@
       name.addEventListener('click', function () { openMemberProfile(u); });
       name.textContent = u.displayName || u.email || 'Member';
       info.appendChild(name);
-      if (u.bio || u.location) {
+      var shownLoc = canSee(u, 'hideLocation') ? u.location : '';
+      if (u.bio || shownLoc) {
         var sub = document.createElement('p');
         sub.className = 'member-sub';
-        sub.textContent = [u.bio, u.location].filter(Boolean).join(' \u00b7 ');
+        sub.textContent = [u.bio, shownLoc].filter(Boolean).join(' \u00b7 ');
         info.appendChild(sub);
       }
       var rowChips = interestsOf(u);

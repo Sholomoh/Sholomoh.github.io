@@ -993,3 +993,22 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .danger-details > summary::before { content: '\25B8  '; }
 .danger-details[open] > summary::before { content: '\25BE  '; }
 .danger-details > summary:hover { color: var(--text); }
+
+/* PROFILE: crop modal, pinned story, privacy checkboxes */
+.crop-modal {
+  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.75); padding: 1rem;
+}
+.crop-modal[hidden] { display: none; }
+.crop-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 1.2rem; width: 100%; max-width: 340px; text-align: center;
+}
+.crop-title { color: var(--white); font-weight: 700; margin-bottom: 0.8rem; }
+#crop-canvas { width: 280px; max-width: 100%; height: auto; border-radius: 10px; touch-action: none; cursor: grab; }
+#crop-zoom { width: 100%; margin: 0.9rem 0 0.2rem; accent-color: var(--green); }
+.crop-box .form-actions { justify-content: center; }
+.mini-story.is-pinned { border-color: rgba(0,255,136,0.45); }
+.mini-pin-btn { margin-top: 0.6rem; }
+.check-label { display: flex; align-items: center; gap: 0.55rem; margin: 0.5rem 0; color: var(--text); font-size: 0.88rem; cursor: pointer; }
+.check-label input { accent-color: var(--green); }
