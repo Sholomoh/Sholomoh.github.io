@@ -142,6 +142,12 @@ service cloud.firestore {
     match /postComments/{id} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow update: if isSignedIn() &&
+        resource.data.authorUid == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt']) &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 1000;
       allow delete: if isSignedIn() &&
         (resource.data.authorUid == request.auth.uid || isAdmin());
     }

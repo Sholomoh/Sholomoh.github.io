@@ -241,13 +241,55 @@
 
   /* ---------- composer show/hide ---------- */
 
+  var draftTitle = document.getElementById('post-title');
+  var draftBody = document.getElementById('post-body');
+  var draftTimer = null;
+  function draftKey() { return currentUid ? 'sholomoh:draft:' + currentUid : null; }
+  function readDraft() {
+    var k = draftKey();
+    if (!k) return null;
+    try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; }
+  }
+  function saveDraft() {
+    var k = draftKey();
+    if (!k) return;
+    try {
+      if (!draftTitle.value.trim() && !draftBody.value.trim()) localStorage.removeItem(k);
+      else localStorage.setItem(k, JSON.stringify({ title: draftTitle.value, body: draftBody.value }));
+    } catch (e) { /* storage unavailable: skip silently */ }
+    updateDraftUI();
+  }
+  function clearDraft() {
+    var k = draftKey();
+    if (k) { try { localStorage.removeItem(k); } catch (e) {} }
+    updateDraftUI();
+  }
+  function updateDraftUI() {
+    var d = readDraft();
+    composerToggle.textContent = (d && composer.hidden) ? '\u270e Continue draft' : '+ New story';
+  }
+  function restoreDraft() {
+    var d = readDraft();
+    if (d && !draftTitle.value && !draftBody.value) {
+      draftTitle.value = d.title || ''; draftBody.value = d.body || '';
+      postStatus.textContent = 'Draft restored.';
+      setTimeout(function () { if (postStatus.textContent === 'Draft restored.') postStatus.textContent = ''; }, 2500);
+    }
+  }
+  [draftTitle, draftBody].forEach(function (el) {
+    el.addEventListener('input', function () { clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 400); });
+  });
+
   composerToggle.addEventListener('click', function () {
     composer.hidden = !composer.hidden;
-    if (!composer.hidden) document.getElementById('post-title').focus();
+    if (!composer.hidden) { restoreDraft(); draftTitle.focus(); }
+    updateDraftUI();
   });
   composerCancel.addEventListener('click', function () {
     postForm.reset();
+    clearDraft();
     composer.hidden = true;
+    updateDraftUI();
   });
 
   /* ---------- feed sub-tabs (community / friends) ---------- */
@@ -338,6 +380,9 @@
     subscribeComments(postId);
   }
 
+  var editingCommentId = null;
+  var editingCommentValue = null;
+
   function buildCommentsSection(postId, postAuthorUid, postTitle) {
     var wrap = document.createElement('div');
     wrap.className = 'comments-section';
@@ -355,11 +400,46 @@
         var head = document.createElement('p');
         head.className = 'comment-meta';
         var when = c.createdAt && c.createdAt.toDate ? relTime(c.createdAt.toDate()) : '';
-        head.textContent = (c.authorName || 'Member') + (when ? ' \u00b7 ' + when : '');
+        head.textContent = (c.authorName || 'Member') + (when ? ' \u00b7 ' + when : '') + (c.editedAt ? ' \u00b7 edited' : '');
+        row.appendChild(head);
+        if (editingCommentId === c.id) {
+          var eform = document.createElement('form');
+          eform.className = 'comment-form';
+          var einput = document.createElement('input');
+          einput.type = 'text'; einput.className = 'field-input'; einput.value = editingCommentValue !== null ? editingCommentValue : (c.text || ''); einput.maxLength = 1000; einput.required = true;
+          einput.addEventListener('input', function () { editingCommentValue = einput.value; });
+          var esave = document.createElement('button');
+          esave.type = 'submit'; esave.className = 'btn btn-ghost btn-sm'; esave.textContent = 'Save';
+          var ecancel = document.createElement('button');
+          ecancel.type = 'button'; ecancel.className = 'btn btn-ghost btn-sm'; ecancel.textContent = 'Cancel';
+          ecancel.addEventListener('click', function () { editingCommentId = null; editingCommentValue = null; renderFeedOnce(); });
+          eform.appendChild(einput); eform.appendChild(esave); eform.appendChild(ecancel);
+          eform.addEventListener('submit', function (ev) {
+            ev.preventDefault();
+            var nv = einput.value.trim();
+            if (!nv) return;
+            if (nv === (c.text || '')) { editingCommentId = null; editingCommentValue = null; renderFeedOnce(); return; }
+            esave.disabled = true;
+            db.collection('postComments').doc(c.id).update({ text: nv, editedAt: FieldValue.serverTimestamp() })
+              .then(function () { editingCommentId = null; editingCommentValue = null; })
+              .catch(function () { esave.disabled = false; esave.textContent = 'Retry'; });
+          });
+          row.appendChild(eform);
+          list.appendChild(row);
+          setTimeout(function () { einput.focus(); }, 0);
+          return;
+        }
         var ctext = document.createElement('p');
         ctext.className = 'comment-text';
         ctext.textContent = c.text || '';
-        row.appendChild(head); row.appendChild(ctext);
+        row.appendChild(ctext);
+        if (currentUid && c.authorUid === currentUid) {
+          var edit = document.createElement('button');
+          edit.type = 'button'; edit.className = 'btn btn-ghost btn-sm comment-del';
+          edit.textContent = 'Edit';
+          edit.addEventListener('click', function () { editingCommentId = c.id; editingCommentValue = null; renderFeedOnce(); });
+          row.appendChild(edit);
+        }
         if (currentUid && (c.authorUid === currentUid || amAdmin)) {
           var del = document.createElement('button');
           del.type = 'button'; del.className = 'btn btn-ghost btn-sm btn-danger comment-del';
@@ -843,8 +923,10 @@
       });
     }).then(function () {
       postForm.reset();
+      clearDraft();
       postStatus.textContent = 'Posted.';
       composer.hidden = true;
+      updateDraftUI();
       setTimeout(function () { postStatus.textContent = ''; }, 2500);
     }).catch(function (err) {
       postStatus.textContent = 'Could not post: ' + (err && err.message ? err.message : 'try again.');
@@ -1943,7 +2025,8 @@
       currentUid = null; amAdmin = false;
       friendUids = new Set(); outgoingByUid = {}; incomingByUid = {};
       myLikedPostIds = new Set(); expandedComments = new Set(); commentsCache = {};
-      expandedStories = new Set(); feedLimit = FEED_PAGE;
+      expandedStories = new Set(); feedLimit = FEED_PAGE; editingCommentId = null;
+      postForm.reset(); updateDraftUI();
       heldBack = {}; newestSeen = 0; feedInitialised = false; newPill.hidden = true;
       threadView.hidden = true; inboxView.hidden = false;
       activeConvId = null; activeOtherUid = null;
@@ -1969,6 +2052,7 @@
       var poster = admin || !!(r[1] && r[1].exists);
       amAdmin = admin;
       composerWrap.hidden = !poster;
+      updateDraftUI();
       requestBox.hidden = poster;
       adminTabBtn.hidden = !admin;
       if (!poster) checkRequestStatus(user.uid);
