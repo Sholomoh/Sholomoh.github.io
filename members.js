@@ -729,6 +729,94 @@
     }).then(function () { submitBtn.disabled = false; });
   });
 
+
+  /* ---------- delete account ---------- */
+
+  var deleteBtn = document.getElementById('delete-account-btn');
+  var deleteForm = document.getElementById('delete-account-form');
+  var deleteStatus = document.getElementById('delete-status');
+
+  deleteBtn.addEventListener('click', function () {
+    deleteForm.hidden = false; deleteBtn.hidden = true;
+    document.getElementById('delete-password').focus();
+  });
+  document.getElementById('delete-cancel-btn').addEventListener('click', function () {
+    deleteForm.reset(); deleteForm.hidden = true; deleteBtn.hidden = false; deleteStatus.textContent = '';
+  });
+
+  // Delete every doc a query returns, in batches (Firestore caps at 500).
+  function deleteQueryDocs(query) {
+    return query.get().then(function (snap) {
+      var docs = snap.docs, chain = Promise.resolve();
+      for (var i = 0; i < docs.length; i += 400) {
+        (function (chunk) {
+          chain = chain.then(function () {
+            var batch = db.batch();
+            chunk.forEach(function (d) { batch.delete(d.ref); });
+            return batch.commit();
+          });
+        })(docs.slice(i, i + 400));
+      }
+      return chain;
+    });
+  }
+
+  function deleteMyData(uid) {
+    var quiet = function () {};
+    // Likes and comments on other people's posts: remove, then fix the counters.
+    var likes = db.collection('postLikes').where('uid', '==', uid).get().then(function (snap) {
+      return Promise.all(snap.docs.map(function (d) {
+        return d.ref.delete().then(function () {
+          return db.collection('posts').doc(d.data().postId).update({ likeCount: FieldValue.increment(-1) });
+        }).catch(quiet);
+      }));
+    });
+    var comments = db.collection('postComments').where('authorUid', '==', uid).get().then(function (snap) {
+      return Promise.all(snap.docs.map(function (d) {
+        return d.ref.delete().then(function () {
+          return db.collection('posts').doc(d.data().postId).update({ commentCount: FieldValue.increment(-1) });
+        }).catch(quiet);
+      }));
+    });
+    return Promise.all([likes, comments]).then(function () {
+      return Promise.all([
+        deleteQueryDocs(db.collection('posts').where('authorUid', '==', uid)),
+        deleteQueryDocs(db.collection('friendRequests').where('fromUid', '==', uid)),
+        deleteQueryDocs(db.collection('friendRequests').where('toUid', '==', uid)),
+        db.collection('posterRequests').doc(uid).delete().catch(quiet)
+      ]);
+    }).then(function () {
+      return db.collection('users').doc(uid).delete();
+    });
+  }
+
+  deleteForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var user = auth.currentUser;
+    var submitBtn = deleteForm.querySelector('button[type="submit"]');
+    if (document.getElementById('delete-confirm').value.trim() !== 'DELETE') {
+      deleteStatus.textContent = 'Type DELETE (capitals) to confirm.';
+      return;
+    }
+    submitBtn.disabled = true;
+    deleteStatus.className = 'form-note';
+    deleteStatus.textContent = 'Deleting\u2026';
+    var cred = firebase.auth.EmailAuthProvider.credential(user.email, document.getElementById('delete-password').value);
+    // Re-check the password first so nothing is removed on a wrong one.
+    user.reauthenticateWithCredential(cred).then(function () {
+      return deleteMyData(user.uid);
+    }).then(function () {
+      return user.delete();
+    }).then(function () {
+      deleteForm.reset();
+      deleteForm.hidden = true; deleteBtn.hidden = false; deleteStatus.textContent = '';
+    }).catch(function (err) {
+      deleteStatus.className = 'form-error';
+      deleteStatus.textContent = (err && err.code === 'auth/wrong-password') || (err && err.code === 'auth/invalid-credential')
+        ? 'Wrong password.' : 'Couldn\u2019t delete your account: ' + (err && err.message ? err.message : 'try again.');
+    }).then(function () { submitBtn.disabled = false; });
+  });
+
   /* ---------- profile ---------- */
 
   var myProfile = null;

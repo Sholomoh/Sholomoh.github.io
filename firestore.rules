@@ -22,6 +22,8 @@ service cloud.firestore {
         request.resource.data.createdAt == resource.data.createdAt &&
         (!('dob' in resource.data) || resource.data.dob == null ||
          request.resource.data.dob == resource.data.dob);
+      // Members can delete their own profile (account deletion).
+      allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Admin allowlist. Add yourself here manually in the Firebase console
@@ -42,7 +44,8 @@ service cloud.firestore {
     match /posterRequests/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
     }
 
     // Friend (connect) requests. Doc id is "{fromUid}_{toUid}". Either

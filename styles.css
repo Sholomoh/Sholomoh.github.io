@@ -893,3 +893,7 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .notif-time { display: block; font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; }
 .notif-row.clickable { cursor: pointer; }
 .notif-row.clickable:hover { color: var(--green); }
+
+.danger-zone { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,71,87,0.3); }
+.danger-zone h3 { color: var(--red); font-size: 1rem; margin-bottom: 0.5rem; }
+.danger-zone .form-note { margin-bottom: 1rem; }

@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=22">
+  <link rel="stylesheet" href="styles.css?v=23">
   <script src="circuit-bg.js?v=3" defer></script>
   <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -180,6 +180,20 @@
           </div>
           <p id="profile-status" class="form-note"></p>
         </form>
+        <div class="danger-zone" id="danger-zone">
+          <h3>Delete account</h3>
+          <p class="form-note">This permanently deletes your profile, stories, comments, likes and friend connections. It can't be undone. Messages you've already sent stay in the other person's inbox.</p>
+          <button type="button" id="delete-account-btn" class="btn btn-ghost btn-sm btn-danger">Delete my account</button>
+          <form id="delete-account-form" hidden>
+            <label class="field-label">Confirm your password<input type="password" id="delete-password" class="field-input" autocomplete="current-password" required></label>
+            <label class="field-label">Type DELETE to confirm<input type="text" id="delete-confirm" class="field-input" autocomplete="off" required></label>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-ghost btn-sm btn-danger">Permanently delete</button>
+              <button type="button" id="delete-cancel-btn" class="btn btn-ghost btn-sm">Cancel</button>
+            </div>
+            <p id="delete-status" class="form-error"></p>
+          </form>
+        </div>
       </div>
 
       <!-- ADMIN -->
@@ -196,6 +210,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js"></script>
+  <script src="members.js?v=2"></script>
 </body>
 </html>
