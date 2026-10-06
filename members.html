@@ -157,14 +157,16 @@
       <!-- MY PROFILE -->
       <div class="tab-panel" id="tab-profile" hidden>
         <div class="profile-preview" id="profile-preview">
-          <div class="profile-preview-header">
-            <span id="profile-preview-avatar"></span>
-            <div class="profile-preview-text">
-              <p class="profile-preview-name" id="profile-preview-name"></p>
-              <p class="profile-preview-sub" id="profile-preview-sub"></p>
+          <div class="profile-banner"></div>
+          <div class="profile-preview-body">
+            <div class="profile-preview-top">
+              <span id="profile-preview-avatar" class="profile-avatar-wrap"></span>
+              <button type="button" id="profile-edit-btn" class="btn btn-ghost btn-sm profile-edit-btn">Edit profile</button>
             </div>
+            <p class="profile-preview-name" id="profile-preview-name"></p>
+            <p class="profile-preview-location" id="profile-preview-location" hidden></p>
+            <p class="profile-preview-bio" id="profile-preview-bio"></p>
           </div>
-          <button type="button" id="profile-edit-btn" class="btn btn-ghost btn-sm profile-edit-btn">Edit profile</button>
         </div>
         <form id="profile-form" hidden>
           <label class="field-label">Name<input type="text" id="profile-name" class="field-input" required></label>

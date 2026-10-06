@@ -822,7 +822,8 @@
   var myProfile = null;
   var profilePreviewAvatar = document.getElementById('profile-preview-avatar');
   var profilePreviewName = document.getElementById('profile-preview-name');
-  var profilePreviewSub = document.getElementById('profile-preview-sub');
+  var profilePreviewLocation = document.getElementById('profile-preview-location');
+  var profilePreviewBio = document.getElementById('profile-preview-bio');
 
   function renderProfilePreview(overridePhotoUrl) {
     profilePreviewAvatar.innerHTML = '';
@@ -838,8 +839,12 @@
       profilePreviewAvatar.appendChild(span);
     }
     profilePreviewName.textContent = (myProfile && myProfile.displayName) || 'Your profile';
-    var sub = [(myProfile && myProfile.bio), (myProfile && myProfile.location)].filter(Boolean).join(' \u00b7 ');
-    profilePreviewSub.textContent = sub || 'This is how you appear to other members.';
+    var loc = (myProfile && myProfile.location) || '';
+    profilePreviewLocation.textContent = loc ? '\ud83d\udccd ' + loc : '';
+    profilePreviewLocation.hidden = !loc;
+    var bio = (myProfile && myProfile.bio) || '';
+    profilePreviewBio.textContent = bio || 'No bio yet \u2014 tap Edit profile to add one.';
+    profilePreviewBio.classList.toggle('is-empty', !bio);
   }
 
   function loadMyProfile() {
