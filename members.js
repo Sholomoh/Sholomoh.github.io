@@ -826,25 +826,38 @@
   var memberProfileCard = document.getElementById('member-profile-card');
   var memberProfileStories = document.getElementById('member-profile-stories');
 
+  // Older stories/users may be missing fields (or have odd values), so every
+  // read below is defensive: counts default to 0, dates tolerate several shapes.
+  function num(v) { v = Number(v); return isFinite(v) && v > 0 ? Math.floor(v) : 0; }
+  function toDate(t) {
+    if (!t) return null;
+    if (typeof t.toDate === 'function') return t.toDate();
+    if (t instanceof Date) return t;
+    if (typeof t.seconds === 'number') return new Date(t.seconds * 1000);
+    if (typeof t === 'number' || typeof t === 'string') { var d = new Date(t); return isNaN(d) ? null : d; }
+    return null;
+  }
+
   function loadUserPosts(uid) {
     // No orderBy here on purpose: avoids needing a composite index; sort client-side.
     return db.collection('posts').where('authorUid', '==', uid).get().then(function (snap) {
       var arr = [];
       snap.forEach(function (doc) { arr.push({ id: doc.id, data: doc.data() }); });
       arr.sort(function (a, b) {
-        return ((b.data.createdAt && b.data.createdAt.seconds) || 0) - ((a.data.createdAt && a.data.createdAt.seconds) || 0);
+        var ad = toDate(a.data.createdAt), bd = toDate(b.data.createdAt);
+        return (bd ? bd.getTime() : 0) - (ad ? ad.getTime() : 0);
       });
       return arr;
     });
   }
 
   function fmtJoined(u) {
-    var t = u && u.createdAt && u.createdAt.toDate ? u.createdAt.toDate() : null;
+    var t = toDate(u && u.createdAt);
     return t ? t.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '\u2014';
   }
 
   function renderStats(el, posts, u, friendCount) {
-    var likes = posts.reduce(function (n, p) { return n + (p.data.likeCount || 0); }, 0);
+    var likes = posts.reduce(function (n, p) { return n + num(p.data.likeCount); }, 0);
     var items = [[posts.length, 'Stories'], [likes, 'Likes']];
     if (friendCount !== null && friendCount !== undefined) items.push([friendCount, 'Friends']);
     items.push([fmtJoined(u), 'Joined']);
@@ -872,12 +885,14 @@
     }
     var body = document.createElement('div');
     body.className = 'mini-story-body';
-    var h = document.createElement('h3'); h.textContent = p.title || 'Untitled';
+    var h = document.createElement('h3'); h.textContent = String(p.title || 'Untitled');
     var meta = document.createElement('p'); meta.className = 'story-meta';
-    var when = p.createdAt && p.createdAt.toDate ? relTime(p.createdAt.toDate()) : '';
-    meta.textContent = when + (when ? ' \u00b7 ' : '') + '\u2764 ' + (p.likeCount || 0) + ' \u00b7 \ud83d\udcac ' + (p.commentCount || 0);
+    var cd = toDate(p.createdAt);
+    var when = cd ? relTime(cd) : '';
+    var kindIcon = (url && type === 'video') ? ' \u00b7 \ud83c\udfac' : (url && type !== 'image') ? ' \u00b7 \ud83d\udcce' : '';
+    meta.textContent = when + (when ? ' \u00b7 ' : '') + '\u2764 ' + num(p.likeCount) + ' \u00b7 \ud83d\udcac ' + num(p.commentCount) + kindIcon;
     var snip = document.createElement('p'); snip.className = 'mini-story-text';
-    var t = p.body || '';
+    var t = String(p.body || '');
     snip.textContent = t.length > 140 ? t.slice(0, 140).trim() + '\u2026' : t;
     body.appendChild(h); body.appendChild(meta); body.appendChild(snip);
     card.appendChild(body);
