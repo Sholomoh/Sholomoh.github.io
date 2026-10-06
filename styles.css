@@ -1051,3 +1051,19 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .notif-row.clickable:hover { background: rgba(255,255,255,0.04); }
 #tab-stories.focus-mode > :not(#story-focus) { display: none !important; }
 #story-focus-card { margin-top: 0.9rem; }
+
+/* ACCESSIBILITY + MOBILE */
+:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+button.chip { cursor: pointer; font-family: 'Share Tech Mono', monospace; }
+button.chip:hover { background: rgba(0,210,211,0.16); }
+[role="button"].clickable:focus-visible, .author-link:focus-visible { border-radius: 4px; }
+@media (pointer: coarse) {
+  .btn-sm, .reaction-btn, .subtab-btn, .tab-btn, .read-more-btn, .notif-bell { min-height: 44px; }
+  button.chip { min-height: 34px; padding: 0.35rem 0.8rem; }
+  input, select, textarea { font-size: 16px; }
+  .comment-del { min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-complete-bar span, .new-pill { transition: none !important; }
+  html { scroll-behavior: auto; }
+}

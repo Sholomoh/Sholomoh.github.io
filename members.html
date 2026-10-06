@@ -22,11 +22,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=30">
-  <div class="crop-modal" id="crop-modal" hidden>
+  <link rel="stylesheet" href="styles.css?v=31">
+  <div class="crop-modal" id="crop-modal" role="dialog" aria-modal="true" aria-labelledby="crop-title" hidden>
     <div class="crop-box">
-      <p class="crop-title">Adjust your photo</p>
-      <canvas id="crop-canvas" width="280" height="280"></canvas>
+      <p class="crop-title" id="crop-title">Adjust your photo</p>
+      <canvas id="crop-canvas" width="280" height="280" tabindex="0" role="img" aria-label="Photo crop area. Use arrow keys to move, plus and minus to zoom."></canvas>
       <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1" aria-label="Zoom">
       <p class="form-note">Drag to reposition, slider to zoom.</p>
       <div class="form-actions">
@@ -84,7 +84,7 @@
       <div class="member-bar">
         <span id="who-am-i"></span>
         <div class="member-bar-right">
-          <button type="button" id="notif-bell" class="btn btn-ghost btn-sm notif-bell">🔔<span id="notif-badge" class="badge notif-badge" hidden>0</span></button>
+          <button type="button" id="notif-bell" class="btn btn-ghost btn-sm notif-bell" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">🔔<span id="notif-badge" class="badge notif-badge" hidden>0</span></button>
           <button id="signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
         </div>
       </div>
@@ -112,6 +112,7 @@
       <div class="tab-panel active" id="tab-stories">
         <div id="story-focus" hidden>
           <button type="button" id="story-focus-back" class="btn btn-ghost btn-sm">← Back to feed</button>
+          <button type="button" id="story-focus-copy" class="btn btn-ghost btn-sm">🔗 Copy link</button>
           <div id="story-focus-card"></div>
         </div>
         <div id="composer-wrap" hidden>
@@ -274,6 +275,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=9"></script>
+  <script src="members.js?v=10"></script>
 </body>
 </html>

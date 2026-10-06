@@ -536,11 +536,13 @@
     focusId = null; focusData = null;
     storyFocus.hidden = true;
     tabStories.classList.remove('focus-mode');
+    clearHash('s');
   }
   function openStoryFocus(postId) {
     document.querySelector('#main-tabs .tab-btn[data-tab="stories"]').click();
     closeStoryFocus();
     focusId = postId;
+    setHash('s=' + postId);
     tabStories.classList.add('focus-mode');
     storyFocus.hidden = false;
     storyFocusCard.innerHTML = '<p class="form-note">Loading\u2026</p>';
@@ -555,6 +557,8 @@
     window.scrollTo({ top: 0 });
   }
   document.getElementById('story-focus-back').addEventListener('click', closeStoryFocus);
+  var storyFocusCopy = document.getElementById('story-focus-copy');
+  storyFocusCopy.addEventListener('click', function () { if (focusId) copyLink(storyFocusCopy, 's=' + focusId); });
 
   function goToAuthor(uid) {
     if (!uid) return;
@@ -586,7 +590,7 @@
     head.className = 'story-head';
     var headAv = avatarEl(p.authorUid, p.authorName);
     headAv.classList.add('clickable');
-    headAv.addEventListener('click', function () { goToAuthor(p.authorUid); });
+    makeActivatable(headAv, function () { goToAuthor(p.authorUid); }, 'View ' + (p.authorName || 'author') + '\u2019s profile');
     head.appendChild(headAv);
     var headText = document.createElement('div');
     var h3 = document.createElement('h3');
@@ -598,7 +602,7 @@
     var authorLink = document.createElement('span');
     authorLink.className = 'author-link';
     authorLink.textContent = p.authorName || '';
-    authorLink.addEventListener('click', function () { goToAuthor(p.authorUid); });
+    makeActivatable(authorLink, function () { goToAuthor(p.authorUid); });
     meta.appendChild(authorLink);
     meta.appendChild(document.createTextNode((when ? ' \u00b7 ' + when : '') + (edited ? ' \u00b7 edited' : '')));
     headText.appendChild(h3); headText.appendChild(meta);
@@ -631,6 +635,8 @@
     likeBtn.type = 'button';
     likeBtn.className = 'reaction-btn' + (liked ? ' liked' : '');
     likeBtn.textContent = (liked ? '\u2764' : '\u2661') + ' ' + (p.likeCount || 0);
+    likeBtn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+    likeBtn.setAttribute('aria-label', (liked ? 'Unlike' : 'Like') + ' this story, ' + (p.likeCount || 0) + ' likes');
     likeBtn.addEventListener('click', function () {
       if (!currentUid) return;
       likeBtn.disabled = true;
@@ -1145,6 +1151,7 @@
       var pin = document.createElement('button');
       pin.type = 'button'; pin.className = 'btn btn-ghost btn-sm mini-pin-btn';
       pin.textContent = isPinned ? 'Unpin' : 'Pin to profile';
+      pin.setAttribute('aria-label', (isPinned ? 'Unpin ' : 'Pin ') + String(p.title || 'story') + (isPinned ? '' : ' to profile'));
       pin.addEventListener('click', function () { pin.disabled = true; opts.onPin(isPinned ? null : item.id); });
       body.appendChild(pin);
     }
@@ -1193,6 +1200,11 @@
     msgBtn.textContent = '\u2709 Message';
     msgBtn.addEventListener('click', function () { openConversation(u); });
     actions.appendChild(msgBtn);
+    var linkBtn = document.createElement('button');
+    linkBtn.type = 'button'; linkBtn.className = 'btn btn-ghost btn-sm';
+    linkBtn.textContent = '\ud83d\udd17 Copy link';
+    linkBtn.addEventListener('click', function () { copyLink(linkBtn, 'u=' + u.id); });
+    actions.appendChild(linkBtn);
     top.appendChild(actions);
     body.appendChild(top);
     var name = document.createElement('p'); name.className = 'profile-preview-name';
@@ -1219,6 +1231,7 @@
   var openProfileUid = null;
   function openMemberProfile(u) {
     openProfileUid = u.id;
+    setHash('u=' + u.id);
     membersList.hidden = true;
     document.querySelector('#tab-members .page-intro-sm').hidden = true;
     memberProfileEl.hidden = false;
@@ -1242,6 +1255,7 @@
 
   function closeMemberProfile() {
     openProfileUid = null;
+    clearHash('u');
     memberProfileEl.hidden = true;
     membersList.hidden = false;
     document.querySelector('#tab-members .page-intro-sm').hidden = false;
@@ -1297,6 +1311,7 @@
       CROP.img = img; CROP.ox = 0; CROP.oy = 0; cropZoom.value = 1;
       drawCrop(cropCtx, CROP_VIEW, true);
       cropModal.hidden = false;
+      cropCanvas.focus();
     };
     img.onerror = function () { profilePhoto.value = ''; };
     img.src = url;
@@ -1314,6 +1329,23 @@
   });
   ['pointerup', 'pointercancel'].forEach(function (ev) {
     cropCanvas.addEventListener(ev, function () { CROP.dragging = false; });
+  });
+  cropCanvas.addEventListener('keydown', function (e) {
+    if (!CROP.img) return;
+    var step = 12, used = true;
+    if (e.key === 'ArrowLeft') CROP.ox += step;
+    else if (e.key === 'ArrowRight') CROP.ox -= step;
+    else if (e.key === 'ArrowUp') CROP.oy += step;
+    else if (e.key === 'ArrowDown') CROP.oy -= step;
+    else if (e.key === '+' || e.key === '=') cropZoom.value = Math.min(3, parseFloat(cropZoom.value) + 0.1);
+    else if (e.key === '-') cropZoom.value = Math.max(1, parseFloat(cropZoom.value) - 0.1);
+    else used = false;
+    if (used) { e.preventDefault(); clampCrop(); drawCrop(cropCtx, CROP_VIEW, true); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (!cropModal.hidden) { document.getElementById('crop-cancel').click(); }
+    else if (typeof notifPanel !== 'undefined' && !notifPanel.hidden) { notifPanel.hidden = true; notifBell.setAttribute('aria-expanded', 'false'); notifBell.focus(); }
   });
   document.getElementById('crop-cancel').addEventListener('click', function () {
     cropModal.hidden = true; profilePhoto.value = ''; croppedPhotoFile = null;
@@ -1341,6 +1373,47 @@
     return hit.concat(posts.filter(function (p) { return p.id !== pinnedId; }));
   }
 
+  /* ---------- accessibility + links helpers ---------- */
+  function makeActivatable(el, fn, label) {
+    el.setAttribute('role', 'button');
+    el.tabIndex = 0;
+    if (label) el.setAttribute('aria-label', label);
+    el.addEventListener('click', fn);
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); }
+    });
+  }
+
+  function setHash(val) {
+    try { history.replaceState(null, '', location.pathname + location.search + '#' + val); } catch (e) {}
+  }
+  function clearHash(kind) {
+    if (location.hash.indexOf('#' + kind + '=') === 0) {
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    }
+  }
+  function copyLink(btn, hashVal) {
+    var url = location.origin + location.pathname + '#' + hashVal;
+    var original = btn.textContent;
+    function done(ok) {
+      btn.textContent = ok ? 'Link copied \u2713' : 'Copy failed';
+      setTimeout(function () { btn.textContent = original; }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () { done(true); }, function () { done(false); });
+    } else {
+      done(false);
+    }
+  }
+
+  function filterByInterest(tag) {
+    document.querySelector('#main-tabs .tab-btn[data-tab="members"]').click();
+    closeMemberProfile();
+    memberSearch.value = tag;
+    renderMembersList();
+    window.scrollTo({ top: 0 });
+  }
+
   var BIO_MAX = 160;
 
   function parseInterests(str) {
@@ -1360,8 +1433,10 @@
   function renderChips(el, list, max) {
     el.innerHTML = '';
     list.slice(0, max || 6).forEach(function (t) {
-      var c = document.createElement('span');
-      c.className = 'chip'; c.textContent = t;
+      var c = document.createElement('button');
+      c.type = 'button'; c.className = 'chip'; c.textContent = t;
+      c.setAttribute('aria-label', 'Find members interested in ' + t);
+      c.addEventListener('click', function () { filterByInterest(t); });
       el.appendChild(c);
     });
     el.hidden = !list.length;
@@ -1620,13 +1695,13 @@
       row.className = 'member-row';
       var av = avatarEl(u.id, u.displayName);
       av.classList.add('clickable');
-      av.addEventListener('click', function () { openMemberProfile(u); });
+      makeActivatable(av, function () { openMemberProfile(u); }, 'View ' + (u.displayName || 'member') + '\u2019s profile');
       row.appendChild(av);
       var info = document.createElement('div');
       info.className = 'member-info';
       var name = document.createElement('p');
       name.className = 'member-name clickable';
-      name.addEventListener('click', function () { openMemberProfile(u); });
+      makeActivatable(name, function () { openMemberProfile(u); });
       name.textContent = u.displayName || u.email || 'Member';
       info.appendChild(name);
       var shownLoc = canSee(u, 'hideLocation') ? u.location : '';
@@ -2159,7 +2234,7 @@
       time.textContent = cd ? relTime(cd) : '';
       text.appendChild(main); text.appendChild(time);
       row.appendChild(text);
-      row.addEventListener('click', function () { openNotifGroup(g); });
+      makeActivatable(row, function () { openNotifGroup(g); }, groupText(g));
       notifList.appendChild(row);
     });
   }
@@ -2189,6 +2264,7 @@
 
   notifBell.addEventListener('click', function () {
     notifPanel.hidden = !notifPanel.hidden;
+    notifBell.setAttribute('aria-expanded', notifPanel.hidden ? 'false' : 'true');
   });
   document.getElementById('notif-markall').addEventListener('click', markAllNotifsRead);
   document.getElementById('notif-clear').addEventListener('click', function () {
@@ -2197,6 +2273,22 @@
     lastNotifs.forEach(function (n) { db.collection('notifications').doc(n.id).delete().catch(function () {}); });
     renderNotifList();
   });
+
+  /* ---------- deep links: #u=<uid> (profile), #s=<postId> (story) ---------- */
+  function handleHash() {
+    if (!currentUid) return;
+    var m = /^#([us])=([A-Za-z0-9_-]+)$/.exec(location.hash);
+    if (!m) return;
+    if (m[1] === 's') {
+      if (focusId !== m[2]) openStoryFocus(m[2]);
+    } else if (m[2] === currentUid) {
+      document.querySelector('#main-tabs .tab-btn[data-tab="profile"]').click();
+    } else if (usersByUid[m[2]] && openProfileUid !== m[2]) {
+      document.querySelector('#main-tabs .tab-btn[data-tab="members"]').click();
+      openMemberProfile(usersByUid[m[2]]);
+    }
+  }
+  window.addEventListener('hashchange', handleHash);
 
   /* ---------- auth state ---------- */
 
@@ -2251,6 +2343,7 @@
     loadAllUsers().then(function () {
       loadRelationships();
       loadInbox();
+      handleHash();
     });
   });
 })();
