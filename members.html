@@ -128,6 +128,12 @@
       <div class="tab-panel" id="tab-members" hidden>
         <p class="page-intro-sm">Everyone who's signed up. Connect to see each other's stories in your Friends feed.</p>
         <div id="members-list"></div>
+        <div id="member-profile" hidden>
+          <button type="button" id="member-profile-back" class="btn btn-ghost btn-sm">← Back to members</button>
+          <div id="member-profile-card"></div>
+          <h2 class="mt profile-section-title">Stories</h2>
+          <div id="member-profile-stories"></div>
+        </div>
       </div>
 
       <!-- FRIEND REQUESTS -->
@@ -166,6 +172,7 @@
             <p class="profile-preview-name" id="profile-preview-name"></p>
             <p class="profile-preview-location" id="profile-preview-location" hidden></p>
             <p class="profile-preview-bio" id="profile-preview-bio"></p>
+            <div class="profile-stats" id="profile-stats"></div>
           </div>
         </div>
         <form id="profile-form" hidden>
@@ -182,6 +189,8 @@
           </div>
           <p id="profile-status" class="form-note"></p>
         </form>
+        <h2 class="mt profile-section-title">My stories</h2>
+        <div id="profile-stories"></div>
         <div class="danger-zone" id="danger-zone">
           <h3>Delete account</h3>
           <p class="form-note">This permanently deletes your profile, stories, comments, likes and friend connections. It can't be undone. Messages you've already sent stay in the other person's inbox.</p>

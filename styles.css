@@ -925,3 +925,33 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .danger-zone { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,71,87,0.3); }
 .danger-zone h3 { color: var(--red); font-size: 1rem; margin-bottom: 0.5rem; }
 .danger-zone .form-note { margin-bottom: 1rem; }
+
+/* PROFILE: stats row, my stories, public profile */
+.profile-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: 0.6rem;
+  margin-top: 1.2rem; padding-top: 1.1rem; border-top: 1px solid var(--border);
+}
+.profile-stat { text-align: center; }
+.profile-stat-value { display: block; color: var(--white); font-size: 1.15rem; font-weight: 700; }
+.profile-stat-label {
+  display: block; margin-top: 0.15rem; color: var(--muted);
+  font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.profile-section-title { font-size: 1.05rem; color: var(--white); margin-bottom: 0.9rem; }
+.mini-story {
+  display: flex; gap: 0.9rem; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 0.9rem 1rem; margin-bottom: 0.7rem;
+}
+.mini-story-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.mini-story-body { min-width: 0; flex: 1; }
+.mini-story-body h3 { color: var(--white); font-size: 0.95rem; margin-bottom: 0.15rem; }
+.mini-story-body .story-meta { margin-bottom: 0.4rem; }
+.mini-story-text { color: var(--text); font-size: 0.84rem; line-height: 1.55; word-break: break-word; }
+.clickable { cursor: pointer; }
+.member-name.clickable:hover { color: var(--green); }
+#member-profile .profile-preview { margin-top: 1rem; }
+#member-profile .member-actions { margin-bottom: 0.2rem; }
+@media (max-width: 500px) {
+  .profile-preview-top { flex-wrap: wrap; }
+}

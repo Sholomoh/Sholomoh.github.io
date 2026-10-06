@@ -232,6 +232,7 @@
       btn.classList.add('active');
       var tab = btn.getAttribute('data-tab');
       Object.keys(panels).forEach(function (k) { panels[k].hidden = k !== tab; });
+      if (tab !== 'members' && typeof closeMemberProfile === 'function') closeMemberProfile();
     });
   });
 
@@ -817,6 +818,150 @@
     }).then(function () { submitBtn.disabled = false; });
   });
 
+  /* ---------- profile stats, story lists, public profile ---------- */
+
+  var profileStatsEl = document.getElementById('profile-stats');
+  var profileStoriesEl = document.getElementById('profile-stories');
+  var memberProfileEl = document.getElementById('member-profile');
+  var memberProfileCard = document.getElementById('member-profile-card');
+  var memberProfileStories = document.getElementById('member-profile-stories');
+
+  function loadUserPosts(uid) {
+    // No orderBy here on purpose: avoids needing a composite index; sort client-side.
+    return db.collection('posts').where('authorUid', '==', uid).get().then(function (snap) {
+      var arr = [];
+      snap.forEach(function (doc) { arr.push({ id: doc.id, data: doc.data() }); });
+      arr.sort(function (a, b) {
+        return ((b.data.createdAt && b.data.createdAt.seconds) || 0) - ((a.data.createdAt && a.data.createdAt.seconds) || 0);
+      });
+      return arr;
+    });
+  }
+
+  function fmtJoined(u) {
+    var t = u && u.createdAt && u.createdAt.toDate ? u.createdAt.toDate() : null;
+    return t ? t.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '\u2014';
+  }
+
+  function renderStats(el, posts, u, friendCount) {
+    var likes = posts.reduce(function (n, p) { return n + (p.data.likeCount || 0); }, 0);
+    var items = [[posts.length, 'Stories'], [likes, 'Likes']];
+    if (friendCount !== null && friendCount !== undefined) items.push([friendCount, 'Friends']);
+    items.push([fmtJoined(u), 'Joined']);
+    el.innerHTML = '';
+    items.forEach(function (it) {
+      var box = document.createElement('div');
+      box.className = 'profile-stat';
+      var v = document.createElement('span'); v.className = 'profile-stat-value'; v.textContent = it[0];
+      var l = document.createElement('span'); l.className = 'profile-stat-label'; l.textContent = it[1];
+      box.appendChild(v); box.appendChild(l);
+      el.appendChild(box);
+    });
+  }
+
+  function buildMiniStory(item) {
+    var p = item.data;
+    var card = document.createElement('article');
+    card.className = 'mini-story';
+    var url = p.attachmentURL || p.photoURL;
+    var type = p.attachmentType || (p.photoURL ? 'image' : null);
+    if (url && type === 'image') {
+      var img = document.createElement('img');
+      img.src = url; img.alt = ''; img.loading = 'lazy'; img.className = 'mini-story-thumb';
+      card.appendChild(img);
+    }
+    var body = document.createElement('div');
+    body.className = 'mini-story-body';
+    var h = document.createElement('h3'); h.textContent = p.title || 'Untitled';
+    var meta = document.createElement('p'); meta.className = 'story-meta';
+    var when = p.createdAt && p.createdAt.toDate ? relTime(p.createdAt.toDate()) : '';
+    meta.textContent = when + (when ? ' \u00b7 ' : '') + '\u2764 ' + (p.likeCount || 0) + ' \u00b7 \ud83d\udcac ' + (p.commentCount || 0);
+    var snip = document.createElement('p'); snip.className = 'mini-story-text';
+    var t = p.body || '';
+    snip.textContent = t.length > 140 ? t.slice(0, 140).trim() + '\u2026' : t;
+    body.appendChild(h); body.appendChild(meta); body.appendChild(snip);
+    card.appendChild(body);
+    return card;
+  }
+
+  function renderMiniStories(el, posts, emptyMsg) {
+    el.innerHTML = '';
+    if (!posts.length) { el.innerHTML = '<p class="form-note"></p>'; el.firstChild.textContent = emptyMsg; return; }
+    posts.forEach(function (it) { el.appendChild(buildMiniStory(it)); });
+  }
+
+  function refreshMyProfileExtras() {
+    if (!currentUid) return;
+    loadUserPosts(currentUid).then(function (posts) {
+      renderStats(profileStatsEl, posts, myProfile || {}, friendUids.size);
+      renderMiniStories(profileStoriesEl, posts, 'You haven\u2019t posted any stories yet.');
+    }).catch(function () {
+      profileStoriesEl.innerHTML = '<p class="form-note">Couldn\u2019t load your stories.</p>';
+    });
+  }
+
+  function buildPublicProfileCard(u) {
+    var card = document.createElement('div');
+    card.className = 'profile-preview';
+    var banner = document.createElement('div'); banner.className = 'profile-banner';
+    var body = document.createElement('div'); body.className = 'profile-preview-body';
+    var top = document.createElement('div'); top.className = 'profile-preview-top';
+    var av = document.createElement('span'); av.className = 'profile-avatar-wrap';
+    av.appendChild(avatarEl(u.id, u.displayName));
+    top.appendChild(av);
+    var actions = buildRelationshipControl(u);
+    var msgBtn = document.createElement('button');
+    msgBtn.type = 'button'; msgBtn.className = 'btn btn-ghost btn-sm';
+    msgBtn.textContent = '\u2709 Message';
+    msgBtn.addEventListener('click', function () { openConversation(u); });
+    actions.appendChild(msgBtn);
+    top.appendChild(actions);
+    body.appendChild(top);
+    var name = document.createElement('p'); name.className = 'profile-preview-name';
+    name.textContent = u.displayName || 'Member';
+    body.appendChild(name);
+    if (u.location) {
+      var loc = document.createElement('p'); loc.className = 'profile-preview-location';
+      loc.textContent = '\ud83d\udccd ' + u.location;
+      body.appendChild(loc);
+    }
+    var bio = document.createElement('p');
+    bio.className = 'profile-preview-bio' + (u.bio ? '' : ' is-empty');
+    bio.textContent = u.bio || 'No bio yet.';
+    body.appendChild(bio);
+    var stats = document.createElement('div'); stats.className = 'profile-stats'; stats.id = 'member-profile-stats';
+    body.appendChild(stats);
+    card.appendChild(banner); card.appendChild(body);
+    return card;
+  }
+
+  var openProfileUid = null;
+  function openMemberProfile(u) {
+    openProfileUid = u.id;
+    membersList.hidden = true;
+    document.querySelector('#tab-members .page-intro-sm').hidden = true;
+    memberProfileEl.hidden = false;
+    memberProfileCard.innerHTML = '';
+    memberProfileCard.appendChild(buildPublicProfileCard(u));
+    memberProfileStories.innerHTML = '<p class="form-note">Loading\u2026</p>';
+    loadUserPosts(u.id).then(function (posts) {
+      if (openProfileUid !== u.id) return;
+      renderStats(document.getElementById('member-profile-stats'), posts, u, null);
+      renderMiniStories(memberProfileStories, posts, 'No stories yet.');
+    }).catch(function () {
+      memberProfileStories.innerHTML = '<p class="form-note">Couldn\u2019t load stories.</p>';
+    });
+    window.scrollTo({ top: 0 });
+  }
+
+  function closeMemberProfile() {
+    openProfileUid = null;
+    memberProfileEl.hidden = true;
+    membersList.hidden = false;
+    document.querySelector('#tab-members .page-intro-sm').hidden = false;
+  }
+  document.getElementById('member-profile-back').addEventListener('click', closeMemberProfile);
+
   /* ---------- profile ---------- */
 
   var myProfile = null;
@@ -859,6 +1004,7 @@
       }
       document.getElementById('profile-photo-pending').hidden = true;
       renderProfilePreview();
+      refreshMyProfileExtras();
     });
   }
 
@@ -966,11 +1112,15 @@
     allUsers.forEach(function (u) {
       var row = document.createElement('div');
       row.className = 'member-row';
-      row.appendChild(avatarEl(u.id, u.displayName));
+      var av = avatarEl(u.id, u.displayName);
+      av.classList.add('clickable');
+      av.addEventListener('click', function () { openMemberProfile(u); });
+      row.appendChild(av);
       var info = document.createElement('div');
       info.className = 'member-info';
       var name = document.createElement('p');
-      name.className = 'member-name';
+      name.className = 'member-name clickable';
+      name.addEventListener('click', function () { openMemberProfile(u); });
       name.textContent = u.displayName || u.email || 'Member';
       info.appendChild(name);
       if (u.bio || u.location) {
@@ -1098,6 +1248,15 @@
       renderRequestRows(outgoingList, outgoingPending, false);
       renderMembersList();
       renderFeedOnce();
+      refreshMyProfileExtras();
+      if (openProfileUid && usersByUid[openProfileUid]) {
+        var cu = usersByUid[openProfileUid];
+        var keep = document.getElementById('member-profile-stats');
+        var oldStats = keep ? keep.innerHTML : '';
+        memberProfileCard.innerHTML = '';
+        memberProfileCard.appendChild(buildPublicProfileCard(cu));
+        document.getElementById('member-profile-stats').innerHTML = oldStats;
+      }
     });
   }
 
