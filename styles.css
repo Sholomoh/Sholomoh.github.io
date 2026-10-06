@@ -1086,3 +1086,10 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
 .reply-form { margin-left: 1.3rem; margin-bottom: 0.6rem; }
 .request-row { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
 .request-actions { display: flex; gap: 0.4rem; }
+
+/* REPORTS + BLOCKING */
+.report-row { padding: 0.8rem 0; border-bottom: 1px solid var(--border); }
+.report-title { color: var(--white); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.3rem; }
+.report-snippet { color: var(--text); font-size: 0.82rem; line-height: 1.5; margin-bottom: 0.4rem; word-break: break-word; }
+#report-details { width: 100%; }
+.crop-box select.field-input { width: 100%; }

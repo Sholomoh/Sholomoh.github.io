@@ -426,6 +426,7 @@
     var list = document.createElement('div');
     list.className = 'comments-list';
     var cached = commentsCache[postId];
+    if (cached) cached = cached.filter(function (c) { return !blockedUids.has(c.authorUid); });
     if (!cached) {
       list.innerHTML = '<p class="form-note">Loading comments\u2026</p>';
     } else if (!cached.length) {
@@ -476,6 +477,15 @@
           replyBtn.textContent = 'Reply';
           replyBtn.addEventListener('click', function () { replyingToId = c.id; replyValue = ''; renderFeedOnce(); });
           row.appendChild(replyBtn);
+        }
+        if (currentUid && c.authorUid !== currentUid) {
+          var crep = document.createElement('button');
+          crep.type = 'button'; crep.className = 'btn btn-ghost btn-sm comment-del';
+          crep.textContent = 'Report';
+          crep.addEventListener('click', function () {
+            openReport({ type: 'comment', targetId: c.id, postId: postId, reportedUid: c.authorUid, reportedName: c.authorName, snippet: c.text });
+          });
+          row.appendChild(crep);
         }
         if (currentUid && c.authorUid === currentUid) {
           var edit = document.createElement('button');
@@ -571,6 +581,104 @@
     link.textContent = '\ud83d\udcce ' + (p.attachmentName || 'Download attachment');
     return link;
   }
+
+  /* ---------- blocking ---------- */
+  var blockedUids = new Set();
+
+  function renderBlockedList() {
+    var el = document.getElementById('blocked-list');
+    el.innerHTML = '';
+    if (!blockedUids.size) { el.innerHTML = '<p class="form-note">You haven\u2019t blocked anyone.</p>'; return; }
+    blockedUids.forEach(function (uid) {
+      var u = usersByUid[uid];
+      var row = document.createElement('div');
+      row.className = 'likes-row';
+      var nm = document.createElement('span');
+      nm.textContent = (u && u.displayName) || 'Member';
+      nm.style.flex = '1';
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'btn btn-ghost btn-sm'; btn.textContent = 'Unblock';
+      btn.addEventListener('click', function () { btn.disabled = true; unblockMember(uid); });
+      row.appendChild(nm); row.appendChild(btn);
+      el.appendChild(row);
+    });
+  }
+
+  function loadBlocks() {
+    return db.collection('blocks').where('blockerUid', '==', currentUid).get().then(function (snap) {
+      blockedUids = new Set();
+      snap.forEach(function (d) { blockedUids.add(d.data().blockedUid); });
+      renderBlockedList();
+    });
+  }
+
+  function afterBlockChange() {
+    renderBlockedList(); renderFeedOnce(); renderMembersList();
+    rerenderOpenProfileCard(); renderNotifList(); loadInbox(); loadRelationships();
+  }
+
+  function blockMember(u) {
+    var me = currentUid;
+    return db.collection('blocks').doc(me + '_' + u.id).set({
+      blockerUid: me, blockedUid: u.id, createdAt: FieldValue.serverTimestamp()
+    }).then(function () {
+      blockedUids.add(u.id);
+      // Blocking also ends any friendship / pending request between you.
+      return Promise.all([
+        db.collection('friendRequests').doc(me + '_' + u.id).delete().catch(function () {}),
+        db.collection('friendRequests').doc(u.id + '_' + me).delete().catch(function () {})
+      ]);
+    }).then(afterBlockChange);
+  }
+
+  function unblockMember(uid) {
+    return db.collection('blocks').doc(currentUid + '_' + uid).delete().then(function () {
+      blockedUids.delete(uid);
+      afterBlockChange();
+    }).catch(function () { renderBlockedList(); });
+  }
+
+  /* ---------- reporting ---------- */
+  var reportModal = document.getElementById('report-modal');
+  var reportStatus = document.getElementById('report-status');
+  var reportSend = document.getElementById('report-send');
+  var reportTarget = null;
+  function closeReport() { reportModal.hidden = true; reportTarget = null; }
+  document.getElementById('report-cancel').addEventListener('click', closeReport);
+  reportModal.addEventListener('click', function (e) { if (e.target === reportModal) closeReport(); });
+
+  function openReport(info) {
+    reportTarget = info;
+    document.getElementById('report-title').textContent = info.type === 'comment' ? 'Report this comment' : 'Report this story';
+    document.getElementById('report-details').value = '';
+    reportStatus.className = 'form-note'; reportStatus.textContent = '';
+    reportSend.disabled = false;
+    reportModal.hidden = false;
+    document.getElementById('report-reason').focus();
+  }
+
+  reportSend.addEventListener('click', function () {
+    if (!reportTarget || !currentUid) return;
+    var t = reportTarget;
+    reportSend.disabled = true;
+    db.collection('reports').doc(currentUid + '_' + t.targetId).set({
+      type: t.type, targetId: t.targetId, postId: t.postId,
+      reportedUid: t.reportedUid || '', reportedName: t.reportedName || 'Member',
+      reporterUid: currentUid,
+      reason: document.getElementById('report-reason').value,
+      details: document.getElementById('report-details').value.trim().slice(0, 300),
+      snippet: String(t.snippet || '').slice(0, 160),
+      status: 'open', createdAt: FieldValue.serverTimestamp()
+    }).then(function () {
+      reportStatus.className = 'form-success';
+      reportStatus.textContent = '\u2713 Thanks \u2014 an admin will review this.';
+      setTimeout(closeReport, 1400);
+    }).catch(function () {
+      reportStatus.className = 'form-error';
+      reportStatus.textContent = 'You\u2019ve already reported this, or it couldn\u2019t be sent.';
+      reportSend.disabled = false;
+    });
+  });
 
   /* ---------- who liked a story ---------- */
   var likesModal = document.getElementById('likes-modal');
@@ -747,6 +855,17 @@
     commentBtn.textContent = '\ud83d\udcac ' + cc + (cc === 1 ? ' comment' : ' comments');
     commentBtn.addEventListener('click', function () { toggleComments(id); });
     reactions.appendChild(commentBtn);
+    if (currentUid && p.authorUid !== currentUid) {
+      var repBtn = document.createElement('button');
+      repBtn.type = 'button'; repBtn.className = 'reaction-btn';
+      repBtn.textContent = '\u2691 Report';
+      repBtn.setAttribute('aria-label', 'Report this story');
+      repBtn.addEventListener('click', function () {
+        openReport({ type: 'post', targetId: id, postId: id, reportedUid: p.authorUid, reportedName: p.authorName,
+          snippet: (p.title || '') + (p.body ? ': ' + p.body : '') });
+      });
+      reactions.appendChild(repBtn);
+    }
     if ((p.likeCount || 0) > 0) {
       var whoBtn = document.createElement('button');
       whoBtn.type = 'button';
@@ -912,7 +1031,7 @@
     if (activeSubtab === 'friends') {
       docs = docs.filter(function (doc) { return friendUids.has(doc.data().authorUid); });
     }
-    docs = docs.filter(function (doc) { return !heldBack[doc.id]; });
+    docs = docs.filter(function (doc) { return !heldBack[doc.id] && !blockedUids.has(doc.data().authorUid); });
     var q = feedSearch.value.trim().toLowerCase();
     var filtersActive = !!q || feedFilter.value !== 'all';
     if (q) {
@@ -1045,6 +1164,115 @@
     return btn;
   }
 
+  /* ---------- admin: scrub emails saved as author names ---------- */
+  var scrubResult = document.getElementById('scrub-result');
+  var scrubScan = document.getElementById('scrub-scan');
+
+  function runInChunks(items, size, fn) {
+    var failed = 0, i = 0;
+    function next() {
+      if (i >= items.length) return Promise.resolve(failed);
+      var chunk = items.slice(i, i + size); i += size;
+      return Promise.all(chunk.map(function (it) {
+        return fn(it).catch(function () { failed++; });
+      })).then(next);
+    }
+    return next();
+  }
+
+  scrubScan.addEventListener('click', function () {
+    scrubScan.disabled = true;
+    scrubResult.innerHTML = '<p class="form-note">Scanning\u2026</p>';
+    Promise.all([db.collection('posts').get(), db.collection('postComments').get()]).then(function (r) {
+      var hits = [];
+      r[0].forEach(function (d) { if (String(d.data().authorName || '').indexOf('@') !== -1) hits.push({ coll: 'posts', id: d.id, uid: d.data().authorUid }); });
+      r[1].forEach(function (d) { if (String(d.data().authorName || '').indexOf('@') !== -1) hits.push({ coll: 'postComments', id: d.id, uid: d.data().authorUid }); });
+      scrubResult.innerHTML = '';
+      if (!hits.length) {
+        scrubResult.innerHTML = '<p class="form-success">\u2713 None found \u2014 no stories or comments show an email as the name.</p>';
+        return;
+      }
+      var msg = document.createElement('p');
+      msg.className = 'form-note';
+      msg.textContent = 'Found ' + hits.length + ' item' + (hits.length === 1 ? '' : 's') + ' showing an email as the author name.';
+      var fix = document.createElement('button');
+      fix.type = 'button'; fix.className = 'btn btn-ghost btn-sm'; fix.textContent = 'Replace with member names';
+      var status = document.createElement('p');
+      status.className = 'form-note';
+      fix.addEventListener('click', function () {
+        fix.disabled = true;
+        status.textContent = 'Fixing\u2026';
+        runInChunks(hits, 15, function (h) {
+          var u = usersByUid[h.uid];
+          var name = (u && u.displayName) || 'Member';
+          return db.collection(h.coll).doc(h.id).update({ authorName: name });
+        }).then(function (failed) {
+          status.className = failed ? 'form-error' : 'form-success';
+          status.textContent = failed
+            ? 'Fixed ' + (hits.length - failed) + ', but ' + failed + ' failed. Comments need the updated Firestore rules (admin may edit authorName).'
+            : '\u2713 Fixed ' + hits.length + '.';
+          fix.disabled = !!failed;
+        });
+      });
+      scrubResult.appendChild(msg); scrubResult.appendChild(fix); scrubResult.appendChild(status);
+    }).catch(function () {
+      scrubResult.innerHTML = '<p class="form-error">Couldn\u2019t scan. Check your connection and try again.</p>';
+    }).then(function () { scrubScan.disabled = false; });
+  });
+
+  var adminReqCount = 0, adminReportCount = 0;
+  function updateAdminBadge() {
+    var n = adminReqCount + adminReportCount;
+    adminBadge.hidden = n === 0;
+    if (n) adminBadge.textContent = String(n);
+  }
+
+  function loadReports() {
+    var el = document.getElementById('reports-list');
+    db.collection('reports').where('status', '==', 'open').get().then(function (snap) {
+      adminReportCount = snap.size; updateAdminBadge();
+      el.innerHTML = '';
+      if (snap.empty) { el.innerHTML = '<p class="form-note">No open reports.</p>'; return; }
+      snap.forEach(function (doc) {
+        var r = doc.data();
+        var row = document.createElement('div');
+        row.className = 'report-row';
+        var title = document.createElement('p');
+        title.className = 'report-title';
+        title.textContent = (r.type === 'comment' ? 'Comment' : 'Story') + ' by ' + (r.reportedName || 'Member') + ' \u2014 ' + (r.reason || 'Reported');
+        row.appendChild(title);
+        if (r.snippet) { var sn = document.createElement('p'); sn.className = 'report-snippet'; sn.textContent = r.snippet; row.appendChild(sn); }
+        if (r.details) { var dt = document.createElement('p'); dt.className = 'form-note'; dt.textContent = 'Reporter says: ' + r.details; row.appendChild(dt); }
+        var acts = document.createElement('div');
+        acts.className = 'request-actions';
+        function mk(text, danger, fn) {
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'btn btn-ghost btn-sm' + (danger ? ' btn-danger' : ''); b.textContent = text;
+          b.addEventListener('click', function () {
+            if (danger && !window.confirm(text + '?')) return;
+            b.disabled = true;
+            Promise.resolve(fn()).then(loadReports).catch(function () { b.disabled = false; b.textContent = 'Retry'; });
+          });
+          return b;
+        }
+        acts.appendChild(mk('View', false, function () { openStoryFocus(r.postId); return new Promise(function () {}); }));
+        acts.appendChild(mk('Delete content', true, function () {
+          var kill = r.type === 'comment'
+            ? db.collection('postComments').doc(r.targetId).delete().then(function () {
+                return db.collection('posts').doc(r.postId).update({ commentCount: FieldValue.increment(-1) }).catch(function () {});
+              })
+            : db.collection('posts').doc(r.targetId).delete();
+          return kill.then(function () { return db.collection('reports').doc(doc.id).delete(); });
+        }));
+        acts.appendChild(mk('Dismiss', false, function () { return db.collection('reports').doc(doc.id).delete(); }));
+        row.appendChild(acts);
+        el.appendChild(row);
+      });
+    }).catch(function () {
+      el.innerHTML = '<p class="form-error">Couldn\u2019t load reports.</p>';
+    });
+  }
+
   function loadPosterRequests() {
     var postersList = document.getElementById('posters-list');
     Promise.all([
@@ -1052,8 +1280,7 @@
       db.collection('posters').get()
     ]).then(function (r) {
       var snap = r[0], posters = r[1];
-      adminBadge.hidden = snap.empty;
-      if (!snap.empty) adminBadge.textContent = String(snap.size);
+      adminReqCount = snap.size; updateAdminBadge();
 
       requestsList.innerHTML = '';
       if (snap.empty) requestsList.innerHTML = '<p class="form-note">No pending requests.</p>';
@@ -1180,6 +1407,7 @@
         deleteQueryDocs(db.collection('friendRequests').where('fromUid', '==', uid)),
         deleteQueryDocs(db.collection('friendRequests').where('toUid', '==', uid)),
         db.collection('posterRequests').doc(uid).delete().catch(quiet),
+        deleteQueryDocs(db.collection('blocks').where('blockerUid', '==', uid)),
         db.collection('userDob').doc(uid).delete().catch(quiet),
         db.collection('userLocations').doc(uid).delete().catch(quiet)
       ]);
@@ -1352,6 +1580,16 @@
     linkBtn.textContent = '\ud83d\udd17 Copy link';
     linkBtn.addEventListener('click', function () { copyLink(linkBtn, 'u=' + u.id); });
     actions.appendChild(linkBtn);
+    var blockBtn = document.createElement('button');
+    blockBtn.type = 'button'; blockBtn.className = 'btn btn-ghost btn-sm btn-danger';
+    var isBlocked = blockedUids.has(u.id);
+    blockBtn.textContent = isBlocked ? 'Unblock' : 'Block';
+    blockBtn.addEventListener('click', function () {
+      if (!isBlocked && !window.confirm('Block ' + (u.displayName || 'this member') + '? You won\u2019t see their stories, comments or messages, and any friendship will end.')) return;
+      blockBtn.disabled = true;
+      (isBlocked ? unblockMember(u.id) : blockMember(u)).catch(function () { blockBtn.disabled = false; });
+    });
+    actions.appendChild(blockBtn);
     top.appendChild(actions);
     body.appendChild(top);
     var name = document.createElement('p'); name.className = 'profile-preview-name';
@@ -1463,13 +1701,13 @@
     img.onerror = function () { profilePhoto.value = ''; };
     img.src = url;
   }
-  cropZoom.addEventListener('input', function () { clampCrop(); drawCrop(cropCtx, CROP_VIEW, true); });
+  cropZoom.addEventListener('input', function () { if (!CROP.img) return; clampCrop(); drawCrop(cropCtx, CROP_VIEW, true); });
   cropCanvas.addEventListener('pointerdown', function (e) {
     CROP.dragging = true; CROP.lx = e.clientX; CROP.ly = e.clientY;
     cropCanvas.setPointerCapture(e.pointerId);
   });
   cropCanvas.addEventListener('pointermove', function (e) {
-    if (!CROP.dragging) return;
+    if (!CROP.dragging || !CROP.img) return;
     CROP.ox += e.clientX - CROP.lx; CROP.oy += e.clientY - CROP.ly;
     CROP.lx = e.clientX; CROP.ly = e.clientY;
     clampCrop(); drawCrop(cropCtx, CROP_VIEW, true);
@@ -1491,7 +1729,8 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (!likesModal.hidden) { closeLikes(); }
+    if (!reportModal.hidden) { closeReport(); }
+    else if (!likesModal.hidden) { closeLikes(); }
     else if (!cropModal.hidden) { document.getElementById('crop-cancel').click(); }
     else if (typeof notifPanel !== 'undefined' && !notifPanel.hidden) { notifPanel.hidden = true; notifBell.setAttribute('aria-expanded', 'false'); notifBell.focus(); }
   });
@@ -1499,6 +1738,7 @@
     cropModal.hidden = true; profilePhoto.value = ''; croppedPhotoFile = null;
   });
   document.getElementById('crop-apply').addEventListener('click', function () {
+    if (!CROP.img) { cropModal.hidden = true; return; }
     var out = document.createElement('canvas');
     out.width = CROP_OUT; out.height = CROP_OUT;
     drawCrop(out.getContext('2d'), CROP_OUT, false);
@@ -1875,6 +2115,7 @@
   function visibleMembers() {
     var q = memberSearch.value.trim().toLowerCase();
     var list = allUsers.filter(function (u) {
+      if (blockedUids.has(u.id)) return false;
       if (!q) return true;
       var hay = [u.displayName, locationOf(u), u.bio].concat(interestsOf(u)).join(' ').toLowerCase();
       return hay.indexOf(q) !== -1;
@@ -2033,7 +2274,7 @@
         var d = doc.data();
         incomingByUid[d.fromUid] = { id: doc.id, status: d.status };
         if (d.status === 'accepted') friendUids.add(d.fromUid);
-        if (d.status === 'pending') incomingPending.push({ id: doc.id, uid: d.fromUid, name: d.fromName });
+        if (d.status === 'pending' && !blockedUids.has(d.fromUid)) incomingPending.push({ id: doc.id, uid: d.fromUid, name: d.fromName });
       });
 
       requestsBadge.hidden = incomingPending.length === 0;
@@ -2136,7 +2377,11 @@
       .where('participants', 'array-contains', currentUid)
       .onSnapshot(function (snap) {
         var convs = [];
-        snap.forEach(function (doc) { convs.push({ id: doc.id, data: doc.data() }); });
+        snap.forEach(function (doc) {
+          var pp = doc.data().participants || [];
+          var ou = pp[0] === currentUid ? pp[1] : pp[0];
+          if (!blockedUids.has(ou)) convs.push({ id: doc.id, data: doc.data() });
+        });
         convs.sort(function (a, b) {
           var as = (a.data.lastMessageAt && a.data.lastMessageAt.seconds) || 0;
           var bs = (b.data.lastMessageAt && b.data.lastMessageAt.seconds) || 0;
@@ -2436,7 +2681,7 @@
     var cleared = notifClearedMs();
     var visible = lastNotifs.filter(function (n) {
       var cd = toDate(n.data.createdAt);
-      return !cd || cd.getTime() > cleared;
+      return (!cd || cd.getTime() > cleared) && !blockedUids.has(n.data.fromUid);
     });
     var unread = visible.filter(function (n) { return !n.data.read; }).length;
     notifBadge.hidden = unread === 0;
@@ -2562,11 +2807,13 @@
       requestBox.hidden = poster;
       adminTabBtn.hidden = !admin;
       if (!poster) checkRequestStatus(user.uid);
-      if (admin) loadPosterRequests();
+      if (admin) { loadPosterRequests(); loadReports(); }
       renderFeedOnce();
     });
 
     loadAllUsers().then(function () {
+      return loadBlocks().then(function () { renderFeedOnce(); }).catch(function () {});
+    }).then(function () {
       loadRelationships();
       loadInbox();
       handleHash();

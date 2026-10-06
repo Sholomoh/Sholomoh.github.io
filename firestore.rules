@@ -19,6 +19,14 @@ service cloud.firestore {
               get(/databases/$(database)/documents/friendRequests/$(b + '_' + a)).data.status == 'accepted');
     }
 
+    // Other participant of a two-person conversation.
+    function otherOf(p, uid) { return p[0] == uid ? p[1] : p[0]; }
+
+    // True when `blocker` has blocked `blocked` (doc id is "{blocker}_{blocked}").
+    function isBlocked(blocker, blocked) {
+      return exists(/databases/$(database)/documents/blocks/$(blocker + '_' + blocked));
+    }
+
     // Public profile info. Each user manages their own doc. Email addresses
     // are no longer stored here (existing ones can only be removed, never
     // changed or added); createdAt is locked after creation.
@@ -58,6 +66,31 @@ service cloud.firestore {
       allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // Blocks. Only the blocker can see or manage their own; the blocked person
+    // can't read them, but the rules here use them to refuse messages,
+    // friend requests and notifications from the blocked member.
+    match /blocks/{blockId} {
+      allow read: if isSignedIn() && resource.data.blockerUid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.resource.data.blockerUid == request.auth.uid &&
+        request.resource.data.blockedUid != request.auth.uid &&
+        blockId == request.auth.uid + '_' + request.resource.data.blockedUid;
+      allow delete: if isSignedIn() && resource.data.blockerUid == request.auth.uid;
+    }
+
+    // Reports about a story or comment. Anyone signed in can file one (one per
+    // reporter per item); only admins can read, resolve or remove them.
+    match /reports/{reportId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.reporterUid == request.auth.uid &&
+        reportId == request.auth.uid + '_' + request.resource.data.targetId &&
+        request.resource.data.keys().hasOnly(['type', 'targetId', 'postId', 'reportedUid', 'reportedName',
+          'reporterUid', 'reason', 'details', 'snippet', 'status', 'createdAt']) &&
+        request.resource.data.reason is string && request.resource.data.reason.size() <= 40 &&
+        request.resource.data.details.size() <= 300;
+      allow read, update, delete: if isAdmin();
+    }
+
     // Admin allowlist. Add yourself here manually in the Firebase console
     // after your first sign-up — the app can never write to this collection.
     match /admins/{uid} {
@@ -90,7 +123,8 @@ service cloud.firestore {
       allow create: if isSignedIn() &&
         request.resource.data.fromUid == request.auth.uid &&
         request.resource.data.toUid != request.auth.uid &&
-        request.resource.data.status == 'pending';
+        request.resource.data.status == 'pending' &&
+        !isBlocked(request.resource.data.toUid, request.auth.uid);
       allow update: if isSignedIn() &&
         request.resource.data.fromUid == resource.data.fromUid &&
         request.resource.data.toUid == resource.data.toUid && (
@@ -111,12 +145,13 @@ service cloud.firestore {
       allow read: if isSignedIn() && resource.data.toUid == request.auth.uid;
       allow create: if isSignedIn() &&
         request.resource.data.fromUid == request.auth.uid &&
-        request.resource.data.toUid != request.auth.uid;
+        request.resource.data.toUid != request.auth.uid &&
+        !isBlocked(request.resource.data.toUid, request.auth.uid);
       allow update: if isSignedIn() && resource.data.toUid == request.auth.uid &&
         request.resource.data.toUid == resource.data.toUid &&
         request.resource.data.fromUid == resource.data.fromUid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      // NEW: recipients can clear their own notifications
+      // Recipients can clear their own notifications
       allow delete: if isSignedIn() && resource.data.toUid == request.auth.uid;
     }
 
@@ -138,8 +173,9 @@ service cloud.firestore {
           request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
         allow create: if isSignedIn() &&
           request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants &&
-          request.resource.data.fromUid == request.auth.uid;
-        // NEW: you can delete your own messages
+          request.resource.data.fromUid == request.auth.uid &&
+          !isBlocked(otherOf(get(/databases/$(database)/documents/conversations/$(convId)).data.participants, request.auth.uid), request.auth.uid);
+        // You can delete your own messages
         allow delete: if isSignedIn() && resource.data.fromUid == request.auth.uid;
       }
     }
@@ -178,12 +214,20 @@ service cloud.firestore {
     match /postComments/{id} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
-      allow update: if isSignedIn() &&
-        resource.data.authorUid == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt']) &&
-        request.resource.data.text is string &&
-        request.resource.data.text.size() > 0 &&
-        request.resource.data.text.size() <= 1000;
+      allow update: if isSignedIn() && (
+        (
+          resource.data.authorUid == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt']) &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 1000
+        ) ||
+        // Admins may only rewrite the displayed author name (privacy cleanup)
+        (
+          isAdmin() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName'])
+        )
+      );
       allow delete: if isSignedIn() &&
         (resource.data.authorUid == request.auth.uid || isAdmin());
     }

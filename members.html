@@ -22,7 +22,28 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=34">
+  <link rel="stylesheet" href="styles.css?v=35">
+  <div class="crop-modal" id="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-title" hidden>
+    <div class="crop-box likes-box">
+      <p class="crop-title" id="report-title">Report</p>
+      <label class="field-label">Reason
+        <select id="report-reason" class="field-input">
+          <option>Spam</option>
+          <option>Harassment or bullying</option>
+          <option>Inappropriate content</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label class="field-label">Details (optional)
+        <textarea id="report-details" class="story-input" rows="3" maxlength="300" placeholder="Anything that helps an admin understand..."></textarea>
+      </label>
+      <p id="report-status" class="form-note"></p>
+      <div class="form-actions">
+        <button type="button" id="report-send" class="btn btn-primary btn-sm">Send report</button>
+        <button type="button" id="report-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+    </div>
+  </div>
   <div class="crop-modal" id="likes-modal" role="dialog" aria-modal="true" aria-labelledby="likes-title" hidden>
     <div class="crop-box likes-box">
       <p class="crop-title" id="likes-title">Liked by</p>
@@ -251,6 +272,8 @@
         <div id="profile-stories"></div>
         <details class="danger-details">
           <summary>Account settings</summary>
+        <h3 class="profile-section-title">Blocked members</h3>
+        <div id="blocked-list"></div>
         <div class="danger-zone" id="danger-zone">
           <h3>Delete account</h3>
           <p class="form-note">This permanently deletes your profile, stories, comments, likes and friend connections. It can't be undone. Messages you've already sent stay in the other person's inbox.</p>
@@ -274,6 +297,12 @@
         <div id="requests-list"></div>
         <h2 class="mt">Approved posters</h2>
         <div id="posters-list"></div>
+        <h2 class="mt">Reports</h2>
+        <div id="reports-list"></div>
+        <h2 class="mt">Privacy cleanup</h2>
+        <p class="form-note">Finds stories and comments where an email address was saved as the author's name, and replaces it with the member's display name.</p>
+        <button type="button" id="scrub-scan" class="btn btn-ghost btn-sm">Scan for emails in names</button>
+        <div id="scrub-result"></div>
       </div>
     </div>
   </div>
@@ -284,6 +313,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=14"></script>
+  <script src="members.js?v=17"></script>
 </body>
 </html>
