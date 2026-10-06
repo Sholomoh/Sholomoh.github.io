@@ -76,6 +76,7 @@
   var profileDobWrap = document.getElementById('profile-dob-wrap');
   var profileDob = document.getElementById('profile-dob');
   var profileEmail = document.getElementById('profile-email');
+  var profileInterests = document.getElementById('profile-interests');
   var profileStatus = document.getElementById('profile-status');
 
   /* ---------- small helpers ---------- */
@@ -945,6 +946,9 @@
     bio.className = 'profile-preview-bio' + (u.bio ? '' : ' is-empty');
     bio.textContent = u.bio || 'No bio yet.';
     body.appendChild(bio);
+    var chips = document.createElement('div'); chips.className = 'chips';
+    renderChips(chips, interestsOf(u));
+    body.appendChild(chips);
     var stats = document.createElement('div'); stats.className = 'profile-stats'; stats.id = 'member-profile-stats';
     body.appendChild(stats);
     card.appendChild(banner); card.appendChild(body);
@@ -985,6 +989,40 @@
   var profilePreviewName = document.getElementById('profile-preview-name');
   var profilePreviewLocation = document.getElementById('profile-preview-location');
   var profilePreviewBio = document.getElementById('profile-preview-bio');
+
+  var BIO_MAX = 160;
+
+  function parseInterests(str) {
+    var seen = {}, out = [];
+    String(str || '').split(',').forEach(function (s) {
+      s = s.trim().replace(/\s+/g, ' ').slice(0, 24);
+      var key = s.toLowerCase();
+      if (s && !seen[key] && out.length < 6) { seen[key] = true; out.push(s); }
+    });
+    return out;
+  }
+
+  function interestsOf(u) {
+    return Array.isArray(u && u.interests) ? u.interests.filter(function (x) { return typeof x === 'string' && x; }).slice(0, 6) : [];
+  }
+
+  function renderChips(el, list, max) {
+    el.innerHTML = '';
+    list.slice(0, max || 6).forEach(function (t) {
+      var c = document.createElement('span');
+      c.className = 'chip'; c.textContent = t;
+      el.appendChild(c);
+    });
+    el.hidden = !list.length;
+  }
+
+  function updateBioCount() {
+    var n = profileBio.value.length;
+    var el = document.getElementById('profile-bio-count');
+    el.textContent = n + '/' + BIO_MAX;
+    el.classList.toggle('over', n > BIO_MAX);
+  }
+  profileBio.addEventListener('input', updateBioCount);
 
   function applyCover(bannerEl, url) {
     if (url) {
@@ -1039,6 +1077,7 @@
     var bio = (myProfile && myProfile.bio) || '';
     profilePreviewBio.textContent = bio || 'No bio yet \u2014 tap Edit profile to add one.';
     profilePreviewBio.classList.toggle('is-empty', !bio);
+    renderChips(document.getElementById('profile-preview-chips'), interestsOf(myProfile));
     renderCompleteness();
     document.getElementById('profile-cover-remove').hidden = !(myProfile && myProfile.coverURL) || removeCoverFlag;
   }
@@ -1048,6 +1087,8 @@
       myProfile = doc.exists ? doc.data() : {};
       profileName.value = myProfile.displayName || '';
       profileBio.value = myProfile.bio || '';
+      profileInterests.value = interestsOf(myProfile).join(', ');
+      updateBioCount();
       profileLocation.value = myProfile.location || '';
       profileEmail.textContent = myProfile.email || auth.currentUser.email || '';
       if (myProfile.dob) {
@@ -1095,6 +1136,8 @@
     profileEditBtn.hidden = false;
     profileName.value = myProfile.displayName || '';
     profileBio.value = myProfile.bio || '';
+    profileInterests.value = interestsOf(myProfile).join(', ');
+    updateBioCount();
     profileLocation.value = myProfile.location || '';
     profilePhoto.value = '';
     document.getElementById('profile-photo-pending').hidden = true;
@@ -1137,7 +1180,8 @@
     var update = {
       displayName: profileName.value.trim(),
       bio: profileBio.value.trim(),
-      location: profileLocation.value.trim()
+      location: profileLocation.value.trim(),
+      interests: parseInterests(profileInterests.value)
     };
     if (!myProfile.dob && profileDob.value) update.dob = profileDob.value;
 
@@ -1189,10 +1233,35 @@
     });
   }
 
+  var memberSearch = document.getElementById('member-search');
+  var memberSort = document.getElementById('member-sort');
+  memberSearch.addEventListener('input', function () { renderMembersList(); });
+  memberSort.addEventListener('change', function () { renderMembersList(); });
+
+  function visibleMembers() {
+    var q = memberSearch.value.trim().toLowerCase();
+    var list = allUsers.filter(function (u) {
+      if (!q) return true;
+      var hay = [u.displayName, u.location, u.bio].concat(interestsOf(u)).join(' ').toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+    if (memberSort.value === 'new') {
+      list.sort(function (a, b) {
+        var ad = toDate(a.createdAt), bd = toDate(b.createdAt);
+        return (bd ? bd.getTime() : 0) - (ad ? ad.getTime() : 0);
+      });
+    } else {
+      list.sort(function (a, b) { return (a.displayName || '').localeCompare(b.displayName || ''); });
+    }
+    return list;
+  }
+
   function renderMembersList() {
     if (!allUsers.length) { membersList.innerHTML = '<p class="form-note">No other members yet.</p>'; return; }
+    var shown = visibleMembers();
     membersList.innerHTML = '';
-    allUsers.forEach(function (u) {
+    if (!shown.length) { membersList.innerHTML = '<p class="form-note">No members match your search.</p>'; return; }
+    shown.forEach(function (u) {
       var row = document.createElement('div');
       row.className = 'member-row';
       var av = avatarEl(u.id, u.displayName);
@@ -1211,6 +1280,12 @@
         sub.className = 'member-sub';
         sub.textContent = [u.bio, u.location].filter(Boolean).join(' \u00b7 ');
         info.appendChild(sub);
+      }
+      var rowChips = interestsOf(u);
+      if (rowChips.length) {
+        var cw = document.createElement('div'); cw.className = 'chips chips-sm';
+        renderChips(cw, rowChips, 3);
+        info.appendChild(cw);
       }
       row.appendChild(info);
       var actionsWrap = buildRelationshipControl(u);

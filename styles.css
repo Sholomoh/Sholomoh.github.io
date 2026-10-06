@@ -968,3 +968,28 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 }
 .profile-complete-bar { height: 5px; margin-top: 0.55rem; border-radius: 4px; background: rgba(255,255,255,0.08); overflow: hidden; }
 .profile-complete-bar span { display: block; height: 100%; width: 0; background: var(--green); border-radius: 4px; transition: width 0.4s; }
+
+/* PROFILE: chips, bio counter, directory tools, collapsible account settings */
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.8rem; }
+.chips[hidden] { display: none; }
+.chip {
+  font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--cyan);
+  background: rgba(0,210,211,0.08); border: 1px solid rgba(0,210,211,0.3);
+  padding: 0.2rem 0.6rem; border-radius: 20px;
+}
+.chips-sm { margin-top: 0.45rem; gap: 0.3rem; }
+.chips-sm .chip { font-size: 0.64rem; padding: 0.12rem 0.5rem; }
+.char-count { float: right; color: var(--muted); font-size: 0.7rem; }
+.char-count.over { color: var(--red); }
+.member-tools { display: flex; gap: 0.6rem; margin-bottom: 1rem; }
+.member-tools #member-search { flex: 1; min-width: 0; }
+.member-tools #member-sort { width: auto; flex-shrink: 0; }
+.danger-details { margin-top: 2rem; }
+.danger-details > summary {
+  cursor: pointer; color: var(--muted); font-family: 'Share Tech Mono', monospace;
+  font-size: 0.8rem; padding: 0.4rem 0; list-style: none;
+}
+.danger-details > summary::-webkit-details-marker { display: none; }
+.danger-details > summary::before { content: '\25B8  '; }
+.danger-details[open] > summary::before { content: '\25BE  '; }
+.danger-details > summary:hover { color: var(--text); }

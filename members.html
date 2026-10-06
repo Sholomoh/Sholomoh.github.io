@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=24">
+  <link rel="stylesheet" href="styles.css?v=25">
   <script src="circuit-bg.js?v=3" defer></script>
   <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
@@ -127,6 +127,13 @@
       <!-- MEMBERS DIRECTORY -->
       <div class="tab-panel" id="tab-members" hidden>
         <p class="page-intro-sm">Everyone who's signed up. Connect to see each other's stories in your Friends feed.</p>
+        <div class="member-tools" id="member-tools">
+          <input type="search" id="member-search" class="field-input" placeholder="Search name, location or interest..." autocomplete="off">
+          <select id="member-sort" class="field-input" aria-label="Sort members">
+            <option value="az">A–Z</option>
+            <option value="new">Newest</option>
+          </select>
+        </div>
         <div id="members-list"></div>
         <div id="member-profile" hidden>
           <button type="button" id="member-profile-back" class="btn btn-ghost btn-sm">← Back to members</button>
@@ -172,6 +179,7 @@
             <p class="profile-preview-name" id="profile-preview-name"></p>
             <p class="profile-preview-location" id="profile-preview-location" hidden></p>
             <p class="profile-preview-bio" id="profile-preview-bio"></p>
+            <div class="chips" id="profile-preview-chips"></div>
             <div class="profile-complete" id="profile-complete" hidden>
               <div class="profile-complete-head"><span id="profile-complete-text"></span><span id="profile-complete-pct"></span></div>
               <div class="profile-complete-bar"><span id="profile-complete-fill"></span></div>
@@ -181,7 +189,8 @@
         </div>
         <form id="profile-form" hidden>
           <label class="field-label">Name<input type="text" id="profile-name" class="field-input" required></label>
-          <label class="field-label">Bio<textarea id="profile-bio" class="story-input profile-bio-input" placeholder="A line about yourself..."></textarea></label>
+          <label class="field-label">Bio <span class="char-count" id="profile-bio-count">0/160</span><textarea id="profile-bio" class="story-input profile-bio-input" maxlength="160" placeholder="A line about yourself..."></textarea></label>
+          <label class="field-label">Interests (comma-separated, up to 6)<input type="text" id="profile-interests" class="field-input" placeholder="e.g. python, cybersecurity, hiking" maxlength="140"></label>
           <label class="field-label">Location<input type="text" id="profile-location" class="field-input" placeholder="City, Country"></label>
           <label class="file-label">Cover photo<input type="file" id="profile-cover" accept="image/*"></label>
           <p id="profile-cover-pending" class="form-note pending-note" hidden>Preview only — not saved yet. <button type="button" id="profile-cover-cancel" class="btn btn-ghost btn-sm">Cancel</button></p>
@@ -198,6 +207,8 @@
         </form>
         <h2 class="mt profile-section-title">My stories</h2>
         <div id="profile-stories"></div>
+        <details class="danger-details">
+          <summary>Account settings</summary>
         <div class="danger-zone" id="danger-zone">
           <h3>Delete account</h3>
           <p class="form-note">This permanently deletes your profile, stories, comments, likes and friend connections. It can't be undone. Messages you've already sent stay in the other person's inbox.</p>
@@ -212,6 +223,7 @@
             <p id="delete-status" class="form-error"></p>
           </form>
         </div>
+        </details>
       </div>
 
       <!-- ADMIN -->
@@ -228,6 +240,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=3"></script>
+  <script src="members.js?v=4"></script>
 </body>
 </html>
