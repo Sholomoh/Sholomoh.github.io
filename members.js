@@ -122,20 +122,32 @@
     return span;
   }
 
+  // 20MB keeps things comfortably inside Cloudinary's free tier even with
+  // a few videos in the mix; raise it in one place here if that's too tight.
+  var MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
+  // Images, video, and documents (PDF/Word/etc.) all go through the same
+  // /auto/upload endpoint, which inspects the file and returns which kind
+  // it detected — the caller renders accordingly (img / video / file link).
   function uploadToCloudinary(file) {
     var cfg = window.CLOUDINARY_CONFIG;
     if (!cfg || !cfg.cloudName || cfg.cloudName === 'PASTE_ME') {
-      return Promise.reject(new Error('Photo upload isn\u2019t configured yet.'));
+      return Promise.reject(new Error('Upload isn\u2019t configured yet.'));
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      return Promise.reject(new Error('That file is over the 20MB limit.'));
     }
     var fd = new FormData();
     fd.append('file', file);
     fd.append('upload_preset', cfg.uploadPreset);
-    return fetch('https://api.cloudinary.com/v1_1/' + cfg.cloudName + '/image/upload', {
+    return fetch('https://api.cloudinary.com/v1_1/' + cfg.cloudName + '/auto/upload', {
       method: 'POST', body: fd
     }).then(function (r) {
-      if (!r.ok) throw new Error('Photo upload failed.');
+      if (!r.ok) throw new Error('Upload failed.');
       return r.json();
-    }).then(function (data) { return data.secure_url; });
+    }).then(function (data) {
+      return { url: data.secure_url, resourceType: data.resource_type, name: file.name };
+    });
   }
 
   /* ---------- auth tabs + forms ---------- */
@@ -383,6 +395,33 @@
     return wrap;
   }
 
+  // Renders a post's attachment appropriately for its kind. Falls back to
+  // the older photoURL-only field for posts created before video/document
+  // support existed, which always get treated as an image.
+  function buildAttachment(p) {
+    var url = p.attachmentURL || p.photoURL;
+    var type = p.attachmentType || (p.photoURL ? 'image' : null);
+    if (!url || !type) return document.createDocumentFragment();
+
+    if (type === 'video') {
+      var video = document.createElement('video');
+      video.src = url; video.controls = true; video.preload = 'metadata'; video.className = 'story-video';
+      return video;
+    }
+    if (type === 'image') {
+      var img = document.createElement('img');
+      img.src = url; img.alt = ''; img.className = 'story-photo'; img.loading = 'lazy';
+      return img;
+    }
+    // Anything else (pdf, doc, zip, ...) -> a plain download link, since it
+    // can't be meaningfully previewed inline.
+    var link = document.createElement('a');
+    link.href = url; link.target = '_blank'; link.rel = 'noopener';
+    link.className = 'story-file-link';
+    link.textContent = '\ud83d\udcce ' + (p.attachmentName || 'Download attachment');
+    return link;
+  }
+
   function buildStoryCard(id, p) {
     var card = document.createElement('article');
     card.className = 'story-card';
@@ -392,11 +431,7 @@
       return card;
     }
 
-    if (p.photoURL) {
-      var img = document.createElement('img');
-      img.src = p.photoURL; img.alt = ''; img.className = 'story-photo'; img.loading = 'lazy';
-      card.appendChild(img);
-    }
+    card.appendChild(buildAttachment(p));
 
     var body = document.createElement('div');
     body.className = 'story-body';
@@ -479,21 +514,22 @@
     var bodyInput = document.createElement('textarea');
     bodyInput.className = 'story-input'; bodyInput.value = p.body || '';
 
+    var hasAttachment = !!(p.attachmentURL || p.photoURL);
     var photoRow = document.createElement('label');
     photoRow.className = 'file-label';
-    photoRow.textContent = p.photoURL ? 'Replace photo' : 'Add photo';
+    photoRow.textContent = hasAttachment ? 'Replace attachment' : 'Attach a photo, video, or document';
     var photoInput = document.createElement('input');
-    photoInput.type = 'file'; photoInput.accept = 'image/*';
+    photoInput.type = 'file'; photoInput.accept = 'image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip';
     photoRow.appendChild(photoInput);
 
     var removeRow = null, removeCheck = null;
-    if (p.photoURL) {
+    if (hasAttachment) {
       removeRow = document.createElement('label');
       removeRow.className = 'checkbox-label';
       removeCheck = document.createElement('input');
       removeCheck.type = 'checkbox';
       removeRow.appendChild(removeCheck);
-      removeRow.appendChild(document.createTextNode(' Remove current photo'));
+      removeRow.appendChild(document.createTextNode(' Remove current attachment'));
     }
 
     var status = document.createElement('p');
@@ -514,13 +550,17 @@
       if (!title || !bodyText) { status.textContent = 'Title and story can\u2019t be empty.'; return; }
       var file = photoInput.files[0];
       saveBtn.disabled = true;
-      status.textContent = file ? 'Uploading photo\u2026' : 'Saving\u2026';
+      status.textContent = file ? 'Uploading\u2026' : 'Saving\u2026';
 
       var photoWork = file ? uploadToCloudinary(file) : Promise.resolve(undefined);
-      photoWork.then(function (url) {
+      photoWork.then(function (result) {
         var update = { title: title, body: bodyText, updatedAt: FieldValue.serverTimestamp() };
-        if (file) update.photoURL = url;
-        else if (removeCheck && removeCheck.checked) update.photoURL = null;
+        if (file) {
+          update.attachmentURL = result.url; update.attachmentType = result.resourceType; update.attachmentName = result.name;
+          update.photoURL = null;
+        } else if (removeCheck && removeCheck.checked) {
+          update.attachmentURL = null; update.attachmentType = null; update.attachmentName = null; update.photoURL = null;
+        }
         return db.collection('posts').doc(id).update(update);
       }).then(function () {
         editingId = null;
@@ -661,16 +701,18 @@
     if (!user) return;
     var title = document.getElementById('post-title').value.trim();
     var body = document.getElementById('post-body').value.trim();
-    var file = document.getElementById('post-photo').files[0];
+    var file = document.getElementById('post-attachment').files[0];
     var submitBtn = postForm.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    postStatus.textContent = file ? 'Uploading photo\u2026' : 'Posting\u2026';
+    postStatus.textContent = file ? 'Uploading\u2026' : 'Posting\u2026';
 
-    (file ? uploadToCloudinary(file) : Promise.resolve(null)).then(function (url) {
+    (file ? uploadToCloudinary(file) : Promise.resolve(null)).then(function (result) {
       return db.collection('posts').add({
         title: title,
         body: body,
-        photoURL: url,
+        attachmentURL: result ? result.url : null,
+        attachmentType: result ? result.resourceType : null,
+        attachmentName: result ? result.name : null,
         authorUid: user.uid,
         authorName: user.displayName || user.email,
         likeCount: 0,
@@ -784,8 +826,8 @@
     if (!myProfile.dob && profileDob.value) update.dob = profileDob.value;
 
     var photoWork = profilePhoto.files[0] ? uploadToCloudinary(profilePhoto.files[0]) : Promise.resolve(undefined);
-    photoWork.then(function (url) {
-      if (url) update.photoURL = url;
+    photoWork.then(function (result) {
+      if (result) update.photoURL = result.url;
       return db.collection('users').doc(currentUid).update(update);
     }).then(function () {
       return auth.currentUser.updateProfile({ displayName: update.displayName });

@@ -675,6 +675,13 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
   overflow: hidden; margin-bottom: 1.4rem;
 }
 .story-photo { width: 100%; max-height: 360px; object-fit: cover; display: block; }
+.story-video { width: 100%; max-height: 420px; display: block; background: #000; }
+.story-file-link {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 1rem 1.4rem; background: var(--surface); border-bottom: 1px solid var(--border);
+  color: var(--green); text-decoration: none; font-family: 'Share Tech Mono', monospace; font-size: 0.85rem;
+}
+.story-file-link:hover { background: var(--green-dim); }
 .story-body { padding: 1.4rem 1.6rem; }
 .story-body h3 { color: var(--white); font-size: 1.05rem; margin-bottom: 0.3rem; }
 .story-meta { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--green); letter-spacing: 0.05em; margin-bottom: 0.8rem; }
