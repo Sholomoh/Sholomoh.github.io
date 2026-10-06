@@ -1035,3 +1035,19 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 }
 .new-pill[hidden] { display: none; }
 @media (max-width: 500px) { .feed-tools { flex-wrap: wrap; } .feed-tools #feed-search { flex-basis: 100%; } }
+
+/* MESSAGES + NOTIFICATIONS upgrades */
+#thread-input { resize: none; max-height: 120px; overflow-y: auto; line-height: 1.4; }
+#thread-form { align-items: flex-end; }
+.msg-bubble span:first-child { white-space: pre-wrap; word-break: break-word; }
+.msg-day {
+  align-self: center; margin: 0.6rem 0 0.2rem; padding: 0.15rem 0.7rem; border-radius: 20px;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; color: var(--muted);
+  background: rgba(255,255,255,0.05);
+}
+.load-earlier-btn { align-self: center; margin-bottom: 0.6rem; }
+.notif-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; flex-wrap: wrap; }
+.notif-actions { display: flex; gap: 0.4rem; }
+.notif-row.clickable:hover { background: rgba(255,255,255,0.04); }
+#tab-stories.focus-mode > :not(#story-focus) { display: none !important; }
+#story-focus-card { margin-top: 0.9rem; }

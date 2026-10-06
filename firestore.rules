@@ -84,6 +84,8 @@ service cloud.firestore {
         request.resource.data.toUid == resource.data.toUid &&
         request.resource.data.fromUid == resource.data.fromUid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      // NEW: recipients can clear their own notifications
+      allow delete: if isSignedIn() && resource.data.toUid == request.auth.uid;
     }
 
     // Direct messages. Conversation id is the two participant uids,

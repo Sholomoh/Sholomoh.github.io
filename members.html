@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=29">
+  <link rel="stylesheet" href="styles.css?v=30">
   <div class="crop-modal" id="crop-modal" hidden>
     <div class="crop-box">
       <p class="crop-title">Adjust your photo</p>
@@ -91,6 +91,10 @@
       <div id="notif-panel" class="notif-panel" hidden>
         <div class="notif-panel-head">
           <p>Notifications</p>
+          <div class="notif-actions">
+            <button type="button" id="notif-markall" class="btn btn-ghost btn-sm">Mark all read</button>
+            <button type="button" id="notif-clear" class="btn btn-ghost btn-sm">Clear all</button>
+          </div>
         </div>
         <div id="notif-list"></div>
       </div>
@@ -106,6 +110,10 @@
 
       <!-- STORIES -->
       <div class="tab-panel active" id="tab-stories">
+        <div id="story-focus" hidden>
+          <button type="button" id="story-focus-back" class="btn btn-ghost btn-sm">← Back to feed</button>
+          <div id="story-focus-card"></div>
+        </div>
         <div id="composer-wrap" hidden>
           <button type="button" id="composer-toggle" class="btn btn-primary btn-sm composer-toggle-btn">+ New story</button>
           <div id="composer" hidden>
@@ -185,7 +193,7 @@
           <h2 id="thread-with" class="thread-with"></h2>
           <div id="thread-messages"></div>
           <form id="thread-form">
-            <input type="text" id="thread-input" class="field-input" placeholder="Write a message..." autocomplete="off" required>
+            <textarea id="thread-input" class="field-input" rows="1" maxlength="2000" placeholder="Write a message..." required></textarea>
             <button type="submit" class="btn btn-primary btn-sm">Send</button>
           </form>
         </div>
@@ -266,6 +274,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=8"></script>
+  <script src="members.js?v=9"></script>
 </body>
 </html>

@@ -516,6 +516,46 @@
     return link;
   }
 
+  /* ---------- single story view (opened from notifications) ---------- */
+  var tabStories = document.getElementById('tab-stories');
+  var storyFocus = document.getElementById('story-focus');
+  var storyFocusCard = document.getElementById('story-focus-card');
+  var focusId = null, focusUnsub = null, focusData = null;
+
+  function renderFocus() {
+    if (!focusId) return;
+    storyFocusCard.innerHTML = '';
+    if (!focusData) {
+      storyFocusCard.innerHTML = '<p class="form-note">This story is no longer available.</p>';
+      return;
+    }
+    storyFocusCard.appendChild(buildStoryCard(focusId, focusData));
+  }
+  function closeStoryFocus() {
+    if (focusUnsub) { focusUnsub(); focusUnsub = null; }
+    focusId = null; focusData = null;
+    storyFocus.hidden = true;
+    tabStories.classList.remove('focus-mode');
+  }
+  function openStoryFocus(postId) {
+    document.querySelector('#main-tabs .tab-btn[data-tab="stories"]').click();
+    closeStoryFocus();
+    focusId = postId;
+    tabStories.classList.add('focus-mode');
+    storyFocus.hidden = false;
+    storyFocusCard.innerHTML = '<p class="form-note">Loading\u2026</p>';
+    expandedComments.add(postId);
+    subscribeComments(postId);
+    focusUnsub = db.collection('posts').doc(postId).onSnapshot(function (doc) {
+      focusData = doc.exists ? doc.data() : null;
+      renderFocus();
+    }, function () {
+      focusData = null; renderFocus();
+    });
+    window.scrollTo({ top: 0 });
+  }
+  document.getElementById('story-focus-back').addEventListener('click', closeStoryFocus);
+
   function goToAuthor(uid) {
     if (!uid) return;
     if (uid === currentUid) {
@@ -754,6 +794,7 @@
   }
 
   function renderFeedOnce() {
+    renderFocus();
     if (!lastSnap) return;
     var docs = [];
     lastSnap.forEach(function (doc) { docs.push(doc); });
@@ -1675,13 +1716,15 @@
         fromUid: me, fromName: myProfile.displayName || auth.currentUser.email,
         toUid: u.id, toName: u.displayName || u.email,
         status: 'pending', createdAt: FieldValue.serverTimestamp()
-      });
+      }).then(function () { return notifyIfNotSelf(u.id, 'friendRequest'); });
     }).then(loadRelationships);
   }
 
   function respondToRequest(reqId, status) {
     return db.collection('friendRequests').doc(reqId).update({
       status: status, respondedAt: FieldValue.serverTimestamp()
+    }).then(function () {
+      return status === 'accepted' ? notifyIfNotSelf(reqId.split('_')[0], 'friendAccept') : null;
     }).then(loadRelationships);
   }
 
@@ -1865,28 +1908,99 @@
 
     db.collection('conversations').doc(activeConvId).set({
       participants: participants
-    }, { merge: true }).then(function () { markRead(activeConvId, participants); });
+    }, { merge: true }).then(function () { markRead(activeConvId, participants); subscribeConvRead(participants); });
 
-    if (threadUnsub) threadUnsub();
+    stopThread();
+    msgLimit = MSG_PAGE; lastThreadDocs = []; otherReadMs = 0; threadHasMore = false;
+    subscribeThread(participants);
+  }
+
+  var MSG_PAGE = 50;
+  var msgLimit = MSG_PAGE;
+  var lastThreadDocs = [];
+  var otherReadMs = 0;
+  var threadHasMore = false;
+  var loadingEarlier = false;
+  var convUnsub = null;
+
+  function stopThread() {
+    if (threadUnsub) { threadUnsub(); threadUnsub = null; }
+    if (convUnsub) { convUnsub(); convUnsub = null; }
+  }
+
+  function dayLabel(d) {
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var that = new Date(d); that.setHours(0, 0, 0, 0);
+    var diff = Math.round((today - that) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function renderThread() {
+    var prevH = threadMessages.scrollHeight, prevTop = threadMessages.scrollTop;
+    threadMessages.innerHTML = '';
+    if (!lastThreadDocs.length) { threadMessages.innerHTML = '<p class="form-note">Say hello \u2014 no messages yet.</p>'; return; }
+    if (threadHasMore) {
+      var more = document.createElement('button');
+      more.type = 'button'; more.className = 'btn btn-ghost btn-sm load-earlier-btn';
+      more.textContent = 'Load earlier messages';
+      more.addEventListener('click', function () {
+        more.disabled = true; more.textContent = 'Loading\u2026';
+        loadingEarlier = true; msgLimit += MSG_PAGE;
+        if (threadUnsub) { threadUnsub(); threadUnsub = null; }
+        subscribeThread([currentUid, activeOtherUid].sort(), true);
+      });
+      threadMessages.appendChild(more);
+    }
+    var lastMine = -1;
+    lastThreadDocs.forEach(function (m, i) { if (m.fromUid === currentUid) lastMine = i; });
+    var lastDay = '';
+    lastThreadDocs.forEach(function (m, i) {
+      var cd = toDate(m.createdAt);
+      if (cd) {
+        var label = dayLabel(cd);
+        if (label !== lastDay) {
+          var div = document.createElement('div');
+          div.className = 'msg-day'; div.textContent = label;
+          threadMessages.appendChild(div);
+          lastDay = label;
+        }
+      }
+      var bubble = document.createElement('div');
+      bubble.className = 'msg-bubble ' + (m.fromUid === currentUid ? 'mine' : 'theirs');
+      var text = document.createElement('span');
+      text.textContent = m.text || '';
+      bubble.appendChild(text);
+      var time = document.createElement('span');
+      time.className = 'msg-time';
+      var stamp = cd ? relTime(cd) : '';
+      if (i === lastMine) {
+        var status = !cd ? 'Sending\u2026' : (otherReadMs >= cd.getTime() ? 'Seen' : 'Sent');
+        stamp = stamp ? stamp + ' \u00b7 ' + status : status;
+      }
+      time.textContent = stamp;
+      bubble.appendChild(time);
+      threadMessages.appendChild(bubble);
+    });
+    if (loadingEarlier) {
+      threadMessages.scrollTop = threadMessages.scrollHeight - prevH + prevTop;
+      loadingEarlier = false;
+    } else {
+      threadMessages.scrollTop = threadMessages.scrollHeight;
+    }
+  }
+
+  function subscribeThread(participants, keepConv) {
     threadUnsub = db.collection('conversations').doc(activeConvId).collection('messages')
-      .orderBy('createdAt')
+      .orderBy('createdAt', 'desc').limit(msgLimit)
       .onSnapshot(function (snap) {
-        threadMessages.innerHTML = '';
-        if (snap.empty) { threadMessages.innerHTML = '<p class="form-note">Say hello \u2014 no messages yet.</p>'; return; }
-        snap.forEach(function (doc) {
-          var m = doc.data();
-          var bubble = document.createElement('div');
-          bubble.className = 'msg-bubble ' + (m.fromUid === currentUid ? 'mine' : 'theirs');
-          var text = document.createElement('span');
-          text.textContent = m.text || '';
-          bubble.appendChild(text);
-          var time = document.createElement('span');
-          time.className = 'msg-time';
-          time.textContent = m.createdAt && m.createdAt.toDate ? relTime(m.createdAt.toDate()) : '';
-          bubble.appendChild(time);
-          threadMessages.appendChild(bubble);
-        });
-        threadMessages.scrollTop = threadMessages.scrollHeight;
+        var arr = [];
+        snap.forEach(function (doc) { arr.push(doc.data()); });
+        arr.reverse();
+        lastThreadDocs = arr;
+        threadHasMore = snap.size >= msgLimit;
+        renderThread();
         // Still looking at this thread when a new message lands -> stays read.
         if (activeConvId) markRead(activeConvId, participants);
       }, function () {
@@ -1894,11 +2008,37 @@
       });
   }
 
+  // Subscribed only after the conversation doc is known to exist (rules need it).
+  function subscribeConvRead(participants) {
+    if (convUnsub || !activeConvId) return;
+    var otherField = participants[0] === activeOtherUid ? 'lastReadAt0' : 'lastReadAt1';
+    convUnsub = db.collection('conversations').doc(activeConvId).onSnapshot(function (doc) {
+      var d = doc.data() || {};
+      var t = toDate(d[otherField]);
+      otherReadMs = t ? t.getTime() : 0;
+      if (lastThreadDocs.length) renderThread();
+    }, function () {});
+  }
+
   threadBack.addEventListener('click', function () {
-    if (threadUnsub) { threadUnsub(); threadUnsub = null; }
+    stopThread();
     threadView.hidden = true;
     inboxView.hidden = false;
     activeConvId = null; activeOtherUid = null;
+  });
+
+  var coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  function autosizeThreadInput() {
+    threadInput.style.height = 'auto';
+    threadInput.style.height = Math.min(threadInput.scrollHeight, 120) + 'px';
+  }
+  threadInput.addEventListener('input', autosizeThreadInput);
+  threadInput.addEventListener('keydown', function (e) {
+    // Desktop: Enter sends, Shift+Enter = new line. Touch keyboards: Enter = new line.
+    if (e.key === 'Enter' && !e.shiftKey && !coarsePointer && !e.isComposing) {
+      e.preventDefault();
+      if (threadInput.value.trim()) threadForm.requestSubmit();
+    }
   });
 
   threadForm.addEventListener('submit', function (e) {
@@ -1908,6 +2048,7 @@
     var sendBtn = threadForm.querySelector('button[type="submit"]');
     sendBtn.disabled = true;
     threadInput.value = '';
+    autosizeThreadInput();
     db.collection('conversations').doc(activeConvId).collection('messages').add({
       fromUid: currentUid, text: text, createdAt: FieldValue.serverTimestamp()
     }).then(function () {
@@ -1942,42 +2083,83 @@
     return db.collection('notifications').add(payload).catch(function () {});
   }
 
-  function notifText(n) {
-    if (n.type === 'like') return (n.fromName || 'Someone') + ' liked your story \u201c' + (n.postTitle || '') + '\u201d';
-    if (n.type === 'comment') return (n.fromName || 'Someone') + ' commented on your story \u201c' + (n.postTitle || '') + '\u201d';
-    if (n.type === 'message') return (n.fromName || 'Someone') + ' sent you a message';
-    return (n.fromName || 'Someone') + ' did something';
+  function notifClearedMs() {
+    try { return Number(localStorage.getItem('sholomoh:notifCleared:' + currentUid)) || 0; } catch (e) { return 0; }
+  }
+
+  function groupNotifs(list) {
+    var map = {}, order = [];
+    list.forEach(function (n) {
+      var d = n.data;
+      var k = d.type + ':' + (d.postId || d.convId || d.fromUid || '');
+      if (!map[k]) { map[k] = { type: d.type, sample: d, items: [], names: [] }; order.push(map[k]); }
+      var g = map[k];
+      g.items.push(n);
+      var nm = d.fromName || 'Someone';
+      if (g.names.indexOf(nm) === -1) g.names.push(nm);
+    });
+    return order;
+  }
+
+  function groupText(g) {
+    var n = g.names;
+    var who = n.length === 1 ? n[0] : n.length === 2 ? n[0] + ' and ' + n[1] : n[0] + ' and ' + (n.length - 1) + ' others';
+    var title = '\u201c' + (g.sample.postTitle || '') + '\u201d';
+    if (g.type === 'like') return who + ' liked your story ' + title;
+    if (g.type === 'comment') return who + ' commented on your story ' + title;
+    if (g.type === 'message') return g.items.length > 1 ? who + ' sent you ' + g.items.length + ' messages' : who + ' sent you a message';
+    if (g.type === 'friendRequest') return who + ' sent you a friend request';
+    if (g.type === 'friendAccept') return who + ' accepted your friend request';
+    return who + ' did something';
+  }
+
+  function openNotifGroup(g) {
+    g.items.forEach(function (n) {
+      if (!n.data.read) db.collection('notifications').doc(n.id).update({ read: true }).catch(function () {});
+    });
+    notifPanel.hidden = true;
+    var d = g.sample;
+    if ((g.type === 'like' || g.type === 'comment') && d.postId) {
+      openStoryFocus(d.postId);
+    } else if (g.type === 'message') {
+      openConversation(usersByUid[d.fromUid] || { id: d.fromUid, displayName: d.fromName });
+    } else if (g.type === 'friendRequest') {
+      document.querySelector('#main-tabs .tab-btn[data-tab="requests"]').click();
+    } else if (g.type === 'friendAccept' && usersByUid[d.fromUid]) {
+      document.querySelector('#main-tabs .tab-btn[data-tab="members"]').click();
+      openMemberProfile(usersByUid[d.fromUid]);
+    }
   }
 
   function renderNotifList() {
-    var unread = lastNotifs.filter(function (n) { return !n.data.read; }).length;
+    var cleared = notifClearedMs();
+    var visible = lastNotifs.filter(function (n) {
+      var cd = toDate(n.data.createdAt);
+      return !cd || cd.getTime() > cleared;
+    });
+    var unread = visible.filter(function (n) { return !n.data.read; }).length;
     notifBadge.hidden = unread === 0;
     if (unread) notifBadge.textContent = String(unread > 9 ? '9+' : unread);
 
-    if (!lastNotifs.length) {
+    if (!visible.length) {
       notifList.innerHTML = '<p class="form-note">No notifications yet.</p>';
       return;
     }
     notifList.innerHTML = '';
-    lastNotifs.slice(0, 25).forEach(function (n) {
+    groupNotifs(visible).slice(0, 25).forEach(function (g) {
       var row = document.createElement('div');
-      row.className = 'notif-row' + (n.data.read ? '' : ' unread');
+      var isUnread = g.items.some(function (n) { return !n.data.read; });
+      row.className = 'notif-row clickable' + (isUnread ? ' unread' : '');
       var text = document.createElement('div');
       var main = document.createElement('span');
-      main.textContent = notifText(n.data);
+      main.textContent = groupText(g);
       var time = document.createElement('span');
       time.className = 'notif-time';
-      time.textContent = n.data.createdAt && n.data.createdAt.toDate ? relTime(n.data.createdAt.toDate()) : '';
+      var cd = toDate(g.items[0].data.createdAt);
+      time.textContent = cd ? relTime(cd) : '';
       text.appendChild(main); text.appendChild(time);
       row.appendChild(text);
-      if (n.data.type === 'message') {
-        row.classList.add('clickable');
-        row.addEventListener('click', function () {
-          notifPanel.hidden = true;
-          var other = usersByUid[n.data.fromUid] || { id: n.data.fromUid, displayName: n.data.fromName };
-          openConversation(other);
-        });
-      }
+      row.addEventListener('click', function () { openNotifGroup(g); });
       notifList.appendChild(row);
     });
   }
@@ -2007,7 +2189,13 @@
 
   notifBell.addEventListener('click', function () {
     notifPanel.hidden = !notifPanel.hidden;
-    if (!notifPanel.hidden) markAllNotifsRead();
+  });
+  document.getElementById('notif-markall').addEventListener('click', markAllNotifsRead);
+  document.getElementById('notif-clear').addEventListener('click', function () {
+    try { localStorage.setItem('sholomoh:notifCleared:' + currentUid, String(Date.now())); } catch (e) {}
+    // Best-effort delete (needs the notifications delete rule); hidden locally either way.
+    lastNotifs.forEach(function (n) { db.collection('notifications').doc(n.id).delete().catch(function () {}); });
+    renderNotifList();
   });
 
   /* ---------- auth state ---------- */
@@ -2017,7 +2205,7 @@
     if (!user) {
       if (feedUnsub) { feedUnsub(); feedUnsub = null; }
       if (inboxUnsub) { inboxUnsub(); inboxUnsub = null; }
-      if (threadUnsub) { threadUnsub(); threadUnsub = null; }
+      stopThread(); closeStoryFocus();
       if (notifUnsub) { notifUnsub(); notifUnsub = null; }
       Object.keys(commentUnsubs).forEach(function (k) { commentUnsubs[k](); });
       commentUnsubs = {};
