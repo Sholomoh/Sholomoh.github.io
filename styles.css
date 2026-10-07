@@ -1115,3 +1115,9 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
 @media (max-width: 560px) {
   .profile-stats:has(.profile-stat:nth-child(4)) { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* STORY IMAGES: show the whole picture (no cropping), tap to enlarge */
+.story-photo { object-fit: contain; max-height: 520px; background: #0a1420; cursor: zoom-in; }
+.lightbox { flex-direction: column; gap: 0.9rem; }
+.lightbox[hidden] { display: none; }
+.lightbox img { max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: 8px; background: #000; }

@@ -571,6 +571,7 @@
     if (type === 'image') {
       var img = document.createElement('img');
       img.src = url; img.alt = ''; img.className = 'story-photo'; img.loading = 'lazy';
+      makeActivatable(img, function () { openLightbox(url); }, 'View full image');
       return img;
     }
     // Anything else (pdf, doc, zip, ...) -> a plain download link, since it
@@ -679,6 +680,18 @@
       reportSend.disabled = false;
     });
   });
+
+  /* ---------- full-size image viewer ---------- */
+  var lightbox = document.getElementById('lightbox');
+  var lightboxImg = document.getElementById('lightbox-img');
+  function closeLightbox() { lightbox.hidden = true; lightboxImg.src = ''; }
+  function openLightbox(url) {
+    lightboxImg.src = url;
+    lightbox.hidden = false;
+    document.getElementById('lightbox-close').focus();
+  }
+  document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+  lightbox.addEventListener('click', function (e) { if (e.target === lightbox) closeLightbox(); });
 
   /* ---------- who liked a story ---------- */
   var likesModal = document.getElementById('likes-modal');
@@ -1729,7 +1742,8 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (!reportModal.hidden) { closeReport(); }
+    if (!lightbox.hidden) { closeLightbox(); }
+    else if (!reportModal.hidden) { closeReport(); }
     else if (!likesModal.hidden) { closeLikes(); }
     else if (!cropModal.hidden) { document.getElementById('crop-cancel').click(); }
     else if (typeof notifPanel !== 'undefined' && !notifPanel.hidden) { notifPanel.hidden = true; notifBell.setAttribute('aria-expanded', 'false'); notifBell.focus(); }
