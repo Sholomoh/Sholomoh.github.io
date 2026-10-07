@@ -2601,9 +2601,35 @@
   var loadingEarlier = false;
   var convUnsub = null;
 
+  /* typing indicator (field typingAt0/typingAt1 on the conversation doc) */
+  var threadTyping = document.getElementById('thread-typing');
+  var otherTypingSeen, typingHideTimer = null, lastTypingSentAt = 0;
+
+  function showTyping() {
+    threadTyping.hidden = false;
+    clearTimeout(typingHideTimer);
+    typingHideTimer = setTimeout(hideTyping, 6000);
+  }
+  function hideTyping() {
+    clearTimeout(typingHideTimer);
+    threadTyping.hidden = true;
+  }
+  // Tell the other person I'm typing, at most once every 3 seconds. Not sent
+  // if I've hidden my online status or either of us has blocked the other.
+  function sendTyping() {
+    if (!activeConvId || (myProfile && myProfile.hidePresence) || blockedUids.has(activeOtherUid)) return;
+    var now = Date.now();
+    if (now - lastTypingSentAt < 3000) return;
+    lastTypingSentAt = now;
+    var f = [currentUid, activeOtherUid].sort()[0] === currentUid ? 'typingAt0' : 'typingAt1';
+    var upd = {}; upd[f] = FieldValue.serverTimestamp();
+    db.collection('conversations').doc(activeConvId).set(upd, { merge: true }).catch(function () {});
+  }
+
   function stopThread() {
     if (threadUnsub) { threadUnsub(); threadUnsub = null; }
     if (convUnsub) { convUnsub(); convUnsub = null; }
+    hideTyping(); lastTypingSentAt = 0;
   }
 
   function dayLabel(d) {
@@ -2690,6 +2716,7 @@
         snap.forEach(function (doc) { var d = doc.data(); d._id = doc.id; arr.push(d); });
         arr.reverse();
         lastThreadDocs = arr;
+        if (arr.length && arr[arr.length - 1].fromUid === activeOtherUid) hideTyping();
         threadHasMore = snap.size >= msgLimit;
         renderThread();
         // Still looking at this thread when a new message lands -> stays read.
@@ -2703,8 +2730,19 @@
   function subscribeConvRead(participants) {
     if (convUnsub || !activeConvId) return;
     var otherField = participants[0] === activeOtherUid ? 'lastReadAt0' : 'lastReadAt1';
+    var otherTypingField = participants[0] === activeOtherUid ? 'typingAt0' : 'typingAt1';
+    otherTypingSeen = undefined;
     convUnsub = db.collection('conversations').doc(activeConvId).onSnapshot(function (doc) {
       var d = doc.data() || {};
+      // Typing: a new value in the other person's field means they just
+      // typed. Comparing values (not clocks) keeps it immune to clock skew.
+      var tt = toDate(d[otherTypingField]);
+      var ttMs = tt ? tt.getTime() : 0;
+      if (otherTypingSeen !== undefined && ttMs && ttMs !== otherTypingSeen &&
+          !(myProfile && myProfile.hidePresence) && !blockedUids.has(activeOtherUid)) {
+        showTyping();
+      }
+      otherTypingSeen = ttMs;
       var t = toDate(d[otherField]);
       otherReadMs = t ? t.getTime() : 0;
       if (lastThreadDocs.length) renderThread();
@@ -2724,6 +2762,7 @@
     threadInput.style.height = Math.min(threadInput.scrollHeight, 120) + 'px';
   }
   threadInput.addEventListener('input', autosizeThreadInput);
+  threadInput.addEventListener('input', function () { if (threadInput.value.trim()) sendTyping(); });
   threadInput.addEventListener('keydown', function (e) {
     // Desktop: Enter sends, Shift+Enter = new line. Touch keyboards: Enter = new line.
     if (e.key === 'Enter' && !e.shiftKey && !coarsePointer && !e.isComposing) {
@@ -2738,6 +2777,7 @@
     if (!text || !activeConvId) return;
     var sendBtn = threadForm.querySelector('button[type="submit"]');
     sendBtn.disabled = true;
+    lastTypingSentAt = 0;
     threadInput.value = '';
     autosizeThreadInput();
     db.collection('conversations').doc(activeConvId).collection('messages').add({

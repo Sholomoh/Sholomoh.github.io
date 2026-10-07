@@ -1146,3 +1146,5 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
   .skill-icon { font-size: 1rem; }
   .skill-item span { font-size: 0.68rem; overflow-wrap: break-word; }
 }
+
+.thread-typing { margin: 0.3rem 0 0.5rem; font-style: italic; }

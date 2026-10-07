@@ -153,10 +153,22 @@ service cloud.firestore {
     // only flip "read" and nothing else about an entry they didn't send.
     match /notifications/{id} {
       allow read: if isSignedIn() && resource.data.toUid == request.auth.uid;
+      // Only the kinds of notification the app really sends, with only the
+      // fields it writes, unread, server-timestamped and of sane length — so
+      // the collection can't be used to push arbitrary text at someone.
       allow create: if isSignedIn() &&
         request.resource.data.fromUid == request.auth.uid &&
         request.resource.data.toUid != request.auth.uid &&
-        !isBlocked(request.resource.data.toUid, request.auth.uid);
+        !isBlocked(request.resource.data.toUid, request.auth.uid) &&
+        request.resource.data.type in ['like', 'comment', 'reply', 'message', 'friendRequest', 'friendAccept'] &&
+        request.resource.data.keys().hasOnly(['toUid', 'fromUid', 'fromName', 'type', 'read',
+          'createdAt', 'postId', 'postTitle', 'convId']) &&
+        request.resource.data.read == false &&
+        request.resource.data.createdAt == request.time &&
+        (!('fromName' in request.resource.data) || (request.resource.data.fromName is string &&
+          request.resource.data.fromName.size() <= 100)) &&
+        (!('postTitle' in request.resource.data) || request.resource.data.postTitle == null ||
+          (request.resource.data.postTitle is string && request.resource.data.postTitle.size() <= 300));
       allow update: if isSignedIn() && resource.data.toUid == request.auth.uid &&
         request.resource.data.toUid == resource.data.toUid &&
         request.resource.data.fromUid == resource.data.fromUid &&
