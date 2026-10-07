@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=40">
+  <link rel="stylesheet" href="styles.css?v=41">
   <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
     <img id="lightbox-img" alt="">
     <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
@@ -108,7 +108,7 @@
           <button type="button" id="forgot-password-btn" class="forgot-link">Forgot password?</button>
         </form>
         <form id="signup-form" class="auth-form" hidden>
-          <input type="text" id="signup-name" class="field-input" placeholder="Your name" required autocomplete="name">
+          <input type="text" id="signup-name" class="field-input" placeholder="Your name" required autocomplete="name" maxlength="60">
           <input type="email" id="signup-email" class="field-input" placeholder="Email" required autocomplete="email">
           <input type="password" id="signup-password" class="field-input" placeholder="Password (6+ characters)" required minlength="6" autocomplete="new-password">
           <button type="submit" class="btn btn-primary">Create account</button>
@@ -157,7 +157,7 @@
           <div id="composer" hidden>
             <h2>New story</h2>
             <form id="post-form">
-              <input type="text" id="post-title" class="field-input" placeholder="Title" required>
+              <input type="text" id="post-title" class="field-input" placeholder="Title" required maxlength="120">
               <textarea id="post-body" class="story-input" placeholder="Write your story..." required></textarea>
               <label class="file-label">Attach a photo, video, or document (optional)<input type="file" id="post-attachment" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"></label>
               <div class="form-actions">
@@ -260,7 +260,7 @@
           </div>
         </div>
         <form id="profile-form" hidden>
-          <label class="field-label">Name<input type="text" id="profile-name" class="field-input" required></label>
+          <label class="field-label">Name<input type="text" id="profile-name" class="field-input" required maxlength="60"></label>
           <label class="field-label">Bio <span class="char-count" id="profile-bio-count">0/160</span><textarea id="profile-bio" class="story-input profile-bio-input" maxlength="160" placeholder="A line about yourself..."></textarea></label>
           <label class="field-label">Interests (comma-separated, up to 6)<input type="text" id="profile-interests" class="field-input" placeholder="e.g. python, cybersecurity, hiking" maxlength="140"></label>
           <label class="field-label">Location<input type="text" id="profile-location" class="field-input" placeholder="City, Country"></label>
@@ -325,6 +325,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=22"></script>
+  <script src="members.js?v=23"></script>
 </body>
 </html>
