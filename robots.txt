@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sholomoh.github.io/sitemap.xml
