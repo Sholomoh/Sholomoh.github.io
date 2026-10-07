@@ -79,6 +79,7 @@
   var profileInterests = document.getElementById('profile-interests');
   var profileHideLocation = document.getElementById('profile-hide-location');
   var profileHideStats = document.getElementById('profile-hide-stats');
+  var profileShowPresence = document.getElementById('profile-show-presence');
   var profileStatus = document.getElementById('profile-status');
 
   /* ---------- small helpers ---------- */
@@ -235,6 +236,7 @@
       var tab = btn.getAttribute('data-tab');
       Object.keys(panels).forEach(function (k) { panels[k].hidden = k !== tab; });
       try { sessionStorage.setItem('sholomoh:tab', tab); } catch (e) {}
+      if (tab === 'members' && typeof refreshPresence === 'function') refreshPresence(false);
       if (tab !== 'members' && typeof closeMemberProfile === 'function') closeMemberProfile();
     });
   });
@@ -602,6 +604,90 @@
     link.textContent = '\ud83d\udcce ' + (p.attachmentName || 'Download attachment');
     return link;
   }
+
+  /* ---------- online status / last seen + tab-title unread count ---------- */
+  var presenceMap = {};              // uid -> last seen (ms)
+  var presenceTimer = null, presenceFetchedAt = 0;
+  var PRESENCE_BEAT_MS = 90000, ONLINE_WITHIN_MS = 150000;
+  var baseTitle = document.title;
+  var unreadNotifCount = 0, unreadMsgCount = 0;
+
+  function updateTitleBadge() {
+    var n = unreadNotifCount + unreadMsgCount;
+    document.title = (n ? '(' + (n > 9 ? '9+' : n) + ') ' : '') + baseTitle;
+  }
+
+  function pingPresence() {
+    if (!currentUid || (myProfile && myProfile.hidePresence)) return;
+    db.collection('presence').doc(currentUid).set({ lastSeen: FieldValue.serverTimestamp() }).catch(function () {});
+  }
+  function stopPresence() {
+    if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
+  }
+  function startPresence() {
+    stopPresence();
+    if (!currentUid) return;
+    if (myProfile && myProfile.hidePresence) {
+      db.collection('presence').doc(currentUid).delete().catch(function () {});
+      presenceMap = {};
+      return;
+    }
+    pingPresence();
+    presenceTimer = setInterval(function () {
+      if (document.visibilityState === 'visible') pingPresence();
+    }, PRESENCE_BEAT_MS);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') pingPresence();
+  });
+
+  function presenceInfo(uid) {
+    if (!uid || uid === currentUid || (myProfile && myProfile.hidePresence) || blockedUids.has(uid)) return null;
+    var ms = presenceMap[uid];
+    if (!ms) return null;
+    if (Date.now() - ms < ONLINE_WITHIN_MS) return { online: true, text: 'Online' };
+    return { online: false, text: 'Last seen ' + relTime(new Date(ms)) };
+  }
+
+  function buildPresenceEl(uid) {
+    var info = presenceInfo(uid);
+    if (!info) return null;
+    var el = document.createElement('span');
+    el.className = 'presence' + (info.online ? ' online' : '');
+    el.textContent = (info.online ? '\u25cf ' : '') + info.text;
+    return el;
+  }
+
+  function updateThreadPresence() {
+    var el = document.getElementById('thread-presence');
+    var info = activeOtherUid ? presenceInfo(activeOtherUid) : null;
+    el.hidden = !info;
+    el.className = 'thread-presence' + (info && info.online ? ' online' : '');
+    el.textContent = info ? (info.online ? '\u25cf ' : '') + info.text : '';
+  }
+
+  function refreshPresence(force) {
+    if (!currentUid || (myProfile && myProfile.hidePresence)) return Promise.resolve();
+    if (!force && Date.now() - presenceFetchedAt < 30000) return Promise.resolve();
+    presenceFetchedAt = Date.now();
+    return db.collection('presence').get().then(function (snap) {
+      var map = {};
+      snap.forEach(function (d) {
+        var t = toDate(d.data().lastSeen);
+        if (t) map[d.id] = t.getTime();
+      });
+      presenceMap = map;
+      renderMembersList();
+      rerenderOpenProfileCard();
+      updateThreadPresence();
+    }).catch(function () {});
+  }
+
+  // Refresh periodically, but only while a screen that shows status is open.
+  setInterval(function () {
+    if (document.visibilityState !== 'visible' || !currentUid) return;
+    if (!panels.members.hidden || !threadView.hidden) refreshPresence(true);
+  }, 120000);
 
   /* ---------- blocking ---------- */
   var blockedUids = new Set();
@@ -1441,6 +1527,7 @@
         deleteQueryDocs(db.collection('friendRequests').where('toUid', '==', uid)),
         db.collection('posterRequests').doc(uid).delete().catch(quiet),
         deleteQueryDocs(db.collection('blocks').where('blockerUid', '==', uid)),
+        db.collection('presence').doc(uid).delete().catch(quiet),
         db.collection('userDob').doc(uid).delete().catch(quiet),
         db.collection('userLocations').doc(uid).delete().catch(quiet)
       ]);
@@ -1628,6 +1715,8 @@
     var name = document.createElement('p'); name.className = 'profile-preview-name';
     name.textContent = u.displayName || 'Member';
     body.appendChild(name);
+    var pEl2 = buildPresenceEl(u.id);
+    if (pEl2) { pEl2.classList.add('presence-block'); body.appendChild(pEl2); }
     if (locationOf(u)) {
       var loc = document.createElement('p'); loc.className = 'profile-preview-location';
       loc.textContent = '\ud83d\udccd ' + locationOf(u);
@@ -1649,6 +1738,7 @@
   var openProfileUid = null;
   function openMemberProfile(u) {
     openProfileUid = u.id;
+    refreshPresence(false);
     setHash('u=' + u.id);
     membersList.hidden = true;
     document.querySelector('#tab-members .page-intro-sm').hidden = true;
@@ -1986,6 +2076,7 @@
       profileInterests.value = interestsOf(myProfile).join(', ');
       profileHideLocation.checked = !!myProfile.hideLocation;
       profileHideStats.checked = !!myProfile.hideStats;
+    profileShowPresence.checked = !myProfile.hidePresence;
       updateBioCount();
       profileLocation.value = myProfile.location || '';
       profileEmail.textContent = auth.currentUser.email || '';
@@ -1996,6 +2087,8 @@
       removeCoverFlag = false;
       renderProfilePreview();
       refreshMyProfileExtras();
+      startPresence();
+      refreshPresence(true);
     });
   }
 
@@ -2039,6 +2132,7 @@
     profileLocation.value = myProfile.location || '';
     profileHideLocation.checked = !!myProfile.hideLocation;
     profileHideStats.checked = !!myProfile.hideStats;
+    profileShowPresence.checked = !myProfile.hidePresence;
     profilePhoto.value = ''; croppedPhotoFile = null;
     document.getElementById('profile-photo-pending').hidden = true;
     renderProfilePreview();
@@ -2080,7 +2174,8 @@
       location: profileHideLocation.checked ? '' : profileLocation.value.trim(),
       interests: parseInterests(profileInterests.value),
       hideLocation: profileHideLocation.checked,
-      hideStats: profileHideStats.checked
+      hideStats: profileHideStats.checked,
+      hidePresence: !profileShowPresence.checked
     };
     var locVal = profileLocation.value.trim();
     var hideLoc = profileHideLocation.checked;
@@ -2108,6 +2203,8 @@
       profileCover.value = '';
       profileCoverPending.hidden = true;
       removeCoverFlag = false;
+      if (myProfile) myProfile.hidePresence = update.hidePresence;
+      startPresence(); refreshPresence(true);
       profileStatus.className = 'form-success';
       profileStatus.textContent = '\u2713 Saved \u2014 this is now visible to other members.';
       whoAmI.textContent = update.displayName;
@@ -2184,6 +2281,8 @@
       makeActivatable(name, function () { openMemberProfile(u); });
       name.textContent = u.displayName || 'Member';
       info.appendChild(name);
+      var pEl = buildPresenceEl(u.id);
+      if (pEl) info.appendChild(pEl);
       var shownLoc = locationOf(u);
       if (u.bio || shownLoc) {
         var sub = document.createElement('p');
@@ -2432,6 +2531,8 @@
         });
 
         var unreadCount = convs.filter(function (c) { return isUnread(c.data); }).length;
+        unreadMsgCount = unreadCount;
+        updateTitleBadge();
         messagesBadge.hidden = unreadCount === 0;
         if (unreadCount) messagesBadge.textContent = String(unreadCount);
 
@@ -2477,6 +2578,8 @@
     activeConvId = convIdFor(otherUser.id);
     var participants = [currentUid, otherUser.id].sort();
     threadWith.textContent = otherUser.displayName || 'Member';
+    updateThreadPresence();
+    refreshPresence(false);
     inboxView.hidden = true;
     threadView.hidden = false;
     threadMessages.innerHTML = '<p class="form-note">Loading\u2026</p>';
@@ -2727,6 +2830,8 @@
       return (!cd || cd.getTime() > cleared) && !blockedUids.has(n.data.fromUid);
     });
     var unread = visible.filter(function (n) { return !n.data.read; }).length;
+    unreadNotifCount = unread;
+    updateTitleBadge();
     notifBadge.hidden = unread === 0;
     if (unread) notifBadge.textContent = String(unread > 9 ? '9+' : unread);
 
@@ -2829,6 +2934,7 @@
       appSection.hidden = true;
       tabRestored = true;
       try { sessionStorage.removeItem('sholomoh:tab'); } catch (e) {}
+      stopPresence(); presenceMap = {}; unreadNotifCount = 0; unreadMsgCount = 0; updateTitleBadge();
       return;
     }
     authSection.hidden = true;

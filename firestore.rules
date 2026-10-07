@@ -91,6 +91,16 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // Online status: one doc per member holding just a server-stamped lastSeen.
+    // Members who hide their status delete their doc and stop writing it.
+    match /presence/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['lastSeen']) &&
+        request.resource.data.lastSeen == request.time;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // Admin allowlist. Add yourself here manually in the Firebase console
     // after your first sign-up — the app can never write to this collection.
     match /admins/{uid} {

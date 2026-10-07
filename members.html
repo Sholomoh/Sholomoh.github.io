@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=38">
+  <link rel="stylesheet" href="styles.css?v=40">
   <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
     <img id="lightbox-img" alt="">
     <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
@@ -224,6 +224,7 @@
         <div id="thread-view" hidden>
           <button type="button" id="thread-back" class="btn btn-ghost btn-sm">← Back to messages</button>
           <h2 id="thread-with" class="thread-with"></h2>
+          <p id="thread-presence" class="thread-presence" hidden></p>
           <div id="thread-messages"></div>
           <form id="thread-form">
             <textarea id="thread-input" class="field-input" rows="1" maxlength="2000" placeholder="Write a message..." required></textarea>
@@ -264,6 +265,7 @@
           <p id="profile-photo-pending" class="form-note pending-note" hidden>Preview only — not saved yet. <button type="button" id="profile-photo-cancel" class="btn btn-ghost btn-sm">Cancel</button></p>
           <label class="check-label"><input type="checkbox" id="profile-hide-location"> Only friends can see my location</label>
           <label class="check-label"><input type="checkbox" id="profile-hide-stats"> Hide my stats card from non-friends</label>
+          <label class="check-label"><input type="checkbox" id="profile-show-presence" checked> Show when I'm online and last seen (turn off to hide yours and not see others')</label>
           <label class="field-label" id="profile-dob-wrap">Date of birth (private — shown only to you, set once)<input type="date" id="profile-dob" class="field-input"></label>
           <p class="form-note">Email: <span id="profile-email"></span> (can't be changed)</p>
           <div class="form-actions">
@@ -317,6 +319,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=21"></script>
+  <script src="members.js?v=22"></script>
 </body>
 </html>
