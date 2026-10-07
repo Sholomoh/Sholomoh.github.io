@@ -234,9 +234,24 @@
       btn.classList.add('active');
       var tab = btn.getAttribute('data-tab');
       Object.keys(panels).forEach(function (k) { panels[k].hidden = k !== tab; });
+      try { sessionStorage.setItem('sholomoh:tab', tab); } catch (e) {}
       if (tab !== 'members' && typeof closeMemberProfile === 'function') closeMemberProfile();
     });
   });
+
+  // After a refresh, return to the tab you were on (unless a shared link is opening something).
+  var tabRestored = false;
+  function restoreTab() {
+    if (tabRestored) return;
+    if (/^#[us]=/.test(location.hash)) { tabRestored = true; return; }
+    var saved = null;
+    try { saved = sessionStorage.getItem('sholomoh:tab'); } catch (e) {}
+    if (!saved || !panels[saved]) { tabRestored = true; return; }
+    var btn = document.querySelector('#main-tabs .tab-btn[data-tab="' + saved + '"]');
+    if (!btn || btn.hidden || btn.style.display === 'none') return; // e.g. Admin before the admin check finishes
+    tabRestored = true;
+    btn.click();
+  }
 
   /* ---------- composer show/hide ---------- */
 
@@ -572,7 +587,12 @@
       var img = document.createElement('img');
       img.src = url; img.alt = ''; img.className = 'story-photo'; img.loading = 'lazy';
       makeActivatable(img, function () { openLightbox(url); }, 'View full image');
-      return img;
+      // A blurred, dimmed copy of the photo fills any empty space beside it.
+      var wrap = document.createElement('div');
+      wrap.className = 'story-photo-wrap';
+      wrap.style.setProperty('--bg', 'url("' + String(url).replace(/["\\\n]/g, encodeURIComponent) + '")');
+      wrap.appendChild(img);
+      return wrap;
     }
     // Anything else (pdf, doc, zip, ...) -> a plain download link, since it
     // can't be meaningfully previewed inline.
@@ -2402,7 +2422,8 @@
         snap.forEach(function (doc) {
           var pp = doc.data().participants || [];
           var ou = pp[0] === currentUid ? pp[1] : pp[0];
-          if (!blockedUids.has(ou)) convs.push({ id: doc.id, data: doc.data() });
+          // Opening a chat creates an empty record; only show chats that have a message.
+          if (!blockedUids.has(ou) && doc.data().lastMessage) convs.push({ id: doc.id, data: doc.data() });
         });
         convs.sort(function (a, b) {
           var as = (a.data.lastMessageAt && a.data.lastMessageAt.seconds) || 0;
@@ -2806,11 +2827,14 @@
       notifPanel.hidden = true; notifBadge.hidden = true;
       authSection.hidden = false;
       appSection.hidden = true;
+      tabRestored = true;
+      try { sessionStorage.removeItem('sholomoh:tab'); } catch (e) {}
       return;
     }
     authSection.hidden = true;
     appSection.hidden = false;
     currentUid = user.uid;
+    restoreTab();
     whoAmI.textContent = user.displayName || user.email;
     renderFeed();
     loadMyProfile();
@@ -2830,6 +2854,7 @@
       adminTabBtn.hidden = !admin;
       if (!poster) checkRequestStatus(user.uid);
       if (admin) { loadPosterRequests(); loadReports(); }
+      restoreTab();
       renderFeedOnce();
     });
 
