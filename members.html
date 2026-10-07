@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=41">
+  <link rel="stylesheet" href="styles.css?v=42">
   <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
     <img id="lightbox-img" alt="">
     <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
@@ -282,6 +282,8 @@
         </form>
         <h2 class="mt profile-section-title">My stories</h2>
         <div id="profile-stories"></div>
+        <h2 class="mt profile-section-title">Saved stories</h2>
+        <div id="profile-saved"></div>
         <details class="danger-details">
           <summary>Account settings</summary>
         <h3 class="profile-section-title">Blocked members</h3>
@@ -325,6 +327,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=23"></script>
+  <script src="members.js?v=24"></script>
 </body>
 </html>

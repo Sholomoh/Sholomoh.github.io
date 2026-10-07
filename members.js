@@ -689,6 +689,90 @@
     if (!panels.members.hidden || !threadView.hidden) refreshPresence(true);
   }, 120000);
 
+  /* ---------- saved stories (private bookmarks) ---------- */
+  var mySavedIds = new Set();
+  var mySavedAt = {};            // postId -> saved time (ms)
+  var savedPostCache = {};       // postId -> post data (null = gone)
+
+  function loadMySaved() {
+    return db.collection('savedPosts').where('uid', '==', currentUid).get().then(function (snap) {
+      mySavedIds = new Set(); mySavedAt = {};
+      snap.forEach(function (d) {
+        var x = d.data();
+        mySavedIds.add(x.postId);
+        var t = toDate(x.createdAt);
+        mySavedAt[x.postId] = t ? t.getTime() : 0;
+      });
+      renderFeedOnce();
+      renderSavedList();
+    });
+  }
+
+  function toggleSave(postId) {
+    var ref = db.collection('savedPosts').doc(currentUid + '_' + postId);
+    var wasSaved = mySavedIds.has(postId);
+    if (wasSaved) { mySavedIds.delete(postId); delete mySavedAt[postId]; }
+    else { mySavedIds.add(postId); mySavedAt[postId] = Date.now(); }
+    renderFeedOnce(); renderSavedList();
+    var job = wasSaved ? ref.delete()
+      : ref.set({ uid: currentUid, postId: postId, createdAt: FieldValue.serverTimestamp() });
+    return job.catch(function () {
+      // Roll back the optimistic change if the save didn't go through.
+      if (wasSaved) { mySavedIds.add(postId); mySavedAt[postId] = Date.now(); }
+      else { mySavedIds.delete(postId); delete mySavedAt[postId]; }
+      renderFeedOnce(); renderSavedList();
+    });
+  }
+
+  function renderSavedList() {
+    var el = document.getElementById('profile-saved');
+    if (!el) return;
+    var ids = Array.from(mySavedIds).sort(function (a, b) { return (mySavedAt[b] || 0) - (mySavedAt[a] || 0); }).slice(0, 40);
+    if (!ids.length) {
+      el.innerHTML = '<p class="form-note">Nothing saved yet. Tap \u201cSave\u201d on a story to keep it here.</p>';
+      return;
+    }
+    var missing = ids.filter(function (id) { return !(id in savedPostCache); });
+    Promise.all(missing.map(function (id) {
+      return db.collection('posts').doc(id).get().then(function (d) {
+        savedPostCache[id] = d.exists ? d.data() : null;
+        // A saved story that was deleted: tidy up your own bookmark.
+        if (!d.exists) db.collection('savedPosts').doc(currentUid + '_' + id).delete().catch(function () {});
+      }).catch(function () {});
+    })).then(function () {
+      var items = ids.filter(function (id) {
+        var p = savedPostCache[id];
+        return p && !blockedUids.has(p.authorUid);
+      }).map(function (id) { return { id: id, data: savedPostCache[id] }; });
+      el.innerHTML = '';
+      if (!items.length) { el.innerHTML = '<p class="form-note">Nothing saved yet. Tap \u201cSave\u201d on a story to keep it here.</p>'; return; }
+      items.forEach(function (it) {
+        el.appendChild(buildMiniStory(it, { onOpen: openStoryFocus, onRemove: toggleSave }));
+      });
+    });
+  }
+
+  /* ---------- per-conversation message drafts ---------- */
+  var chatDraftTimer = null;
+  function chatDraftKey(convId) { return currentUid && convId ? 'sholomoh:chatdraft:' + currentUid + ':' + convId : null; }
+  function readChatDraft(convId) {
+    var k = chatDraftKey(convId);
+    if (!k) return '';
+    try { return localStorage.getItem(k) || ''; } catch (e) { return ''; }
+  }
+  function saveChatDraft() {
+    var k = chatDraftKey(activeConvId);
+    if (!k) return;
+    try {
+      if (threadInput.value.trim()) localStorage.setItem(k, threadInput.value);
+      else localStorage.removeItem(k);
+    } catch (e) {}
+  }
+  function clearChatDraft(convId) {
+    var k = chatDraftKey(convId);
+    if (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  }
+
   /* ---------- blocking ---------- */
   var blockedUids = new Set();
 
@@ -974,6 +1058,17 @@
     commentBtn.textContent = '\ud83d\udcac ' + cc + (cc === 1 ? ' comment' : ' comments');
     commentBtn.addEventListener('click', function () { toggleComments(id); });
     reactions.appendChild(commentBtn);
+    if (currentUid) {
+      var saved = mySavedIds.has(id);
+      var saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'reaction-btn' + (saved ? ' saved' : '');
+      saveBtn.textContent = saved ? '\ud83d\udd16 Saved' : '\ud83d\udd16 Save';
+      saveBtn.setAttribute('aria-pressed', saved ? 'true' : 'false');
+      saveBtn.setAttribute('aria-label', (saved ? 'Remove from saved: ' : 'Save for later: ') + String(p.title || 'story'));
+      saveBtn.addEventListener('click', function () { toggleSave(id); });
+      reactions.appendChild(saveBtn);
+    }
     if (currentUid && p.authorUid !== currentUid) {
       var repBtn = document.createElement('button');
       repBtn.type = 'button'; repBtn.className = 'reaction-btn';
@@ -1527,6 +1622,7 @@
         deleteQueryDocs(db.collection('friendRequests').where('toUid', '==', uid)),
         db.collection('posterRequests').doc(uid).delete().catch(quiet),
         deleteQueryDocs(db.collection('blocks').where('blockerUid', '==', uid)),
+        deleteQueryDocs(db.collection('savedPosts').where('uid', '==', uid)),
         db.collection('presence').doc(uid).delete().catch(quiet),
         db.collection('userDob').doc(uid).delete().catch(quiet),
         db.collection('userLocations').doc(uid).delete().catch(quiet)
@@ -1650,7 +1746,19 @@
       pin.addEventListener('click', function () { pin.disabled = true; opts.onPin(isPinned ? null : item.id); });
       body.appendChild(pin);
     }
+    if (opts.onRemove) {
+      var rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'btn btn-ghost btn-sm mini-pin-btn';
+      rm.textContent = 'Remove';
+      rm.setAttribute('aria-label', 'Remove ' + String(p.title || 'story') + ' from saved');
+      rm.addEventListener('click', function (e) { e.stopPropagation(); rm.disabled = true; opts.onRemove(item.id); });
+      body.appendChild(rm);
+    }
     card.appendChild(body);
+    if (opts.onOpen) {
+      card.classList.add('clickable');
+      makeActivatable(card, function () { opts.onOpen(item.id); }, 'Open ' + String(p.title || 'story'));
+    }
     return card;
   }
 
@@ -2556,7 +2664,9 @@
           var preview = document.createElement('p');
           preview.className = 'member-sub';
           var prefix = c.data.lastMessageBy === currentUid ? 'You: ' : '';
-          preview.textContent = prefix + (c.data.lastMessage || '');
+          var draftText = readChatDraft(c.id);
+          preview.textContent = draftText ? 'Draft: ' + draftText : prefix + (c.data.lastMessage || '');
+          if (draftText) preview.classList.add('is-draft');
           info.appendChild(name); info.appendChild(preview);
           row.appendChild(info);
           if (unread) {
@@ -2578,6 +2688,8 @@
     activeConvId = convIdFor(otherUser.id);
     var participants = [currentUid, otherUser.id].sort();
     threadWith.textContent = otherUser.displayName || 'Member';
+    threadInput.value = readChatDraft(activeConvId);
+    autosizeThreadInput();
     updateThreadPresence();
     refreshPresence(false);
     inboxView.hidden = true;
@@ -2754,6 +2866,7 @@
     threadView.hidden = true;
     inboxView.hidden = false;
     activeConvId = null; activeOtherUid = null;
+    loadInbox(); // refresh previews so a saved draft shows up
   });
 
   var coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -2762,7 +2875,11 @@
     threadInput.style.height = Math.min(threadInput.scrollHeight, 120) + 'px';
   }
   threadInput.addEventListener('input', autosizeThreadInput);
-  threadInput.addEventListener('input', function () { if (threadInput.value.trim()) sendTyping(); });
+  threadInput.addEventListener('input', function () {
+    if (threadInput.value.trim()) sendTyping();
+    clearTimeout(chatDraftTimer);
+    chatDraftTimer = setTimeout(saveChatDraft, 300);
+  });
   threadInput.addEventListener('keydown', function (e) {
     // Desktop: Enter sends, Shift+Enter = new line. Touch keyboards: Enter = new line.
     if (e.key === 'Enter' && !e.shiftKey && !coarsePointer && !e.isComposing) {
@@ -2778,6 +2895,9 @@
     var sendBtn = threadForm.querySelector('button[type="submit"]');
     sendBtn.disabled = true;
     lastTypingSentAt = 0;
+    var sentConv = activeConvId;
+    clearTimeout(chatDraftTimer);
+    clearChatDraft(sentConv);
     threadInput.value = '';
     autosizeThreadInput();
     db.collection('conversations').doc(activeConvId).collection('messages').add({
@@ -2788,7 +2908,7 @@
       }, { merge: true });
     }).then(function () {
       return notifyIfNotSelf(activeOtherUid, 'message', { convId: activeConvId });
-    }).catch(function () { threadInput.value = text; })
+    }).catch(function () { threadInput.value = text; saveChatDraft(); })
       .then(function () { sendBtn.disabled = false; threadInput.focus(); });
   });
 
@@ -2974,6 +3094,7 @@
       appSection.hidden = true;
       tabRestored = true;
       try { sessionStorage.removeItem('sholomoh:tab'); } catch (e) {}
+      mySavedIds = new Set(); mySavedAt = {}; savedPostCache = {};
       stopPresence(); presenceMap = {}; unreadNotifCount = 0; unreadMsgCount = 0; updateTitleBadge();
       return;
     }
@@ -2985,6 +3106,7 @@
     renderFeed();
     loadMyProfile();
     loadMyLikes();
+    loadMySaved().catch(function () {});
     loadNotifications();
 
     Promise.all([

@@ -101,6 +101,17 @@ service cloud.firestore {
       allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // Saved stories: private bookmarks. Only the owner can see or change them.
+    match /savedPosts/{id} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        id == request.auth.uid + '_' + request.resource.data.postId &&
+        request.resource.data.keys().hasOnly(['uid', 'postId', 'createdAt']) &&
+        request.resource.data.createdAt == request.time;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
     // Admin allowlist. Add yourself here manually in the Firebase console
     // after your first sign-up — the app can never write to this collection.
     match /admins/{uid} {

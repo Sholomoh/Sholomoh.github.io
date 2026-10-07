@@ -1148,3 +1148,8 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
 }
 
 .thread-typing { margin: 0.3rem 0 0.5rem; font-style: italic; }
+
+/* SAVED STORIES + MESSAGE DRAFTS */
+.reaction-btn.saved { color: var(--green); border-color: rgba(0,255,136,0.4); }
+.mini-story.clickable:hover { border-color: rgba(0,255,136,0.35); }
+.inbox-row .is-draft, .is-draft { color: #ff6b81; font-style: italic; }
