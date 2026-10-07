@@ -2211,7 +2211,11 @@
     add.textContent = 'Add friend';
     add.addEventListener('click', function () {
       add.disabled = true;
-      sendFriendRequest(u).catch(function () { add.disabled = false; });
+      sendFriendRequest(u).catch(function (err) {
+        if (window.console) console.error('Add friend failed:', err && (err.code || err.message) || err);
+        add.disabled = false;
+        add.textContent = 'Couldn\u2019t send \u2014 retry';
+      });
     });
     wrap.appendChild(add);
     return wrap;
@@ -2225,20 +2229,24 @@
 
   function sendFriendRequest(u) {
     var me = currentUid;
-    var reverseId = u.id + '_' + me;
     var forwardId = me + '_' + u.id;
-    return db.collection('friendRequests').doc(reverseId).get().then(function (doc) {
-      if (doc.exists && doc.data().status === 'pending') {
-        return db.collection('friendRequests').doc(reverseId).update({
-          status: 'accepted', respondedAt: FieldValue.serverTimestamp()
-        });
-      }
-      return db.collection('friendRequests').doc(forwardId).set({
-        fromUid: me, fromName: myProfile.displayName || 'Member',
-        toUid: u.id, toName: u.displayName || 'Member',
-        status: 'pending', createdAt: FieldValue.serverTimestamp()
-      }).then(function () { return notifyIfNotSelf(u.id, 'friendRequest'); });
-    }).then(loadRelationships);
+    // Query instead of reading a doc that may not exist: the rules only allow
+    // reads on requests you're part of, and a read of a missing doc is refused.
+    return db.collection('friendRequests')
+      .where('fromUid', '==', u.id).where('toUid', '==', me).get().then(function (snap) {
+        var pending = null;
+        snap.forEach(function (d) { if (d.data().status === 'pending') pending = d; });
+        if (pending) {
+          return db.collection('friendRequests').doc(pending.id).update({
+            status: 'accepted', respondedAt: FieldValue.serverTimestamp()
+          }).then(function () { return notifyIfNotSelf(u.id, 'friendAccept'); });
+        }
+        return db.collection('friendRequests').doc(forwardId).set({
+          fromUid: me, fromName: myProfile.displayName || 'Member',
+          toUid: u.id, toName: u.displayName || 'Member',
+          status: 'pending', createdAt: FieldValue.serverTimestamp()
+        }).then(function () { return notifyIfNotSelf(u.id, 'friendRequest'); });
+      }).then(loadRelationships);
   }
 
   function respondToRequest(reqId, status) {

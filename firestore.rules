@@ -119,7 +119,7 @@ service cloud.firestore {
     // pending request; the original sender can re-send after a decline.
     match /friendRequests/{reqId} {
       allow read: if isSignedIn() &&
-        (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+        (resource == null || resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
       allow create: if isSignedIn() &&
         request.resource.data.fromUid == request.auth.uid &&
         request.resource.data.toUid != request.auth.uid &&
