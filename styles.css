@@ -1166,3 +1166,13 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
 .mutual-label { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--muted); }
 
 .member-tools[hidden] { display: none; }
+
+/* ABOUT photo + CONTACT note */
+.about-intro { display: flex; align-items: center; gap: 1.1rem; margin-bottom: 1.6rem; }
+.about-photo {
+  width: 96px; height: 96px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--green), 0 0 22px rgba(0,255,136,0.3);
+}
+.about-intro p { color: var(--muted); line-height: 1.6; font-size: 0.9rem; }
+.about-intro strong { color: var(--white); font-size: 1.05rem; }
+.contact-note { color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; margin: -0.4rem 0 1.6rem; }
