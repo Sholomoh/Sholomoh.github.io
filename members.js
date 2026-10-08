@@ -27,11 +27,14 @@
   var authSection = document.getElementById('auth-section');
   var appSection = document.getElementById('app-section');
 
+  var clearSignedInHint = function () { document.documentElement.classList.remove('was-signed-in'); };
   if (typeof firebase === 'undefined') {
+    clearSignedInHint();
     authSection.innerHTML = '<p class="form-note">Sign-in couldn\u2019t load. Check your connection and refresh.</p>';
     return;
   }
   if (!window.FIREBASE_CONFIG || window.FIREBASE_CONFIG.apiKey === 'PASTE_ME') {
+    clearSignedInHint();
     authSection.innerHTML = '<p class="form-note">Sign-in isn\u2019t configured yet.</p>';
     return;
   }
@@ -3220,6 +3223,8 @@
   /* ---------- auth state ---------- */
 
   auth.onAuthStateChanged(function (user) {
+    clearSignedInHint();
+    try { if (user) localStorage.setItem('sholomoh:signedIn', '1'); else localStorage.removeItem('sholomoh:signedIn'); } catch (e) {}
     editingId = null;
     if (!user) {
       if (feedUnsub) { feedUnsub(); feedUnsub = null; }

@@ -1216,3 +1216,8 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
 .online-summary { font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; color: var(--muted); margin: 0 0 0.8rem; }
 .online-summary.has-online { color: var(--green); }
 .online-summary[hidden] { display: none; }
+
+/* No flash of the sign-in form on reload for returning members */
+.auth-loading { display: none; }
+.was-signed-in #auth-section { display: none; }
+.was-signed-in .auth-loading { display: block; }

@@ -27,7 +27,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=45">
+  <script>
+    // If this browser was signed in last time, hide the sign-in form until we know for sure
+    // (avoids a flash of the sign-in page on reload). Falls back after 6s so it can never stick.
+    (function () {
+      try {
+        if (localStorage.getItem('sholomoh:signedIn') === '1') {
+          var d = document.documentElement;
+          d.classList.add('was-signed-in');
+          setTimeout(function () { d.classList.remove('was-signed-in'); }, 6000);
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=46">
   <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
     <img id="lightbox-img" alt="">
     <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
@@ -95,6 +108,7 @@
     <h1 class="page-title">Members</h1>
     <p class="page-intro">Stories and updates for members and partners. Create a free account to read them — posting is by approval.</p>
 
+    <p class="auth-loading form-note" id="auth-loading">Loading your account…</p>
     <div id="auth-section">
       <div class="auth-card">
         <div class="auth-tabs">
@@ -330,6 +344,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=28"></script>
+  <script src="members.js?v=29"></script>
 </body>
 </html>
