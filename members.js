@@ -80,6 +80,7 @@
   var profileHideLocation = document.getElementById('profile-hide-location');
   var profileHideStats = document.getElementById('profile-hide-stats');
   var profileShowPresence = document.getElementById('profile-show-presence');
+  var profileShowFriends = document.getElementById('profile-show-friends');
   var profileStatus = document.getElementById('profile-status');
 
   /* ---------- small helpers ---------- */
@@ -771,6 +772,52 @@
   function clearChatDraft(convId) {
     var k = chatDraftKey(convId);
     if (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  }
+
+  /* ---------- mutual friends (via friends-only friend lists) ---------- */
+  // Each member publishes their own friend list to friendLists/{uid}, readable only by
+  // their accepted friends. "Mutual friends" with someone = my friends whose list
+  // contains them. Lists are kept in sync by each member's own client when they open the site.
+  var friendListsCache = {};      // friend uid -> array of uids
+  var myFriendListStored = null;  // last known stored copy of my own list
+  var friendListDeleted = false;
+
+  function syncMyFriendList() {
+    if (!currentUid) return Promise.resolve();
+    var ref = db.collection('friendLists').doc(currentUid);
+    if (myProfile && myProfile.hideFriendList) {
+      if (friendListDeleted) return Promise.resolve();
+      friendListDeleted = true; myFriendListStored = null;
+      return ref.delete().catch(function () {});
+    }
+    friendListDeleted = false;
+    var mine = Array.from(friendUids).sort();
+    var same = function (a) { return JSON.stringify(a) === JSON.stringify(mine); };
+    function write() { return ref.set({ uids: mine }).then(function () { myFriendListStored = mine; }); }
+    if (myFriendListStored === null) {
+      return ref.get().then(function (d) {
+        myFriendListStored = d.exists ? (d.data().uids || []).slice().sort() : [];
+        if (!same(myFriendListStored)) return write();
+      }).catch(function () {});
+    }
+    return same(myFriendListStored) ? Promise.resolve() : write().catch(function () {});
+  }
+
+  function loadFriendLists() {
+    var jobs = [];
+    friendUids.forEach(function (fid) {
+      if (fid in friendListsCache) return;
+      jobs.push(db.collection('friendLists').doc(fid).get().then(function (d) {
+        friendListsCache[fid] = d.exists && Array.isArray(d.data().uids) ? d.data().uids : [];
+      }).catch(function () {}));
+    });
+    return Promise.all(jobs);
+  }
+
+  function mutualWith(uid) {
+    return Array.from(friendUids).filter(function (f) {
+      return f !== uid && !blockedUids.has(f) && usersByUid[f] && (friendListsCache[f] || []).indexOf(uid) !== -1;
+    });
   }
 
   /* ---------- blocking ---------- */
@@ -1624,6 +1671,7 @@
         deleteQueryDocs(db.collection('blocks').where('blockerUid', '==', uid)),
         deleteQueryDocs(db.collection('savedPosts').where('uid', '==', uid)),
         db.collection('presence').doc(uid).delete().catch(quiet),
+        db.collection('friendLists').doc(uid).delete().catch(quiet),
         db.collection('userDob').doc(uid).delete().catch(quiet),
         db.collection('userLocations').doc(uid).delete().catch(quiet)
       ]);
@@ -1796,6 +1844,8 @@
     var top = document.createElement('div'); top.className = 'profile-preview-top';
     var av = document.createElement('span'); av.className = 'profile-avatar-wrap';
     av.appendChild(avatarEl(u.id, u.displayName));
+    var pi = presenceInfo(u.id);
+    if (pi && pi.online) { var dot = document.createElement('span'); dot.className = 'online-dot'; dot.title = 'Online'; av.appendChild(dot); }
     top.appendChild(av);
     var actions = buildRelationshipControl(u);
     var msgBtn = document.createElement('button');
@@ -1825,6 +1875,29 @@
     body.appendChild(name);
     var pEl2 = buildPresenceEl(u.id);
     if (pEl2) { pEl2.classList.add('presence-block'); body.appendChild(pEl2); }
+    var mutual = u.id === currentUid ? [] : mutualWith(u.id);
+    if (mutual.length) {
+      var mbox = document.createElement('div');
+      mbox.className = 'mutual-box';
+      var mlabel = document.createElement('span');
+      mlabel.className = 'mutual-label';
+      mlabel.textContent = '\ud83d\udc65 ' + mutual.length + ' mutual friend' + (mutual.length === 1 ? '' : 's') + ':';
+      mbox.appendChild(mlabel);
+      mutual.slice(0, 3).forEach(function (f) {
+        var chip = document.createElement('button');
+        chip.type = 'button'; chip.className = 'chip';
+        chip.textContent = usersByUid[f].displayName || 'Member';
+        chip.setAttribute('aria-label', 'View ' + chip.textContent + '\u2019s profile');
+        chip.addEventListener('click', function () { openMemberProfile(usersByUid[f]); });
+        mbox.appendChild(chip);
+      });
+      if (mutual.length > 3) {
+        var more = document.createElement('span');
+        more.className = 'mutual-label'; more.textContent = '+' + (mutual.length - 3) + ' more';
+        mbox.appendChild(more);
+      }
+      body.appendChild(mbox);
+    }
     if (locationOf(u)) {
       var loc = document.createElement('p'); loc.className = 'profile-preview-location';
       loc.textContent = '\ud83d\udccd ' + locationOf(u);
@@ -1850,6 +1923,7 @@
     setHash('u=' + u.id);
     membersList.hidden = true;
     document.querySelector('#tab-members .page-intro-sm').hidden = true;
+    document.getElementById('member-tools').hidden = true;
     memberProfileEl.hidden = false;
     memberProfileCard.innerHTML = '';
     memberProfileCard.appendChild(buildPublicProfileCard(u));
@@ -1875,6 +1949,7 @@
     memberProfileEl.hidden = true;
     membersList.hidden = false;
     document.querySelector('#tab-members .page-intro-sm').hidden = false;
+    document.getElementById('member-tools').hidden = false;
   }
   document.getElementById('member-profile-back').addEventListener('click', closeMemberProfile);
 
@@ -2185,6 +2260,7 @@
       profileHideLocation.checked = !!myProfile.hideLocation;
       profileHideStats.checked = !!myProfile.hideStats;
     profileShowPresence.checked = !myProfile.hidePresence;
+    profileShowFriends.checked = !myProfile.hideFriendList;
       updateBioCount();
       profileLocation.value = myProfile.location || '';
       profileEmail.textContent = auth.currentUser.email || '';
@@ -2241,6 +2317,7 @@
     profileHideLocation.checked = !!myProfile.hideLocation;
     profileHideStats.checked = !!myProfile.hideStats;
     profileShowPresence.checked = !myProfile.hidePresence;
+    profileShowFriends.checked = !myProfile.hideFriendList;
     profilePhoto.value = ''; croppedPhotoFile = null;
     document.getElementById('profile-photo-pending').hidden = true;
     renderProfilePreview();
@@ -2283,7 +2360,8 @@
       interests: parseInterests(profileInterests.value),
       hideLocation: profileHideLocation.checked,
       hideStats: profileHideStats.checked,
-      hidePresence: !profileShowPresence.checked
+      hidePresence: !profileShowPresence.checked,
+      hideFriendList: !profileShowFriends.checked
     };
     var locVal = profileLocation.value.trim();
     var hideLoc = profileHideLocation.checked;
@@ -2311,7 +2389,8 @@
       profileCover.value = '';
       profileCoverPending.hidden = true;
       removeCoverFlag = false;
-      if (myProfile) myProfile.hidePresence = update.hidePresence;
+      if (myProfile) { myProfile.hidePresence = update.hidePresence; myProfile.hideFriendList = update.hideFriendList; }
+      myFriendListStored = null; syncMyFriendList();
       startPresence(); refreshPresence(true);
       profileStatus.className = 'form-success';
       profileStatus.textContent = '\u2713 Saved \u2014 this is now visible to other members.';
@@ -2381,7 +2460,12 @@
       var av = avatarEl(u.id, u.displayName);
       av.classList.add('clickable');
       makeActivatable(av, function () { openMemberProfile(u); }, 'View ' + (u.displayName || 'member') + '\u2019s profile');
-      row.appendChild(av);
+      var avWrap = document.createElement('span');
+      avWrap.className = 'avatar-wrap';
+      avWrap.appendChild(av);
+      var rowPi = presenceInfo(u.id);
+      if (rowPi && rowPi.online) { var rdot = document.createElement('span'); rdot.className = 'online-dot online-dot-sm'; avWrap.appendChild(rdot); }
+      row.appendChild(avWrap);
       var info = document.createElement('div');
       info.className = 'member-info';
       var name = document.createElement('p');
@@ -2391,6 +2475,8 @@
       info.appendChild(name);
       var pEl = buildPresenceEl(u.id);
       if (pEl) info.appendChild(pEl);
+      var mutN = mutualWith(u.id).length;
+      if (mutN) { var mEl = document.createElement('span'); mEl.className = 'presence'; mEl.textContent = '\ud83d\udc65 ' + mutN + ' mutual'; info.appendChild(mEl); }
       var shownLoc = locationOf(u);
       if (u.bio || shownLoc) {
         var sub = document.createElement('p');
@@ -2538,6 +2624,10 @@
       return loadFriendLocations().then(function () {
         renderMembersList();
         rerenderOpenProfileCard();
+        return Promise.all([loadFriendLists(), syncMyFriendList()]);
+      }).then(function () {
+        renderMembersList();
+        rerenderOpenProfileCard();
       });
     });
   }
@@ -2617,6 +2707,7 @@
     var field = myReadField(participants);
     var payload = {};
     payload[field] = FieldValue.serverTimestamp();
+    payload.participants = participants;
     return db.collection('conversations').doc(convId).set(payload, { merge: true });
   }
 
@@ -2696,13 +2787,12 @@
     threadView.hidden = false;
     threadMessages.innerHTML = '<p class="form-note">Loading\u2026</p>';
 
-    db.collection('conversations').doc(activeConvId).set({
-      participants: participants
-    }, { merge: true }).then(function () { markRead(activeConvId, participants); subscribeConvRead(participants); });
-
+    // Nothing is written just by opening a chat: the conversation record is only
+    // created when the first message is sent (see the send handler).
     stopThread();
     msgLimit = MSG_PAGE; lastThreadDocs = []; otherReadMs = 0; threadHasMore = false;
     subscribeThread(participants);
+    subscribeConvRead(participants);
   }
 
   var MSG_PAGE = 50;
@@ -2729,7 +2819,7 @@
   // Tell the other person I'm typing, at most once every 3 seconds. Not sent
   // if I've hidden my online status or either of us has blocked the other.
   function sendTyping() {
-    if (!activeConvId || (myProfile && myProfile.hidePresence) || blockedUids.has(activeOtherUid)) return;
+    if (!activeConvId || !lastThreadDocs.length || (myProfile && myProfile.hidePresence) || blockedUids.has(activeOtherUid)) return;
     var now = Date.now();
     if (now - lastTypingSentAt < 3000) return;
     lastTypingSentAt = now;
@@ -2832,7 +2922,7 @@
         threadHasMore = snap.size >= msgLimit;
         renderThread();
         // Still looking at this thread when a new message lands -> stays read.
-        if (activeConvId) markRead(activeConvId, participants);
+        if (activeConvId && lastThreadDocs.length) markRead(activeConvId, participants).catch(function () {});
       }, function () {
         threadMessages.innerHTML = '<p class="form-note">Couldn\u2019t load this conversation.</p>';
       });
@@ -2903,7 +2993,8 @@
     db.collection('conversations').doc(activeConvId).collection('messages').add({
       fromUid: currentUid, text: text, createdAt: FieldValue.serverTimestamp()
     }).then(function () {
-      return db.collection('conversations').doc(activeConvId).set({
+      return db.collection('conversations').doc(sentConv).set({
+        participants: [currentUid, activeOtherUid].sort(),
         lastMessage: text, lastMessageAt: FieldValue.serverTimestamp(), lastMessageBy: currentUid
       }, { merge: true });
     }).then(function () {

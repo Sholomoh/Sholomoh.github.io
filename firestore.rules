@@ -112,6 +112,17 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
+    // Friend lists, for "mutual friends". Each member writes only their own list;
+    // it's readable by them and by their accepted friends (and nobody else).
+    match /friendLists/{uid} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == uid || isAcceptedFriend(request.auth.uid, uid));
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['uids']) &&
+        request.resource.data.uids is list && request.resource.data.uids.size() <= 500;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // Admin allowlist. Add yourself here manually in the Firebase console
     // after your first sign-up — the app can never write to this collection.
     match /admins/{uid} {
@@ -193,21 +204,27 @@ service cloud.firestore {
     // always resolves to the same thread. Any signed-in member can
     // message any member — this isn't limited to friends.
     match /conversations/{convId} {
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow read: if isSignedIn() &&
+        (resource == null || request.auth.uid in resource.data.participants);
+      // The id must be the two participants' uids, sorted and joined — so nobody
+      // can pre-create someone else's conversation under their id.
       allow create: if isSignedIn() &&
         request.auth.uid in request.resource.data.participants &&
-        request.resource.data.participants.size() == 2;
+        request.resource.data.participants.size() == 2 &&
+        request.resource.data.participants[0] < request.resource.data.participants[1] &&
+        convId == request.resource.data.participants[0] + '_' + request.resource.data.participants[1];
       allow update: if isSignedIn() &&
         request.auth.uid in resource.data.participants &&
         request.resource.data.participants == resource.data.participants;
 
       match /messages/{msgId} {
-        allow read: if isSignedIn() &&
-          request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants;
+        // Participants come from the conversation id itself, so a chat works before
+        // its conversation record exists (it's created with the first message).
+        allow read: if isSignedIn() && request.auth.uid in convId.split('_');
         allow create: if isSignedIn() &&
-          request.auth.uid in get(/databases/$(database)/documents/conversations/$(convId)).data.participants &&
+          request.auth.uid in convId.split('_') &&
           request.resource.data.fromUid == request.auth.uid &&
-          !isBlocked(otherOf(get(/databases/$(database)/documents/conversations/$(convId)).data.participants, request.auth.uid), request.auth.uid);
+          !isBlocked(otherOf(convId.split('_'), request.auth.uid), request.auth.uid);
         // You can delete your own messages
         allow delete: if isSignedIn() && resource.data.fromUid == request.auth.uid;
       }

@@ -1153,3 +1153,16 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
 .reaction-btn.saved { color: var(--green); border-color: rgba(0,255,136,0.4); }
 .mini-story.clickable:hover { border-color: rgba(0,255,136,0.35); }
 .inbox-row .is-draft, .is-draft { color: #ff6b81; font-style: italic; }
+
+/* ONLINE DOTS + MUTUAL FRIENDS */
+.avatar-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.profile-avatar-wrap { position: relative; }
+.online-dot {
+  position: absolute; right: 4px; bottom: 4px; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--green); border: 3px solid var(--surface); box-shadow: 0 0 8px rgba(0,255,136,0.7);
+}
+.online-dot-sm { width: 11px; height: 11px; right: 0; bottom: 0; border-width: 2px; }
+.mutual-box { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.7rem; }
+.mutual-label { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+
+.member-tools[hidden] { display: none; }
