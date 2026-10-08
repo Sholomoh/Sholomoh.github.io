@@ -618,9 +618,48 @@
     document.title = (n ? '(' + (n > 9 ? '9+' : n) + ') ' : '') + baseTitle;
   }
 
+  var presenceFailed = false, pingFailed = false;
+
+  function updateOnlineSummary() {
+    var el = document.getElementById('online-summary');
+    var note = document.getElementById('profile-presence-note');
+    if (!el || !note) return;
+    var hidden = !!(myProfile && myProfile.hidePresence);
+    // Directory summary
+    el.hidden = false;
+    el.className = 'online-summary';
+    if (hidden) {
+      el.textContent = 'You\u2019ve hidden your status, so you can\u2019t see who\u2019s online either. Change it in Edit profile.';
+    } else if (presenceFailed) {
+      el.textContent = 'Online status couldn\u2019t load right now.';
+    } else {
+      var n = allUsers.filter(function (u) { var i = presenceInfo(u.id); return i && i.online; }).length;
+      if (n) el.classList.add('has-online');
+      el.textContent = n ? '\u25cf ' + n + ' member' + (n === 1 ? '' : 's') + ' online now' : 'No other members online right now';
+    }
+    // Your own status, shown on your profile card
+    note.hidden = false;
+    note.className = 'presence presence-block';
+    if (hidden) {
+      note.textContent = 'Status hidden \u2014 others can\u2019t see when you\u2019re online.';
+    } else if (pingFailed) {
+      note.textContent = 'Your status couldn\u2019t be saved \u2014 the Firestore rules may need updating.';
+    } else {
+      var own = presenceMap[currentUid];
+      if (own && Date.now() - own < ONLINE_WITHIN_MS) { note.classList.add('online'); note.textContent = '\u25cf You\u2019re showing as online to other members'; }
+      else if (own) note.textContent = 'Status last recorded ' + relTime(new Date(own));
+      else note.textContent = 'Your status isn\u2019t being shared yet.';
+    }
+  }
+
   function pingPresence() {
     if (!currentUid || (myProfile && myProfile.hidePresence)) return;
-    db.collection('presence').doc(currentUid).set({ lastSeen: FieldValue.serverTimestamp() }).catch(function () {});
+    db.collection('presence').doc(currentUid).set({ lastSeen: FieldValue.serverTimestamp() })
+      .then(function () { if (pingFailed) { pingFailed = false; updateOnlineSummary(); } })
+      .catch(function (err) {
+        if (window.console) console.error('Presence write failed:', err && (err.code || err.message) || err);
+        pingFailed = true; updateOnlineSummary();
+      });
   }
   function stopPresence() {
     if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
@@ -631,6 +670,7 @@
     if (myProfile && myProfile.hidePresence) {
       db.collection('presence').doc(currentUid).delete().catch(function () {});
       presenceMap = {};
+      updateOnlineSummary();
       return;
     }
     pingPresence();
@@ -678,10 +718,15 @@
         if (t) map[d.id] = t.getTime();
       });
       presenceMap = map;
+      presenceFailed = false;
       renderMembersList();
       rerenderOpenProfileCard();
       updateThreadPresence();
-    }).catch(function () {});
+      updateOnlineSummary();
+    }).catch(function (err) {
+      if (window.console) console.error('Presence read failed:', err && (err.code || err.message) || err);
+      presenceFailed = true; updateOnlineSummary();
+    });
   }
 
   // Refresh periodically, but only while a screen that shows status is open.

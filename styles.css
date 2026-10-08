@@ -1176,3 +1176,43 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
 .about-intro p { color: var(--muted); line-height: 1.6; font-size: 0.9rem; }
 .about-intro strong { color: var(--white); font-size: 1.05rem; }
 .contact-note { color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; margin: -0.4rem 0 1.6rem; }
+
+/* LANDING: make Members stand out (nav pill + animated community card) */
+@property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+@keyframes memberPulse { 0% { box-shadow: 0 0 0 0 rgba(0,210,211,0.6); } 70% { box-shadow: 0 0 0 8px rgba(0,210,211,0); } 100% { box-shadow: 0 0 0 0 rgba(0,210,211,0); } }
+@keyframes spinBorder { to { --ang: 360deg; } }
+.nav-members {
+  display: inline-flex; align-items: center; gap: 0.5rem; color: #00d2d3;
+  background: rgba(0,210,211,0.08); border: 1px solid rgba(0,210,211,0.5); border-radius: 999px;
+  padding: 0.45rem 0.95rem 0.45rem 0.8rem; box-shadow: 0 0 14px rgba(0,210,211,0.18);
+}
+.nav-members::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #00d2d3; animation: memberPulse 2s infinite; }
+.nav-members:hover { color: var(--white); background: rgba(0,210,211,0.18); }
+.card-members {
+  grid-column: 1 / -1; min-height: 190px; border: 1.5px solid transparent;
+  background:
+    linear-gradient(135deg, #0d1620, #0a1218) padding-box,
+    conic-gradient(from var(--ang), #00d2d3, #00ff88, #58a6ff, #bd93f9, #00d2d3) border-box;
+  animation: spinBorder 7s linear infinite;
+  box-shadow: 0 0 44px rgba(0,210,211,0.10);
+}
+.card-members:hover { border-color: transparent; box-shadow: 0 20px 60px rgba(0,210,211,0.22); }
+.members-badge {
+  position: absolute; top: 1.1rem; right: 1.3rem; display: inline-flex; align-items: center; gap: 0.45rem;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: #00ff88; background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.35); border-radius: 999px; padding: 0.25rem 0.7rem;
+}
+.members-badge i { width: 7px; height: 7px; border-radius: 50%; background: #00ff88; animation: memberPulse 2s infinite; }
+.members-cta {
+  font-family: 'Share Tech Mono', monospace; font-size: 0.82rem; color: #04110a; font-weight: 700;
+  background: linear-gradient(90deg, #00d2d3, #00ff88); padding: 0.5rem 1rem; border-radius: 8px;
+}
+.members-cta b { display: inline-block; transition: transform 0.25s; }
+.card-members:hover .members-cta b { transform: translateX(4px); }
+@media (max-width: 450px) { .members-badge { position: static; align-self: flex-start; margin-bottom: 0.8rem; } }
+@media (prefers-reduced-motion: reduce) {
+  .card-members, .nav-members::before, .members-badge i { animation: none; }
+}
+.online-summary { font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; color: var(--muted); margin: 0 0 0.8rem; }
+.online-summary.has-online { color: var(--green); }
+.online-summary[hidden] { display: none; }

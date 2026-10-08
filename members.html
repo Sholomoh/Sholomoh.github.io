@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=44">
+  <link rel="stylesheet" href="styles.css?v=45">
   <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
     <img id="lightbox-img" alt="">
     <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
@@ -197,6 +197,7 @@
       <!-- MEMBERS DIRECTORY -->
       <div class="tab-panel" id="tab-members" hidden>
         <p class="page-intro-sm">Everyone who's signed up. Connect to see each other's stories in your Friends feed.</p>
+        <p id="online-summary" class="online-summary" hidden></p>
         <div class="member-tools" id="member-tools">
           <input type="search" id="member-search" class="field-input" placeholder="Search name, location or interest..." autocomplete="off">
           <select id="member-sort" class="field-input" aria-label="Sort members">
@@ -249,6 +250,7 @@
               <button type="button" id="profile-edit-btn" class="btn btn-ghost btn-sm profile-edit-btn">Edit profile</button>
             </div>
             <p class="profile-preview-name" id="profile-preview-name"></p>
+            <p class="presence presence-block" id="profile-presence-note" hidden></p>
             <p class="profile-preview-location" id="profile-preview-location" hidden></p>
             <p class="profile-preview-bio" id="profile-preview-bio"></p>
             <div class="chips" id="profile-preview-chips"></div>
@@ -328,6 +330,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=25"></script>
+  <script src="members.js?v=26"></script>
 </body>
 </html>
