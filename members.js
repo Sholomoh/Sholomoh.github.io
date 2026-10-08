@@ -112,7 +112,10 @@
       'auth/wrong-password': 'Wrong password.',
       'auth/invalid-credential': 'Wrong email or password.',
       'auth/email-already-in-use': 'An account with that email already exists.',
-      'auth/weak-password': 'Password should be at least 6 characters.'
+      'auth/weak-password': 'Password should be at least 6 characters.',
+      'auth/too-many-requests': 'Too many attempts. Please wait a few minutes and try again.',
+      'auth/network-request-failed': 'Network problem \u2014 check your connection and try again.',
+      'auth/user-disabled': 'This account has been disabled.'
     };
     return (err && (m[err.code] || err.message)) || 'Something went wrong.';
   }
@@ -185,18 +188,56 @@
     });
   });
 
-  document.getElementById('forgot-password-btn').addEventListener('click', function () {
+  var forgotBtn = document.getElementById('forgot-password-btn');
+  var resetCooldown = null;
+
+  function startResetCooldown(seconds) {
+    var left = seconds;
+    forgotBtn.disabled = true;
+    forgotBtn.textContent = 'Send again in ' + left + 's';
+    clearInterval(resetCooldown);
+    resetCooldown = setInterval(function () {
+      left--;
+      if (left <= 0) {
+        clearInterval(resetCooldown);
+        forgotBtn.disabled = false;
+        forgotBtn.textContent = 'Forgot password?';
+      } else {
+        forgotBtn.textContent = 'Send again in ' + left + 's';
+      }
+    }, 1000);
+  }
+
+  forgotBtn.addEventListener('click', function () {
     var email = document.getElementById('signin-email').value.trim();
     if (!email) {
-      showAuthError('Enter your email above first, then tap "Forgot password?" again.');
+      showAuthError('Enter your email above first, then tap \"Forgot password?\" again.');
       document.getElementById('signin-email').focus();
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showAuthError(friendlyError({ code: 'auth/invalid-email' })); return; }
     showAuthError('');
-    auth.sendPasswordResetEmail(email).then(function () {
+    forgotBtn.disabled = true;
+    // Ask Firebase to send the member back to this page afterwards. If this domain isn't in
+    // Firebase's "Authorized domains", that option is refused, so retry without it.
+    var settings = { url: location.origin + location.pathname, handleCodeInApp: false };
+    auth.sendPasswordResetEmail(email, settings).catch(function (err) {
+      var c = err && err.code;
+      if (c === 'auth/unauthorized-continue-uri' || c === 'auth/invalid-continue-uri' || c === 'auth/missing-continue-uri') {
+        return auth.sendPasswordResetEmail(email);
+      }
+      throw err;
+    }).then(function () {
       authError.className = 'form-success';
-      authError.textContent = '\u2713 Password reset email sent to ' + email + '.';
-    }).catch(function (err) { showAuthError(friendlyError(err)); });
+      // Firebase can answer "success" even when no account has this email (to avoid revealing
+      // who is a member), so the wording can't promise an email was sent.
+      authError.textContent = '\u2713 If an account exists for ' + email + ', a reset link is on its way. Check your spam or junk folder too.';
+      startResetCooldown(30);
+    }, function (err) {
+      if (window.console) console.error('Password reset failed:', err && (err.code || err.message) || err);
+      showAuthError(friendlyError(err));
+      forgotBtn.disabled = false;
+    });
   });
 
   signupForm.addEventListener('submit', function (e) {
