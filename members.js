@@ -655,10 +655,18 @@
     }
   }
 
+  var ownLastPing = 0;   // when my last status write succeeded (ms, this device's clock)
+
   function pingPresence() {
-    if (!currentUid || (myProfile && myProfile.hidePresence)) return;
-    db.collection('presence').doc(currentUid).set({ lastSeen: FieldValue.serverTimestamp() })
-      .then(function () { if (pingFailed) { pingFailed = false; updateOnlineSummary(); } })
+    if (!currentUid || (myProfile && myProfile.hidePresence)) return Promise.resolve();
+    return db.collection('presence').doc(currentUid).set({ lastSeen: FieldValue.serverTimestamp() })
+      .then(function () {
+        // Reflect my own status immediately instead of waiting for the next list refresh.
+        ownLastPing = Date.now();
+        presenceMap[currentUid] = ownLastPing;
+        pingFailed = false;
+        updateOnlineSummary();
+      })
       .catch(function (err) {
         if (window.console) console.error('Presence write failed:', err && (err.code || err.message) || err);
         pingFailed = true; updateOnlineSummary();
@@ -669,17 +677,18 @@
   }
   function startPresence() {
     stopPresence();
-    if (!currentUid) return;
+    if (!currentUid) return Promise.resolve();
     if (myProfile && myProfile.hidePresence) {
       db.collection('presence').doc(currentUid).delete().catch(function () {});
-      presenceMap = {};
+      presenceMap = {}; ownLastPing = 0;
       updateOnlineSummary();
-      return;
+      return Promise.resolve();
     }
-    pingPresence();
+    var first = pingPresence();
     presenceTimer = setInterval(function () {
       if (document.visibilityState === 'visible') pingPresence();
     }, PRESENCE_BEAT_MS);
+    return first;
   }
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') pingPresence();
@@ -720,6 +729,7 @@
         var t = toDate(d.data().lastSeen);
         if (t) map[d.id] = t.getTime();
       });
+      if (ownLastPing && (!map[currentUid] || map[currentUid] < ownLastPing)) map[currentUid] = ownLastPing;
       presenceMap = map;
       presenceFailed = false;
       renderMembersList();
@@ -2319,8 +2329,7 @@
       removeCoverFlag = false;
       renderProfilePreview();
       refreshMyProfileExtras();
-      startPresence();
-      refreshPresence(true);
+      startPresence().then(function () { return refreshPresence(true); });
     });
   }
 
@@ -2439,7 +2448,7 @@
       removeCoverFlag = false;
       if (myProfile) { myProfile.hidePresence = update.hidePresence; myProfile.hideFriendList = update.hideFriendList; }
       myFriendListStored = null; syncMyFriendList();
-      startPresence(); refreshPresence(true);
+      startPresence().then(function () { return refreshPresence(true); });
       profileStatus.className = 'form-success';
       profileStatus.textContent = '\u2713 Saved \u2014 this is now visible to other members.';
       whoAmI.textContent = update.displayName;
@@ -3234,7 +3243,7 @@
       tabRestored = true;
       try { sessionStorage.removeItem('sholomoh:tab'); } catch (e) {}
       mySavedIds = new Set(); mySavedAt = {}; savedPostCache = {};
-      stopPresence(); presenceMap = {}; unreadNotifCount = 0; unreadMsgCount = 0; updateTitleBadge();
+      stopPresence(); presenceMap = {}; ownLastPing = 0; unreadNotifCount = 0; unreadMsgCount = 0; updateTitleBadge();
       return;
     }
     authSection.hidden = true;
