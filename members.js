@@ -635,7 +635,10 @@
     } else {
       var n = allUsers.filter(function (u) { var i = presenceInfo(u.id); return i && i.online; }).length;
       if (n) el.classList.add('has-online');
-      el.textContent = n ? '\u25cf ' + n + ' member' + (n === 1 ? '' : 's') + ' online now' : 'No other members online right now';
+      var anyRecorded = allUsers.some(function (u) { return !!presenceInfo(u.id); });
+      el.textContent = n ? '\u25cf ' + n + ' member' + (n === 1 ? '' : 's') + ' online now'
+        : anyRecorded ? 'No other members online right now'
+        : 'No one has shared a status yet \u2014 \u201cOnline\u201d and \u201cLast seen\u201d appear under each member\u2019s name once they\u2019ve opened the site.';
     }
     // Your own status, shown on your profile card
     note.hidden = false;
