@@ -412,23 +412,64 @@
   var expandedComments = new Set();
   var commentsCache = {};
   var commentUnsubs = {};
+  // Counts are derived from the real like/comment documents, not writable
+  // counters on posts. This keeps the feature compatible with Firebase's free plan.
+  var likeCountsByPost = Object.create(null);
+  var commentCountsByPost = Object.create(null);
+  var countUnsubs = [];
+
+  function getLikeCount(postId) { return Number(likeCountsByPost[postId] || 0); }
+  function getCommentCount(postId) { return Number(commentCountsByPost[postId] || 0); }
+
+  function stopPostCountListeners() {
+    countUnsubs.forEach(function (unsub) { try { unsub(); } catch (e) {} });
+    countUnsubs = [];
+    likeCountsByPost = Object.create(null);
+    commentCountsByPost = Object.create(null);
+  }
+
+  function startPostCountListeners() {
+    stopPostCountListeners();
+    // One collection listener per type. Initial reads use the normal Firestore
+    // free quota; subsequent snapshots contain only changed documents.
+    countUnsubs.push(db.collection('postLikes').onSnapshot(function (snap) {
+      var next = Object.create(null), seen = Object.create(null);
+      snap.forEach(function (doc) {
+        var d = doc.data();
+        if (!d.postId || !d.uid) return;
+        if (!seen[d.postId]) seen[d.postId] = Object.create(null);
+        if (seen[d.postId][d.uid]) return; // ignore any historical duplicate likes
+        seen[d.postId][d.uid] = true;
+        next[d.postId] = (next[d.postId] || 0) + 1;
+      });
+      likeCountsByPost = next;
+      renderFeedOnce();
+    }, function (err) { console.warn('Could not update like counts.', err); }));
+    countUnsubs.push(db.collection('postComments').onSnapshot(function (snap) {
+      var next = Object.create(null);
+      snap.forEach(function (doc) {
+        var postId = doc.data().postId;
+        if (postId) next[postId] = (next[postId] || 0) + 1;
+      });
+      commentCountsByPost = next;
+      renderFeedOnce();
+    }, function (err) { console.warn('Could not update comment counts.', err); }));
+  }
 
   function toggleLike(postId, alreadyLiked, postAuthorUid, postTitle) {
     var likeDocId = postId + '_' + currentUid;
-    var postRef = db.collection('posts').doc(postId);
     if (alreadyLiked) {
       myLikedPostIds.delete(postId);
       renderFeedOnce();
-      return db.collection('postLikes').doc(likeDocId).delete().then(function () {
-        return postRef.update({ likeCount: FieldValue.increment(-1) });
-      });
+      return db.collection('postLikes').doc(likeDocId).delete();
     }
     myLikedPostIds.add(postId);
     renderFeedOnce();
     return db.collection('postLikes').doc(likeDocId).set({
       postId: postId, uid: currentUid, createdAt: FieldValue.serverTimestamp()
-    }).then(function () { return postRef.update({ likeCount: FieldValue.increment(1) }); })
-      .then(function () { return notifyIfNotSelf(postAuthorUid, 'like', { postId: postId, postTitle: postTitle }); });
+    }).then(function () {
+      return notifyIfNotSelf(postAuthorUid, 'like', { postId: postId, postTitle: postTitle });
+    });
   }
 
   function loadMyLikes() {
@@ -496,8 +537,6 @@
           postId: postId, parentId: parent.id, authorUid: currentUid,
           authorName: (myProfile && myProfile.displayName) || 'Member',
           text: val, createdAt: FieldValue.serverTimestamp()
-        }).then(function () {
-          return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(1) });
         }).then(function () {
           replyingToId = null; replyValue = '';
           var jobs = [notifyIfNotSelf(parent.authorUid, 'reply', { postId: postId, postTitle: postTitle })];
@@ -589,8 +628,6 @@
           del.addEventListener('click', function () {
             del.disabled = true;
             db.collection('postComments').doc(c.id).delete().then(function () {
-              return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(-1) });
-            }).then(function () {
               commentsCache[postId] = (commentsCache[postId] || []).filter(function (x) { return x.id !== c.id; });
               renderFeedOnce();
             }).catch(function () { del.disabled = false; });
@@ -632,8 +669,6 @@
           postId: postId, authorUid: currentUid,
           authorName: (myProfile && myProfile.displayName) || 'Member',
           text: val, createdAt: FieldValue.serverTimestamp()
-        }).then(function () {
-          return db.collection('posts').doc(postId).update({ commentCount: FieldValue.increment(1) });
         }).then(function () {
           return notifyIfNotSelf(postAuthorUid, 'comment', { postId: postId, postTitle: postTitle });
         }).catch(function () { input.value = val; }).then(function () { btn.disabled = false; });
@@ -1220,9 +1255,9 @@
     var likeBtn = document.createElement('button');
     likeBtn.type = 'button';
     likeBtn.className = 'reaction-btn' + (liked ? ' liked' : '');
-    likeBtn.textContent = (liked ? '\u2764' : '\u2661') + ' ' + (p.likeCount || 0);
+    likeBtn.textContent = (liked ? '\u2764' : '\u2661') + ' ' + getLikeCount(id);
     likeBtn.setAttribute('aria-pressed', liked ? 'true' : 'false');
-    likeBtn.setAttribute('aria-label', (liked ? 'Unlike' : 'Like') + ' this story, ' + (p.likeCount || 0) + ' likes');
+    likeBtn.setAttribute('aria-label', (liked ? 'Unlike' : 'Like') + ' this story, ' + getLikeCount(id) + ' likes');
     likeBtn.addEventListener('click', function () {
       if (!currentUid) return;
       likeBtn.disabled = true;
@@ -1232,7 +1267,7 @@
     var commentBtn = document.createElement('button');
     commentBtn.type = 'button';
     commentBtn.className = 'reaction-btn';
-    var cc = p.commentCount || 0;
+    var cc = getCommentCount(id);
     commentBtn.textContent = '\ud83d\udcac ' + cc + (cc === 1 ? ' comment' : ' comments');
     commentBtn.addEventListener('click', function () { toggleComments(id); });
     reactions.appendChild(commentBtn);
@@ -1258,7 +1293,7 @@
       });
       reactions.appendChild(repBtn);
     }
-    if ((p.likeCount || 0) > 0) {
+    if (getLikeCount(id) > 0) {
       var whoBtn = document.createElement('button');
       whoBtn.type = 'button';
       whoBtn.className = 'reaction-btn';
@@ -1437,7 +1472,7 @@
     }
     if (feedSort.value === 'liked') {
       docs.sort(function (a, b) {
-        var diff = num(b.data().likeCount) - num(a.data().likeCount);
+        var diff = getLikeCount(b.id) - getLikeCount(a.id);
         if (diff) return diff;
         var ad = toDate(a.data().createdAt), bd = toDate(b.data().createdAt);
         return (bd ? bd.getTime() : 0) - (ad ? ad.getTime() : 0);
@@ -1650,9 +1685,7 @@
         acts.appendChild(mk('View', false, function () { openStoryFocus(r.postId); return new Promise(function () {}); }));
         acts.appendChild(mk('Delete content', true, function () {
           var kill = r.type === 'comment'
-            ? db.collection('postComments').doc(r.targetId).delete().then(function () {
-                return db.collection('posts').doc(r.postId).update({ commentCount: FieldValue.increment(-1) }).catch(function () {});
-              })
+            ? db.collection('postComments').doc(r.targetId).delete()
             : db.collection('posts').doc(r.targetId).delete();
           return kill.then(function () { return db.collection('reports').doc(doc.id).delete(); });
         }));
@@ -1728,8 +1761,6 @@
         attachmentName: result ? result.name : null,
         authorUid: user.uid,
         authorName: user.displayName || 'Member',
-        likeCount: 0,
-        commentCount: 0,
         createdAt: FieldValue.serverTimestamp()
       });
     }).then(function () {
@@ -1780,18 +1811,10 @@
     var quiet = function () {};
     // Likes and comments on other people's posts: remove, then fix the counters.
     var likes = db.collection('postLikes').where('uid', '==', uid).get().then(function (snap) {
-      return Promise.all(snap.docs.map(function (d) {
-        return d.ref.delete().then(function () {
-          return db.collection('posts').doc(d.data().postId).update({ likeCount: FieldValue.increment(-1) });
-        }).catch(quiet);
-      }));
+      return Promise.all(snap.docs.map(function (d) { return d.ref.delete().catch(quiet); }));
     });
     var comments = db.collection('postComments').where('authorUid', '==', uid).get().then(function (snap) {
-      return Promise.all(snap.docs.map(function (d) {
-        return d.ref.delete().then(function () {
-          return db.collection('posts').doc(d.data().postId).update({ commentCount: FieldValue.increment(-1) });
-        }).catch(quiet);
-      }));
+      return Promise.all(snap.docs.map(function (d) { return d.ref.delete().catch(quiet); }));
     });
     return Promise.all([likes, comments]).then(function () {
       return Promise.all([
@@ -1877,7 +1900,7 @@
   }
 
   function renderStats(el, posts, u, friendCount) {
-    var likes = posts.reduce(function (n, p) { return n + num(p.data.likeCount); }, 0);
+    var likes = posts.reduce(function (n, p) { return n + getLikeCount(p.id); }, 0);
     var items = [[posts.length, 'Stories'], [likes, 'Likes']];
     if (friendCount !== null && friendCount !== undefined) items.push([friendCount, 'Friends']);
     items.push([fmtJoined(u), 'Joined']);
@@ -1912,7 +1935,7 @@
     var cd = toDate(p.createdAt);
     var when = cd ? relTime(cd) : '';
     var kindIcon = (url && type === 'video') ? ' \u00b7 \ud83c\udfac' : (url && type !== 'image') ? ' \u00b7 \ud83d\udcce' : '';
-    meta.textContent = when + (when ? ' \u00b7 ' : '') + '\u2764 ' + num(p.likeCount) + ' \u00b7 \ud83d\udcac ' + num(p.commentCount) + kindIcon;
+    meta.textContent = when + (when ? ' \u00b7 ' : '') + '\u2764 ' + getLikeCount(item.id) + ' \u00b7 \ud83d\udcac ' + getCommentCount(item.id) + kindIcon;
     var snip = document.createElement('p'); snip.className = 'mini-story-text';
     var t = String(p.body || '');
     snip.textContent = t.length > 140 ? t.slice(0, 140).trim() + '\u2026' : t;
@@ -3299,6 +3322,7 @@
     editingId = null;
     if (!user) {
       if (feedUnsub) { feedUnsub(); feedUnsub = null; }
+      stopPostCountListeners();
       if (inboxUnsub) { inboxUnsub(); inboxUnsub = null; }
       stopThread(); closeStoryFocus();
       if (notifUnsub) { notifUnsub(); notifUnsub = null; }
@@ -3325,6 +3349,7 @@
     authSection.hidden = true;
     appSection.hidden = false;
     currentUid = user.uid;
+    startPostCountListeners();
     restoreTab();
     whoAmI.textContent = user.displayName || user.email;
     renderFeed();

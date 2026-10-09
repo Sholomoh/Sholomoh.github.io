@@ -1,6 +1,6 @@
 /* Service worker: makes the site load fast, work as an installed app, and show a friendly
    offline page. It never touches Firebase, fonts or any other site's requests — only this site's files. */
-const VERSION = 'fk-v2';
+const VERSION = 'fk-v3';
 const PRECACHE = [
   'offline.html', 'index.html', 'services.html', 'skills.html', 'projects.html',
   'certs.html', 'about.html', 'contact.html', 'members.html',

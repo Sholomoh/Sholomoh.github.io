@@ -260,54 +260,72 @@ service cloud.firestore {
       }
     }
 
-    // Stories. Any signed-in member can read. Only posters/admins can
-    // create. Authors (or admins) can edit or remove their own posts —
-    // but editing can never reassign the author or backdate the post.
+    // Stories. Counts are derived from postLikes/postComments documents in the
+    // client, so no client is allowed to write likeCount/commentCount fields.
     match /posts/{postId} {
       allow read: if isSignedIn();
       allow create: if isPoster() && request.resource.data.authorUid == request.auth.uid &&
+        !('likeCount' in request.resource.data) && !('commentCount' in request.resource.data) &&
         request.resource.data.title is string && request.resource.data.title.size() <= 200 &&
         request.resource.data.body is string && request.resource.data.body.size() <= 10000 &&
         okStr(request.resource.data.get('authorName', null), 100) &&
         okUrl(request.resource.data.get('attachmentURL', null)) &&
         okUrl(request.resource.data.get('photoURL', null));
-      // Either the author/admin editing real content (author and date
-      // locked), or any signed-in member bumping only the like/comment
-      // counters — nothing else can change on that second path.
-      allow update: if isSignedIn() && (
-        (
-          (resource.data.authorUid == request.auth.uid || isAdmin()) &&
-          request.resource.data.authorUid == resource.data.authorUid &&
-          request.resource.data.createdAt == resource.data.createdAt &&
-          (request.resource.data.get('title', null) == resource.data.get('title', null) ||
-           (request.resource.data.title is string && request.resource.data.title.size() <= 200)) &&
-          (request.resource.data.get('body', null) == resource.data.get('body', null) ||
-           (request.resource.data.body is string && request.resource.data.body.size() <= 10000)) &&
-          (request.resource.data.get('attachmentURL', null) == resource.data.get('attachmentURL', null) ||
-           okUrl(request.resource.data.get('attachmentURL', null)))
-        ) ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount'])
-      );
+      // Authors/admins can edit story content, but cannot modify counters or
+      // change ownership/creation time. Counter values on old documents, if any,
+      // are immutable and are ignored by the updated client.
+      allow update: if isSignedIn() &&
+        (resource.data.authorUid == request.auth.uid || isAdmin()) &&
+        request.resource.data.authorUid == resource.data.authorUid &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'body', 'attachmentURL', 'attachmentType', 'attachmentName',
+          'photoURL', 'updatedAt', 'authorName'
+        ]) &&
+        (request.resource.data.get('title', null) == resource.data.get('title', null) ||
+         (request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200)) &&
+        (request.resource.data.get('body', null) == resource.data.get('body', null) ||
+         (request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 10000)) &&
+        (request.resource.data.get('attachmentURL', null) == resource.data.get('attachmentURL', null) ||
+         okUrl(request.resource.data.get('attachmentURL', null))) &&
+        (request.resource.data.get('photoURL', null) == resource.data.get('photoURL', null) ||
+         okUrl(request.resource.data.get('photoURL', null))) &&
+        (request.resource.data.get('authorName', null) == resource.data.get('authorName', null) ||
+         (isAdmin() && okStr(request.resource.data.get('authorName', null), 100)));
       allow delete: if isSignedIn() &&
         (resource.data.authorUid == request.auth.uid || isAdmin());
     }
 
-    // One like per member per post. The post's own likeCount field is
-    // bumped separately (see the posts update rule above).
+    // One like per signed-in member per post. The document ID is fixed to
+    // postId_uid so users cannot create multiple likes with custom IDs.
     match /postLikes/{id} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(['postId', 'uid', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.postId is string &&
+        id == request.resource.data.postId + '_' + request.auth.uid &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/posts/$(request.resource.data.postId));
+      allow delete: if isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        id == resource.data.postId + '_' + request.auth.uid;
     }
 
-    // Comments on a post. Any signed-in member can comment; the author
-    // or an admin can remove one.
+    // Comments count themselves by existing as documents; clients never update
+    // a post's counter. The comment must belong to an existing story.
     match /postComments/{id} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid &&
+      allow create: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'createdAt']) &&
+        request.resource.data.authorUid == request.auth.uid &&
+        request.resource.data.postId is string &&
+        exists(/databases/$(database)/documents/posts/$(request.resource.data.postId)) &&
+        (!('parentId' in request.resource.data) || request.resource.data.parentId is string) &&
         request.resource.data.text is string && request.resource.data.text.size() > 0 &&
         request.resource.data.text.size() <= 1000 &&
-        okStr(request.resource.data.get('authorName', null), 100);
+        okStr(request.resource.data.get('authorName', null), 100) &&
+        request.resource.data.createdAt == request.time;
       allow update: if isSignedIn() && (
         (
           resource.data.authorUid == request.auth.uid &&
@@ -316,14 +334,12 @@ service cloud.firestore {
           request.resource.data.text.size() > 0 &&
           request.resource.data.text.size() <= 1000
         ) ||
-        // Admins may only rewrite the displayed author name (privacy cleanup)
-        (
-          isAdmin() &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName'])
-        )
+        (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName']) &&
+          okStr(request.resource.data.get('authorName', null), 100))
       );
       allow delete: if isSignedIn() &&
         (resource.data.authorUid == request.auth.uid || isAdmin());
     }
+
   }
 }
