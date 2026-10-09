@@ -252,8 +252,15 @@ service cloud.firestore {
         allow read: if isSignedIn() && request.auth.uid in convId.split('_');
         allow create: if isSignedIn() &&
           request.auth.uid in convId.split('_') &&
+          request.resource.data.keys().hasOnly(['fromUid', 'text', 'createdAt', 'attachmentURL', 'attachmentType', 'attachmentName']) &&
           request.resource.data.fromUid == request.auth.uid &&
-          request.resource.data.text is string && request.resource.data.text.size() <= 2000 &&
+          request.resource.data.get('text', '') is string && request.resource.data.get('text', '').size() <= 2000 &&
+          (request.resource.data.get('text', '').size() > 0 ||
+           (request.resource.data.get('attachmentURL', null) is string && request.resource.data.get('attachmentURL', '').size() > 0 && okUrl(request.resource.data.get('attachmentURL', null)))) &&
+          okUrl(request.resource.data.get('attachmentURL', null)) &&
+          (request.resource.data.get('attachmentType', null) == null ||
+           request.resource.data.get('attachmentType', null) in ['image', 'video', 'audio', 'document']) &&
+          okStr(request.resource.data.get('attachmentName', null), 180) &&
           !isBlocked(otherOf(convId.split('_'), request.auth.uid), request.auth.uid);
         // You can delete your own messages
         allow delete: if isSignedIn() && resource.data.fromUid == request.auth.uid;

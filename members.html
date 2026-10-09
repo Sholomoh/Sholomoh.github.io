@@ -41,7 +41,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=48">
+  <link rel="stylesheet" href="styles.css?v=49">
   <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
     <img id="lightbox-img" alt="">
     <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
@@ -173,9 +173,16 @@
           <div id="composer" hidden>
             <h2>New story</h2>
             <form id="post-form">
-              <input type="text" id="post-title" class="field-input" placeholder="Title" required maxlength="120">
-              <textarea id="post-body" class="story-input" placeholder="Write your story..." required></textarea>
-              <label class="file-label">Attach a photo, video, or document (optional)<input type="file" id="post-attachment" accept="image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"></label>
+              <input type="text" id="post-title" class="field-input" placeholder="Title (optional for a voice note)" maxlength="120">
+              <textarea id="post-body" class="story-input" placeholder="Write your story or add a voice note..."></textarea>
+              <label class="file-label">Attach an image, video, audio, or document (optional)<input type="file" id="post-attachment" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"></label>
+              <div class="voice-tools" aria-label="Voice note recorder">
+                <button type="button" id="post-record-start" class="btn btn-ghost btn-sm">🎙 Record voice note</button>
+                <button type="button" id="post-record-stop" class="btn btn-ghost btn-sm" hidden>Stop recording</button>
+                <span id="post-record-status" class="form-note" aria-live="polite">Maximum 2 minutes</span>
+                <audio id="post-voice-preview" controls preload="metadata" hidden></audio>
+                <button type="button" id="post-voice-clear" class="btn btn-ghost btn-sm" hidden>Remove recording</button>
+              </div>
               <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Post</button>
                 <button type="button" id="composer-cancel" class="btn btn-ghost btn-sm">Cancel</button>
@@ -249,8 +256,18 @@
           <p id="thread-presence" class="thread-presence" hidden></p>
           <div id="thread-messages"></div>
           <p id="thread-typing" class="form-note thread-typing" hidden aria-live="polite">typing…</p>
+          <div class="message-tools">
+            <label class="file-label message-file-label">Attach image, video, audio, or document
+              <input type="file" id="message-attachment" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip">
+            </label>
+            <button type="button" id="message-record-start" class="btn btn-ghost btn-sm">🎙 Record voice note</button>
+            <button type="button" id="message-record-stop" class="btn btn-ghost btn-sm" hidden>Stop recording</button>
+            <span id="message-record-status" class="form-note" aria-live="polite">Voice notes up to 2 minutes</span>
+            <audio id="message-voice-preview" controls preload="metadata" hidden></audio>
+            <button type="button" id="message-voice-clear" class="btn btn-ghost btn-sm" hidden>Remove recording</button>
+          </div>
           <form id="thread-form">
-            <textarea id="thread-input" class="field-input" rows="1" maxlength="2000" placeholder="Write a message..." required></textarea>
+            <textarea id="thread-input" class="field-input" rows="1" maxlength="2000" placeholder="Write a message..." aria-label="Message text"></textarea>
             <button type="submit" class="btn btn-primary btn-sm">Send</button>
           </form>
         </div>
@@ -346,6 +363,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=33"></script>
+  <script src="members.js?v=34"></script>
 </body>
 </html>

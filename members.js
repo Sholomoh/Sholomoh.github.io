@@ -170,8 +170,66 @@
       if (!r.ok) throw new Error('Upload failed.');
       return r.json();
     }).then(function (data) {
-      return { url: data.secure_url, resourceType: data.resource_type, name: file.name };
+      var mime = (file.type || '').toLowerCase();
+      var kind = mime.indexOf('image/') === 0 ? 'image' : mime.indexOf('video/') === 0 ? 'video' : mime.indexOf('audio/') === 0 ? 'audio' : 'document';
+      return { url: data.secure_url, resourceType: data.resource_type, kind: kind, name: file.name };
     });
+  }
+
+  // Browser-only voice capture: no paid backend required. Recording stops
+  // automatically at 120 seconds. The uploaded file still goes through the
+  // same Cloudinary unsigned-upload flow and 20MB client-side size guard.
+  var MAX_VOICE_MS = 120000;
+  function startVoiceCapture(onFinish, onTick, onError) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+      onError(new Error('Voice recording is not supported by this browser. Try a recent Chrome or Firefox browser.'));
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      var mimeCandidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+      var options = {};
+      if (MediaRecorder.isTypeSupported) {
+        for (var i = 0; i < mimeCandidates.length; i++) {
+          if (MediaRecorder.isTypeSupported(mimeCandidates[i])) { options.mimeType = mimeCandidates[i]; break; }
+        }
+      }
+      var recorder;
+      try { recorder = new MediaRecorder(stream, options); }
+      catch (err) { stream.getTracks().forEach(function (t) { t.stop(); }); onError(err); return; }
+      var chunks = [], startedAt = Date.now(), stopped = false, tickTimer = null, maxTimer = null;
+      function cleanup() {
+        if (tickTimer) clearInterval(tickTimer);
+        if (maxTimer) clearTimeout(maxTimer);
+        stream.getTracks().forEach(function (t) { t.stop(); });
+      }
+      recorder.addEventListener('dataavailable', function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); });
+      recorder.addEventListener('error', function () { cleanup(); onError(new Error('Recording failed. Please try again.')); });
+      recorder.addEventListener('stop', function () {
+        if (stopped) return;
+        stopped = true; cleanup();
+        var blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        onFinish(blob, Math.min(Date.now() - startedAt, MAX_VOICE_MS));
+      });
+      recorder.start();
+      if (onTick) onTick(0);
+      tickTimer = setInterval(function () { if (onTick) onTick(Math.min(Date.now() - startedAt, MAX_VOICE_MS)); }, 250);
+      maxTimer = setTimeout(function () { if (recorder.state === 'recording') recorder.stop(); }, MAX_VOICE_MS);
+      return {
+        stop: function () { if (recorder.state === 'recording') recorder.stop(); },
+        cancel: function () { if (recorder.state === 'recording') { stopped = true; cleanup(); recorder.stop(); } }
+      };
+    }).then(function (session) {
+      if (session) onTick && onTick(0, session);
+    }).catch(function (err) { onError(err || new Error('Could not access the microphone.')); });
+  }
+  function formatVoiceTime(ms) {
+    var sec = Math.floor(ms / 1000);
+    return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+  }
+  function voiceBlobFile(blob, name) {
+    var mime = blob.type || 'audio/webm';
+    var ext = mime.indexOf('mp4') !== -1 ? 'm4a' : mime.indexOf('ogg') !== -1 ? 'ogg' : 'webm';
+    return new File([blob], name + '.' + ext, { type: mime, lastModified: Date.now() });
   }
 
   /* ---------- auth tabs + forms ---------- */
@@ -690,6 +748,11 @@
       var video = document.createElement('video');
       video.src = url; video.controls = true; video.preload = 'metadata'; video.className = 'story-video';
       return video;
+    }
+    if (type === 'audio') {
+      var audio = document.createElement('audio');
+      audio.src = url; audio.controls = true; audio.preload = 'metadata'; audio.className = 'story-audio';
+      return audio;
     }
     if (type === 'image') {
       var img = document.createElement('img');
@@ -1344,7 +1407,7 @@
     photoRow.className = 'file-label';
     photoRow.textContent = hasAttachment ? 'Replace attachment' : 'Attach a photo, video, or document';
     var photoInput = document.createElement('input');
-    photoInput.type = 'file'; photoInput.accept = 'image/*,video/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip';
+    photoInput.type = 'file'; photoInput.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip';
     photoRow.appendChild(photoInput);
 
     var removeRow = null, removeCheck = null;
@@ -1381,7 +1444,7 @@
       photoWork.then(function (result) {
         var update = { title: title, body: bodyText, updatedAt: FieldValue.serverTimestamp() };
         if (file) {
-          update.attachmentURL = result.url; update.attachmentType = result.resourceType; update.attachmentName = result.name;
+          update.attachmentURL = result.url; update.attachmentType = result.kind; update.attachmentName = result.name;
           update.photoURL = null;
         } else if (removeCheck && removeCheck.checked) {
           update.attachmentURL = null; update.attachmentType = null; update.attachmentName = null; update.photoURL = null;
@@ -1741,31 +1804,72 @@
 
   /* ---------- posting (posters + admins) ---------- */
 
+  var postAttachmentInput = document.getElementById('post-attachment');
+  var postRecordStart = document.getElementById('post-record-start');
+  var postRecordStop = document.getElementById('post-record-stop');
+  var postRecordStatus = document.getElementById('post-record-status');
+  var postVoicePreview = document.getElementById('post-voice-preview');
+  var postVoiceClear = document.getElementById('post-voice-clear');
+  var postVoiceBlob = null, postVoiceUrl = null, postRecorderSession = null;
+  function clearPostVoice() {
+    postVoiceBlob = null;
+    if (postVoiceUrl) URL.revokeObjectURL(postVoiceUrl);
+    postVoiceUrl = null; postVoicePreview.removeAttribute('src'); postVoicePreview.hidden = true;
+    postVoiceClear.hidden = true; postRecordStatus.textContent = 'Maximum 2 minutes';
+  }
+  postRecordStart.addEventListener('click', function () {
+    if (postAttachmentInput.files && postAttachmentInput.files.length) postAttachmentInput.value = '';
+    postRecordStart.disabled = true; postRecordStatus.textContent = 'Requesting microphone…';
+    startVoiceCapture(function (blob, duration) {
+      postRecorderSession = null; postRecordStart.disabled = false; postRecordStop.hidden = true;
+      if (!blob.size) { postRecordStatus.textContent = 'No audio captured. Try again.'; return; }
+      postVoiceBlob = blob;
+      if (postVoiceUrl) URL.revokeObjectURL(postVoiceUrl);
+      postVoiceUrl = URL.createObjectURL(blob); postVoicePreview.src = postVoiceUrl; postVoicePreview.hidden = false;
+      postVoiceClear.hidden = false; postRecordStatus.textContent = 'Voice note ready · ' + formatVoiceTime(duration) + ' / 2:00';
+    }, function (ms, session) {
+      if (session) { postRecorderSession = session; postRecordStart.disabled = true; postRecordStop.hidden = false; postRecordStatus.textContent = 'Recording ' + formatVoiceTime(ms) + ' / 2:00'; }
+      else if (postRecorderSession) postRecordStatus.textContent = 'Recording ' + formatVoiceTime(ms) + ' / 2:00';
+    }, function (err) {
+      postRecorderSession = null; postRecordStart.disabled = false; postRecordStop.hidden = true;
+      postRecordStatus.textContent = err && err.message ? err.message : 'Microphone unavailable.';
+    });
+  });
+  postRecordStop.addEventListener('click', function () { if (postRecorderSession) postRecorderSession.stop(); });
+  postVoiceClear.addEventListener('click', clearPostVoice);
+  postAttachmentInput.addEventListener('change', function () { if (postAttachmentInput.files.length) clearPostVoice(); });
+
   postForm.addEventListener('submit', function (e) {
     e.preventDefault();
     var user = auth.currentUser;
     if (!user) return;
+    if (postRecorderSession) { postStatus.textContent = 'Stop the recording before posting.'; return; }
     var title = document.getElementById('post-title').value.trim();
     var body = document.getElementById('post-body').value.trim();
-    var file = document.getElementById('post-attachment').files[0];
+    var file = postVoiceBlob ? voiceBlobFile(postVoiceBlob, 'voice-note') : (postAttachmentInput.files && postAttachmentInput.files[0]);
+    if (!title && !body && !file) { postStatus.textContent = 'Write a story or attach a file/voice note first.'; return; }
+    if (file && file.size > MAX_ATTACHMENT_BYTES) { postStatus.textContent = 'Attachment is over the 20MB limit.'; return; }
+    if (file && !title) title = file.type.indexOf('audio/') === 0 ? 'Voice note' : 'Shared attachment';
+    if (file && !body) body = file.type.indexOf('audio/') === 0 ? 'Voice note' : 'Attachment shared.';
     var submitBtn = postForm.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    postStatus.textContent = file ? 'Uploading\u2026' : 'Posting\u2026';
+    postStatus.textContent = file ? 'Uploading…' : 'Posting…';
 
     (file ? uploadToCloudinary(file) : Promise.resolve(null)).then(function (result) {
       return db.collection('posts').add({
-        title: title,
-        body: body,
+        title: title || 'Story',
+        body: body || '',
         attachmentURL: result ? result.url : null,
-        attachmentType: result ? result.resourceType : null,
+        attachmentType: result ? result.kind : null,
         attachmentName: result ? result.name : null,
         authorUid: user.uid,
         authorName: user.displayName || 'Member',
+        likeCount: 0,
+        commentCount: 0,
         createdAt: FieldValue.serverTimestamp()
       });
     }).then(function () {
-      postForm.reset();
-      clearDraft();
+      postForm.reset(); clearPostVoice(); clearDraft();
       postStatus.textContent = 'Posted.';
       composer.hidden = true;
       updateDraftUI();
@@ -2836,6 +2940,40 @@
   var threadMessages = document.getElementById('thread-messages');
   var threadForm = document.getElementById('thread-form');
   var threadInput = document.getElementById('thread-input');
+  var messageAttachmentInput = document.getElementById('message-attachment');
+  var messageRecordStart = document.getElementById('message-record-start');
+  var messageRecordStop = document.getElementById('message-record-stop');
+  var messageRecordStatus = document.getElementById('message-record-status');
+  var messageVoicePreview = document.getElementById('message-voice-preview');
+  var messageVoiceClear = document.getElementById('message-voice-clear');
+  var messageVoiceBlob = null, messageVoiceUrl = null, messageRecorderSession = null;
+  function clearMessageVoice() {
+    messageVoiceBlob = null;
+    if (messageVoiceUrl) URL.revokeObjectURL(messageVoiceUrl);
+    messageVoiceUrl = null; messageVoicePreview.removeAttribute('src'); messageVoicePreview.hidden = true;
+    messageVoiceClear.hidden = true; messageRecordStatus.textContent = 'Voice notes up to 2 minutes';
+  }
+  messageRecordStart.addEventListener('click', function () {
+    if (messageAttachmentInput.files && messageAttachmentInput.files.length) messageAttachmentInput.value = '';
+    messageRecordStart.disabled = true; messageRecordStatus.textContent = 'Requesting microphone…';
+    startVoiceCapture(function (blob, duration) {
+      messageRecorderSession = null; messageRecordStart.disabled = false; messageRecordStop.hidden = true;
+      if (!blob.size) { messageRecordStatus.textContent = 'No audio captured. Try again.'; return; }
+      messageVoiceBlob = blob;
+      if (messageVoiceUrl) URL.revokeObjectURL(messageVoiceUrl);
+      messageVoiceUrl = URL.createObjectURL(blob); messageVoicePreview.src = messageVoiceUrl; messageVoicePreview.hidden = false;
+      messageVoiceClear.hidden = false; messageRecordStatus.textContent = 'Voice note ready · ' + formatVoiceTime(duration) + ' / 2:00';
+    }, function (ms, session) {
+      if (session) { messageRecorderSession = session; messageRecordStart.disabled = true; messageRecordStop.hidden = false; messageRecordStatus.textContent = 'Recording ' + formatVoiceTime(ms) + ' / 2:00'; }
+      else if (messageRecorderSession) messageRecordStatus.textContent = 'Recording ' + formatVoiceTime(ms) + ' / 2:00';
+    }, function (err) {
+      messageRecorderSession = null; messageRecordStart.disabled = false; messageRecordStop.hidden = true;
+      messageRecordStatus.textContent = err && err.message ? err.message : 'Microphone unavailable.';
+    });
+  });
+  messageRecordStop.addEventListener('click', function () { if (messageRecorderSession) messageRecorderSession.stop(); });
+  messageVoiceClear.addEventListener('click', clearMessageVoice);
+  messageAttachmentInput.addEventListener('change', function () { if (messageAttachmentInput.files.length) clearMessageVoice(); });
 
   var inboxUnsub = null;
   var threadUnsub = null;
@@ -2997,6 +3135,26 @@
     return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
 
+  function buildMessageAttachment(m) {
+    var url = safeUrl(m.attachmentURL);
+    if (!url) return null;
+    var type = m.attachmentType || 'document';
+    var node;
+    if (type === 'image') {
+      node = document.createElement('img'); node.src = url; node.alt = m.attachmentName || 'Image attachment';
+      node.loading = 'lazy'; node.className = 'msg-attachment-image';
+      makeActivatable(node, function () { openLightbox(url); }, 'View image');
+    } else if (type === 'video') {
+      node = document.createElement('video'); node.src = url; node.controls = true; node.preload = 'metadata'; node.className = 'msg-attachment-video';
+    } else if (type === 'audio') {
+      node = document.createElement('audio'); node.src = url; node.controls = true; node.preload = 'metadata'; node.className = 'msg-attachment-audio';
+    } else {
+      node = document.createElement('a'); node.href = url; node.target = '_blank'; node.rel = 'noopener';
+      node.className = 'msg-attachment-file'; node.textContent = '📎 ' + (m.attachmentName || 'Download attachment');
+    }
+    return node;
+  }
+
   function renderThread() {
     var prevH = threadMessages.scrollHeight, prevTop = threadMessages.scrollTop;
     threadMessages.innerHTML = '';
@@ -3029,9 +3187,13 @@
       }
       var bubble = document.createElement('div');
       bubble.className = 'msg-bubble ' + (m.fromUid === currentUid ? 'mine' : 'theirs');
-      var text = document.createElement('span');
-      text.textContent = m.text || '';
-      bubble.appendChild(text);
+      if (m.text) {
+        var text = document.createElement('span');
+        text.textContent = m.text;
+        bubble.appendChild(text);
+      }
+      var attachment = buildMessageAttachment(m);
+      if (attachment) bubble.appendChild(attachment);
       var time = document.createElement('span');
       time.className = 'msg-time';
       var stamp = cd ? relTime(cd) : '';
@@ -3135,26 +3297,41 @@
   threadForm.addEventListener('submit', function (e) {
     e.preventDefault();
     var text = threadInput.value.trim();
-    if (!text || !activeConvId) return;
+    if (!activeConvId) return;
+    if (messageRecorderSession) { messageRecordStatus.textContent = 'Stop the recording before sending.'; return; }
+    var file = messageVoiceBlob ? voiceBlobFile(messageVoiceBlob, 'voice-note') : (messageAttachmentInput.files && messageAttachmentInput.files[0]);
+    if (!text && !file) return;
+    if (file && file.size > MAX_ATTACHMENT_BYTES) { messageRecordStatus.textContent = 'Attachment is over the 20MB limit.'; return; }
     var sendBtn = threadForm.querySelector('button[type="submit"]');
     sendBtn.disabled = true;
+    messageRecordStart.disabled = true;
     lastTypingSentAt = 0;
-    var sentConv = activeConvId;
+    var sentConv = activeConvId, sentOther = activeOtherUid;
     clearTimeout(chatDraftTimer);
     clearChatDraft(sentConv);
     threadInput.value = '';
     autosizeThreadInput();
-    db.collection('conversations').doc(activeConvId).collection('messages').add({
-      fromUid: currentUid, text: text, createdAt: FieldValue.serverTimestamp()
+    var uploadWork = file ? uploadToCloudinary(file) : Promise.resolve(null);
+    uploadWork.then(function (result) {
+      var preview = text || (result && result.kind === 'audio' ? '🎤 Voice note' : result && result.kind === 'image' ? '📷 Image' : result && result.kind === 'video' ? '🎬 Video' : result ? '📎 Attachment' : 'Message');
+      var payload = { fromUid: currentUid, text: text, createdAt: FieldValue.serverTimestamp() };
+      if (result) {
+        payload.attachmentURL = result.url;
+        payload.attachmentType = result.kind;
+        payload.attachmentName = result.name;
+      }
+      return db.collection('conversations').doc(sentConv).collection('messages').add(payload).then(function () {
+        return db.collection('conversations').doc(sentConv).set({
+          participants: [currentUid, sentOther].sort(),
+          lastMessage: preview, lastMessageAt: FieldValue.serverTimestamp(), lastMessageBy: currentUid
+        }, { merge: true });
+      }).then(function () { return notifyIfNotSelf(sentOther, 'message', { convId: sentConv }); });
     }).then(function () {
-      return db.collection('conversations').doc(sentConv).set({
-        participants: [currentUid, activeOtherUid].sort(),
-        lastMessage: text, lastMessageAt: FieldValue.serverTimestamp(), lastMessageBy: currentUid
-      }, { merge: true });
-    }).then(function () {
-      return notifyIfNotSelf(activeOtherUid, 'message', { convId: activeConvId });
-    }).catch(function () { threadInput.value = text; saveChatDraft(); })
-      .then(function () { sendBtn.disabled = false; threadInput.focus(); });
+      messageAttachmentInput.value = ''; clearMessageVoice();
+    }).catch(function (err) {
+      threadInput.value = text; saveChatDraft();
+      messageRecordStatus.textContent = 'Could not send: ' + (err && err.message ? err.message : 'try again.');
+    }).then(function () { sendBtn.disabled = false; messageRecordStart.disabled = false; threadInput.focus(); });
   });
 
   /* ---------- notifications ---------- */
