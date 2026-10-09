@@ -660,6 +660,9 @@
   function updateTitleBadge() {
     var n = unreadNotifCount + unreadMsgCount;
     document.title = (n ? '(' + (n > 9 ? '9+' : n) + ') ' : '') + baseTitle;
+    try {
+      if (navigator.setAppBadge) { (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(function () {}); }
+    } catch (e) {}
   }
 
   var presenceFailed = false, pingFailed = false;
