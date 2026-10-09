@@ -146,9 +146,19 @@
     return span;
   }
 
-  // 20MB keeps things comfortably inside Cloudinary's free tier even with
-  // a few videos in the mix; raise it in one place here if that's too tight.
-  var MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+  // Client-side upload limits. Cloudinary account limits still apply.
+  var MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+  var MAX_RAW_BYTES = 10 * 1024 * 1024;
+  var MAX_VIDEO_BYTES = 20 * 1024 * 1024;
+  var MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+
+  function maxUploadBytes(file) {
+    var type = (file.type || '').toLowerCase();
+    if (type.indexOf('image/') === 0) return MAX_IMAGE_BYTES;
+    if (type.indexOf('video/') === 0) return MAX_VIDEO_BYTES;
+    if (type.indexOf('audio/') === 0) return MAX_AUDIO_BYTES;
+    return MAX_RAW_BYTES;
+  }
 
   // Images, video, and documents (PDF/Word/etc.) all go through the same
   // /auto/upload endpoint, which inspects the file and returns which kind
@@ -158,8 +168,11 @@
     if (!cfg || !cfg.cloudName || cfg.cloudName === 'PASTE_ME') {
       return Promise.reject(new Error('Upload isn\u2019t configured yet.'));
     }
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      return Promise.reject(new Error('That file is over the 20MB limit.'));
+    var limit = maxUploadBytes(file);
+    if (file.size > limit) {
+      return Promise.reject(new Error(
+        'This file exceeds the ' + Math.round(limit / (1024 * 1024)) + 'MB upload limit for its type.'
+      ));
     }
     var fd = new FormData();
     fd.append('file', file);
@@ -1919,7 +1932,10 @@
     var body = document.getElementById('post-body').value.trim();
     var file = postVoiceBlob ? voiceBlobFile(postVoiceBlob, 'voice-note') : (postAttachmentInput.files && postAttachmentInput.files[0]);
     if (!title && !body && !file) { postStatus.textContent = 'Write a story or attach a file/voice note first.'; return; }
-    if (file && file.size > MAX_ATTACHMENT_BYTES) { postStatus.textContent = 'Attachment is over the 20MB limit.'; return; }
+    if (file && file.size > maxUploadBytes(file)) {
+      postStatus.textContent = 'This file exceeds the upload limit for its type.';
+      return;
+    }
     if (file && !title) title = file.type.indexOf('audio/') === 0 ? 'Voice note' : 'Shared attachment';
     if (file && !body) body = file.type.indexOf('audio/') === 0 ? 'Voice note' : 'Attachment shared.';
     var submitBtn = postForm.querySelector('button[type="submit"]');
@@ -3372,7 +3388,10 @@
     if (messageRecorderSession) { messageRecordStatus.textContent = 'Stop the recording before sending.'; return; }
     var file = messageVoiceBlob ? voiceBlobFile(messageVoiceBlob, 'voice-note') : (messageAttachmentInput.files && messageAttachmentInput.files[0]);
     if (!text && !file) return;
-    if (file && file.size > MAX_ATTACHMENT_BYTES) { messageRecordStatus.textContent = 'Attachment is over the 20MB limit.'; return; }
+    if (file && file.size > maxUploadBytes(file)) {
+      messageRecordStatus.textContent = 'This file exceeds the upload limit for its type.';
+      return;
+    }
     var sendBtn = threadForm.querySelector('button[type="submit"]');
     sendBtn.disabled = true;
     messageRecordStart.disabled = true;
