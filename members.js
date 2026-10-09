@@ -652,10 +652,21 @@
           setTimeout(function () { einput.focus(); }, 0);
           return;
         }
-        var ctext = document.createElement('p');
-        ctext.className = 'comment-text';
-        ctext.textContent = c.text || '';
-        row.appendChild(ctext);
+        if (c.text) {
+          var ctext = document.createElement('p');
+          ctext.className = 'comment-text';
+          ctext.textContent = c.text;
+          row.appendChild(ctext);
+        }
+        if (c.attachmentType === 'audio' && safeUrl(c.attachmentURL)) {
+          var voicePlayer = document.createElement('audio');
+          voicePlayer.className = 'comment-voice-player';
+          voicePlayer.controls = true;
+          voicePlayer.preload = 'metadata';
+          voicePlayer.src = safeUrl(c.attachmentURL);
+          voicePlayer.setAttribute('aria-label', 'Voice comment from ' + (c.authorName || 'member'));
+          row.appendChild(voicePlayer);
+        }
         if (currentUid && !isReply) {
           var replyBtn = document.createElement('button');
           replyBtn.type = 'button'; replyBtn.className = 'btn btn-ghost btn-sm comment-del';
@@ -716,20 +727,80 @@
       input.type = 'text'; input.className = 'field-input'; input.placeholder = 'Add a comment...'; input.required = true;
       var btn = document.createElement('button');
       btn.type = 'submit'; btn.className = 'btn btn-ghost btn-sm'; btn.textContent = 'Post';
-      form.appendChild(input); form.appendChild(btn);
+      var voiceBtn = document.createElement('button');
+      voiceBtn.type = 'button'; voiceBtn.className = 'btn btn-ghost btn-sm'; voiceBtn.textContent = '🎙 Voice';
+      var voiceStatus = document.createElement('span');
+      voiceStatus.className = 'form-note comment-voice-status';
+      var voiceSession = null, voiceBlob = null, voicePreviewUrl = null, voiceBusy = false;
+      var voiceStop = document.createElement('button');
+      voiceStop.type = 'button'; voiceStop.className = 'btn btn-ghost btn-sm'; voiceStop.textContent = 'Stop'; voiceStop.hidden = true;
+      var voiceCancel = document.createElement('button');
+      voiceCancel.type = 'button'; voiceCancel.className = 'btn btn-ghost btn-sm'; voiceCancel.textContent = 'Cancel voice'; voiceCancel.hidden = true;
+      form.appendChild(input); form.appendChild(voiceBtn); form.appendChild(btn);
+      form.appendChild(voiceStop); form.appendChild(voiceCancel); form.appendChild(voiceStatus);
+      function resetVoice(discard) {
+        if (discard && voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
+        if (discard) { voiceBlob = null; voicePreviewUrl = null; }
+        voiceSession = null; voiceBusy = false;
+        voiceBtn.disabled = false; voiceBtn.textContent = voiceBlob ? '🎙 Re-record' : '🎙 Voice';
+        voiceStop.hidden = true; voiceCancel.hidden = !voiceBlob;
+        voiceStatus.textContent = voiceBlob ? 'Voice note ready (' + Math.ceil(voiceBlob.size / 1024) + ' KB)' : '';
+        btn.disabled = false;
+      }
+      voiceBtn.addEventListener('click', function () {
+        if (voiceBusy) return;
+        if (voiceBlob) {
+          if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
+          voiceBlob = null; voicePreviewUrl = null;
+        }
+        voiceBusy = true; voiceBtn.disabled = true; btn.disabled = true;
+        voiceStop.hidden = false; voiceCancel.hidden = false;
+        voiceStatus.textContent = 'Requesting microphone…';
+        startVoiceCapture(function (blob, duration) {
+          voiceBlob = blob;
+          voicePreviewUrl = URL.createObjectURL(blob);
+          voiceStatus.textContent = 'Voice note recorded (' + formatVoiceTime(duration) + '). Tap Post to upload.';
+          resetVoice(false);
+        }, function (ms, session) {
+          if (session) voiceSession = session;
+          if (voiceBusy && !voiceBlob) voiceStatus.textContent = 'Recording ' + formatVoiceTime(ms) + ' / 2:00';
+        }, function (err) {
+          voiceStatus.textContent = (err && err.message) || 'Could not record voice note.';
+          resetVoice(true);
+        });
+      });
+      voiceStop.addEventListener('click', function () { if (voiceSession) voiceSession.stop(); });
+      voiceCancel.addEventListener('click', function () {
+        if (voiceSession) voiceSession.cancel();
+        resetVoice(true);
+      });
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         var val = input.value.trim();
-        if (!val) return;
-        btn.disabled = true;
-        input.value = '';
-        db.collection('postComments').add({
-          postId: postId, authorUid: currentUid,
-          authorName: (myProfile && myProfile.displayName) || 'Member',
-          text: val, createdAt: FieldValue.serverTimestamp()
+        if (!val && !voiceBlob) { voiceStatus.textContent = 'Write a comment or record a voice note first.'; return; }
+        if (voiceBusy) { voiceStatus.textContent = 'Stop the recording before posting.'; return; }
+        btn.disabled = true; voiceBtn.disabled = true; voiceStop.disabled = true; voiceCancel.disabled = true;
+        var work = voiceBlob ? uploadToCloudinary(voiceBlobFile(voiceBlob, 'voice-comment')) : Promise.resolve(null);
+        work.then(function (upload) {
+          var comment = {
+            postId: postId, authorUid: currentUid,
+            authorName: (myProfile && myProfile.displayName) || 'Member',
+            text: val, createdAt: FieldValue.serverTimestamp()
+          };
+          if (upload) {
+            comment.attachmentURL = upload.url;
+            comment.attachmentType = 'audio';
+            comment.attachmentName = upload.name;
+          }
+          return db.collection('postComments').add(comment);
         }).then(function () {
+          input.value = '';
+          resetVoice(true);
           return notifyIfNotSelf(postAuthorUid, 'comment', { postId: postId, postTitle: postTitle });
-        }).catch(function () { input.value = val; }).then(function () { btn.disabled = false; });
+        }).catch(function (err) {
+          voiceStatus.textContent = (err && err.message) || 'Comment could not be posted. Please try again.';
+          btn.disabled = false; voiceBtn.disabled = false; voiceStop.disabled = false; voiceCancel.disabled = false;
+        });
       });
       wrap.appendChild(form);
     }

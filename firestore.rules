@@ -324,13 +324,16 @@ service cloud.firestore {
     match /postComments/{id} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() &&
-        request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'createdAt']) &&
+        request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'createdAt', 'attachmentURL', 'attachmentType', 'attachmentName']) &&
         request.resource.data.authorUid == request.auth.uid &&
         request.resource.data.postId is string &&
         exists(/databases/$(database)/documents/posts/$(request.resource.data.postId)) &&
         (!('parentId' in request.resource.data) || request.resource.data.parentId is string) &&
-        request.resource.data.text is string && request.resource.data.text.size() > 0 &&
-        request.resource.data.text.size() <= 1000 &&
+        ((!('text' in request.resource.data)) || (request.resource.data.text is string && request.resource.data.text.size() <= 1000)) &&
+        (('text' in request.resource.data && request.resource.data.text.size() > 0) || ('attachmentURL' in request.resource.data && request.resource.data.attachmentType == 'audio')) &&
+        (!('attachmentURL' in request.resource.data) || (request.resource.data.attachmentURL is string && request.resource.data.attachmentURL.matches('https://res.cloudinary.com/d98pty0j/.*') && request.resource.data.attachmentType == 'audio')) &&
+        (!('attachmentType' in request.resource.data) || request.resource.data.attachmentType == 'audio') &&
+        (!('attachmentName' in request.resource.data) || okStr(request.resource.data.attachmentName, 200)) &&
         okStr(request.resource.data.get('authorName', null), 100) &&
         request.resource.data.createdAt == request.time;
       allow update: if isSignedIn() && (

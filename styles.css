@@ -887,6 +887,9 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .comment-del { margin-top: 0.3rem; }
 .comment-form { display: flex; gap: 0.6rem; }
 .comment-form .field-input { flex: 1; }
+.comment-voice-player { display: block; width: min(100%, 360px); margin: 0.45rem 0; }
+.comment-voice-status { align-self: center; }
+.comment-form button[hidden] { display: none; }
 
 /* AUTH: forgot password link */
 .forgot-link {
