@@ -885,8 +885,8 @@ a:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-r
 .comment-meta { font-family: 'Share Tech Mono', monospace; font-size: 0.68rem; color: var(--green); margin-bottom: 0.15rem; }
 .comment-text { color: var(--text); line-height: 1.5; }
 .comment-del { margin-top: 0.3rem; }
-.comment-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
-.comment-form .field-input { flex: 1 1 180px; min-width: 0; }
+.comment-form { display: flex; gap: 0.6rem; }
+.comment-form .field-input { flex: 1; }
 .comment-voice-player { display: block; width: min(100%, 360px); margin: 0.45rem 0; }
 .comment-voice-status { align-self: center; }
 .comment-form button[hidden] { display: none; }

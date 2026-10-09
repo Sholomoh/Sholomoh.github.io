@@ -41,7 +41,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=50">
+  <link rel="stylesheet" href="styles.css?v=49">
   <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
     <img id="lightbox-img" alt="">
     <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
@@ -363,6 +363,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=35"></script>
+  <script src="members.js?v=34"></script>
 </body>
 </html>

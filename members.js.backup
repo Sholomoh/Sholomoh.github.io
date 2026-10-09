@@ -737,7 +737,7 @@
       var form = document.createElement('form');
       form.className = 'comment-form';
       var input = document.createElement('input');
-      input.type = 'text'; input.className = 'field-input'; input.placeholder = 'Add a comment...'; input.required = false;
+      input.type = 'text'; input.className = 'field-input'; input.placeholder = 'Add a comment...'; input.required = true;
       var btn = document.createElement('button');
       btn.type = 'submit'; btn.className = 'btn btn-ghost btn-sm'; btn.textContent = 'Post';
       var voiceBtn = document.createElement('button');
