@@ -2,6 +2,16 @@
    announces updates, and tells the visitor when they go offline. */
 (function () {
   'use strict';
+  // Clickjacking guard: this site must not be shown inside another website's frame.
+  try {
+    if (window.top !== window.self) {
+      document.documentElement.style.display = 'none';
+      window.top.location.href = window.self.location.href;
+    }
+  } catch (e) {
+    document.documentElement.style.display = 'none';
+  }
+
   var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
   var DISMISS_KEY = 'sholomoh:installDismissed';
   var DAYS14 = 14 * 24 * 3600 * 1000;

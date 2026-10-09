@@ -120,11 +120,24 @@
     return (err && (m[err.code] || err.message)) || 'Something went wrong.';
   }
 
+  // Links to uploaded files are only trusted if they point at THIS site's own Cloudinary
+  // account or Firebase Storage bucket (or are a local preview of a file you just picked).
+  // Anything else — another website, a javascript: link, a data: URL — is ignored.
+  function safeUrl(u) {
+    if (typeof u !== 'string' || !u || u.length > 600) return '';
+    if (u.indexOf('blob:') === 0) return u;
+    var cloud = (window.CLOUDINARY_CONFIG && window.CLOUDINARY_CONFIG.cloudName) || '';
+    var proj = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) || '';
+    if (cloud && u.indexOf('https://res.cloudinary.com/' + cloud + '/') === 0) return u;
+    if (proj && u.indexOf('https://firebasestorage.googleapis.com/v0/b/' + proj + '.') === 0) return u;
+    return '';
+  }
+
   function avatarEl(uid, name) {
     var u = usersByUid[uid];
-    if (u && u.photoURL) {
+    if (u && safeUrl(u.photoURL)) {
       var img = document.createElement('img');
-      img.src = u.photoURL; img.alt = ''; img.className = 'avatar-img';
+      img.src = safeUrl(u.photoURL); img.alt = ''; img.className = 'avatar-img';
       return img;
     }
     var span = document.createElement('span');
@@ -259,7 +272,20 @@
     }).catch(function (err) { showAuthError(friendlyError(err)); });
   });
 
+  function clearLocalPrivateData() {
+    try {
+      var drop = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && (k.indexOf('sholomoh:draft:') === 0 || k.indexOf('sholomoh:chatdraft:') === 0)) drop.push(k);
+      }
+      drop.forEach(function (k) { localStorage.removeItem(k); });
+      sessionStorage.removeItem('sholomoh:tab');
+    } catch (e) {}
+  }
+
   document.getElementById('signout-btn').addEventListener('click', function () {
+    clearLocalPrivateData();
     auth.signOut();
   });
 
@@ -621,7 +647,7 @@
   // the older photoURL-only field for posts created before video/document
   // support existed, which always get treated as an image.
   function buildAttachment(p) {
-    var url = p.attachmentURL || p.photoURL;
+    var url = safeUrl(p.attachmentURL || p.photoURL);
     var type = p.attachmentType || (p.photoURL ? 'image' : null);
     if (!url || !type) return document.createDocumentFragment();
 
@@ -1872,7 +1898,7 @@
     var isPinned = !!opts.pinnedId && item.id === opts.pinnedId;
     var card = document.createElement('article');
     card.className = 'mini-story' + (isPinned ? ' is-pinned' : '');
-    var url = p.attachmentURL || p.photoURL;
+    var url = safeUrl(p.attachmentURL || p.photoURL);
     var type = p.attachmentType || (p.photoURL ? 'image' : null);
     if (url && type === 'image') {
       var img = document.createElement('img');
@@ -2268,6 +2294,7 @@
   profileBio.addEventListener('input', updateBioCount);
 
   function applyCover(bannerEl, url) {
+    url = safeUrl(url);
     if (url) {
       bannerEl.style.backgroundImage = 'url("' + String(url).replace(/"/g, '%22') + '")';
       bannerEl.classList.add('has-cover');
@@ -2300,7 +2327,7 @@
 
   function renderProfilePreview(overridePhotoUrl, overrideCoverUrl) {
     profilePreviewAvatar.innerHTML = '';
-    var photo = overridePhotoUrl || (myProfile && myProfile.photoURL);
+    var photo = safeUrl(overridePhotoUrl || (myProfile && myProfile.photoURL));
     if (photo) {
       var img = document.createElement('img');
       img.src = photo; img.alt = ''; img.className = 'avatar-img';
