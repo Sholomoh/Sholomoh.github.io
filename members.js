@@ -780,6 +780,8 @@
           voiceBlob = null; voicePreviewUrl = null;
         }
         voiceBusy = true; voiceBtn.disabled = true; btn.disabled = true;
+	voicePlayer.hidden = true;
+        voicePlayer.pause();
         voiceStop.hidden = false; voiceCancel.hidden = false;
         voiceStatus.textContent = 'Requesting microphone…';
         startVoiceCapture(function (blob, duration) {
