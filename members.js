@@ -744,16 +744,29 @@
       voiceBtn.type = 'button'; voiceBtn.className = 'btn btn-ghost btn-sm'; voiceBtn.textContent = '🎙 Voice';
       var voiceStatus = document.createElement('span');
       voiceStatus.className = 'form-note comment-voice-status';
+      var voicePlayer = document.createElement('audio');
+      voicePlayer.className = 'comment-voice-player';
+      voicePlayer.controls = true;
+      voicePlayer.preload = 'metadata';
+      voicePlayer.hidden = true;
       var voiceSession = null, voiceBlob = null, voicePreviewUrl = null, voiceBusy = false;
       var voiceStop = document.createElement('button');
       voiceStop.type = 'button'; voiceStop.className = 'btn btn-ghost btn-sm'; voiceStop.textContent = 'Stop'; voiceStop.hidden = true;
       var voiceCancel = document.createElement('button');
       voiceCancel.type = 'button'; voiceCancel.className = 'btn btn-ghost btn-sm'; voiceCancel.textContent = 'Cancel voice'; voiceCancel.hidden = true;
       form.appendChild(input); form.appendChild(voiceBtn); form.appendChild(btn);
-      form.appendChild(voiceStop); form.appendChild(voiceCancel); form.appendChild(voiceStatus);
+      form.appendChild(voiceStop); form.appendChild(voiceCancel);
+      form.appendChild(voiceStatus); form.appendChild(voicePlayer);
       function resetVoice(discard) {
-        if (discard && voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
-        if (discard) { voiceBlob = null; voicePreviewUrl = null; }
+        if (discard) {
+          if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
+          voiceBlob = null;
+          voicePreviewUrl = null;
+          voicePlayer.pause();
+          voicePlayer.removeAttribute('src');
+          voicePlayer.hidden = true;
+          voicePlayer.load();
+        }
         voiceSession = null; voiceBusy = false;
         voiceBtn.disabled = false; voiceBtn.textContent = voiceBlob ? '🎙 Re-record' : '🎙 Voice';
         voiceStop.hidden = true; voiceCancel.hidden = !voiceBlob;
@@ -772,8 +785,11 @@
         startVoiceCapture(function (blob, duration) {
           voiceBlob = blob;
           voicePreviewUrl = URL.createObjectURL(blob);
-          voiceStatus.textContent = 'Voice note recorded (' + formatVoiceTime(duration) + '). Tap Post to upload.';
+          voicePlayer.src = voicePreviewUrl;
+          voicePlayer.hidden = false;
+          voicePlayer.load();
           resetVoice(false);
+          voiceStatus.textContent = 'Voice note recorded. Listen before posting.';
         }, function (ms, session) {
           if (session) voiceSession = session;
           if (voiceBusy && !voiceBlob) voiceStatus.textContent = 'Recording ' + formatVoiceTime(ms) + ' / 2:00';
