@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Members — Fidel Kenyatta</title>
+  <meta name="description" content="Sign in or create a free account to read member and partner stories and updates from Fidel Kenyatta."/>
+  <link rel="canonical" href="https://sholomoh.github.io/members.html"/>
+  <meta name="theme-color" content="#060a0f"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Fidel Kenyatta"/>
+  <meta property="og:title" content="Members — Fidel Kenyatta"/>
+  <meta property="og:description" content="Sign in or create a free account to read member and partner stories and updates."/>
+  <meta property="og:url" content="https://sholomoh.github.io/members.html"/>
+  <meta property="og:image" content="https://sholomoh.github.io/og-image.png"/>
+  <meta property="og:image:width" content="1200"/>
+  <meta property="og:image:height" content="630"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="robots" content="noindex"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+  <link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Fidel K.">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <script>
+    // If this browser was signed in last time, hide the sign-in form until we know for sure
+    // (avoids a flash of the sign-in page on reload). Falls back after 6s so it can never stick.
+    (function () {
+      try {
+        if (localStorage.getItem('sholomoh:signedIn') === '1') {
+          var d = document.documentElement;
+          d.classList.add('was-signed-in');
+          setTimeout(function () { d.classList.remove('was-signed-in'); }, 6000);
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css?v=51">
+  <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
+    <img id="lightbox-img" alt="">
+    <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
+  </div>
+  <div class="crop-modal" id="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-title" hidden>
+    <div class="crop-box likes-box">
+      <p class="crop-title" id="report-title">Report</p>
+      <label class="field-label">Reason
+        <select id="report-reason" class="field-input">
+          <option>Spam</option>
+          <option>Harassment or bullying</option>
+          <option>Inappropriate content</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label class="field-label">Details (optional)
+        <textarea id="report-details" class="story-input" rows="3" maxlength="300" placeholder="Anything that helps an admin understand..."></textarea>
+      </label>
+      <p id="report-status" class="form-note"></p>
+      <div class="form-actions">
+        <button type="button" id="report-send" class="btn btn-primary btn-sm">Send report</button>
+        <button type="button" id="report-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div class="crop-modal" id="likes-modal" role="dialog" aria-modal="true" aria-labelledby="likes-title" hidden>
+    <div class="crop-box likes-box">
+      <p class="crop-title" id="likes-title">Liked by</p>
+      <div id="likes-list"></div>
+      <div class="form-actions"><button type="button" id="likes-close" class="btn btn-ghost btn-sm">Close</button></div>
+    </div>
+  </div>
+  <div class="crop-modal" id="crop-modal" role="dialog" aria-modal="true" aria-labelledby="crop-title" hidden>
+    <div class="crop-box">
+      <p class="crop-title" id="crop-title">Adjust your photo</p>
+      <canvas id="crop-canvas" width="280" height="280" tabindex="0" role="img" aria-label="Photo crop area. Use arrow keys to move, plus and minus to zoom."></canvas>
+      <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1" aria-label="Zoom">
+      <p class="form-note">Drag to reposition, slider to zoom.</p>
+      <div class="form-actions">
+        <button type="button" id="crop-apply" class="btn btn-primary btn-sm">Use photo</button>
+        <button type="button" id="crop-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <script src="circuit-bg.js?v=3" defer></script>
+  <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  <script src="app.js?v=2" defer></script>
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="nav-logo"><img src="avatar.jpg?v=1" alt="" class="nav-avatar" width="38" height="38"><span class="nav-name"><span class="nav-prefix">~/</span>fidelkenyatta</span></a>
+    <ul>
+      <li><a href="services.html">Services</a></li>
+      <li><a href="skills.html">Skills</a></li>
+      <li><a href="projects.html">Projects</a></li>
+      <li><a href="certs.html">Certs</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a href="members.html" class="active">Members</a></li>
+    </ul>
+  </nav>
+
+  <div class="page">
+    <a href="index.html" class="back-link">← Home</a>
+    <div class="page-label">// 07</div>
+    <h1 class="page-title">Members</h1>
+    <p class="page-intro">Stories and updates for members and partners. Create a free account to read them — posting is by approval.</p>
+
+    <p class="auth-loading form-note" id="auth-loading">Loading your account…</p>
+    <div id="auth-section">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" data-tab="signin">Sign in</button>
+          <button type="button" class="auth-tab" data-tab="signup">Create account</button>
+        </div>
+        <form id="signin-form" class="auth-form">
+          <input type="email" id="signin-email" class="field-input" placeholder="Email" required autocomplete="email">
+          <input type="password" id="signin-password" class="field-input" placeholder="Password" required autocomplete="current-password">
+          <button type="submit" class="btn btn-primary">Sign in</button>
+          <button type="button" id="forgot-password-btn" class="forgot-link">Forgot password?</button>
+        </form>
+        <form id="signup-form" class="auth-form" hidden>
+          <input type="text" id="signup-name" class="field-input" placeholder="Your name" required autocomplete="name" maxlength="60">
+          <input type="email" id="signup-email" class="field-input" placeholder="Email" required autocomplete="email">
+          <input type="password" id="signup-password" class="field-input" placeholder="Password (6+ characters)" required minlength="6" autocomplete="new-password">
+          <button type="submit" class="btn btn-primary">Create account</button>
+        </form>
+        <p id="auth-error" class="form-error"></p>
+      </div>
+    </div>
+
+    <div id="app-section" hidden>
+      <div class="member-bar">
+        <span id="who-am-i"></span>
+        <div class="member-bar-right">
+          <button type="button" id="notif-bell" class="btn btn-ghost btn-sm notif-bell" aria-label="Notifications" aria-expanded="false" aria-controls="notif-panel">🔔<span id="notif-badge" class="badge notif-badge" hidden>0</span></button>
+          <button id="signout-btn" class="btn btn-ghost btn-sm">Sign out</button>
+        </div>
+      </div>
+      <div id="notif-panel" class="notif-panel" hidden>
+        <div class="notif-panel-head">
+          <p>Notifications</p>
+          <div class="notif-actions">
+            <button type="button" id="notif-markall" class="btn btn-ghost btn-sm">Mark all read</button>
+            <button type="button" id="notif-clear" class="btn btn-ghost btn-sm">Clear all</button>
+          </div>
+        </div>
+        <div id="notif-list"></div>
+      </div>
+
+      <div class="tabs-row" id="main-tabs">
+        <button type="button" class="tab-btn active" data-tab="stories">Stories</button>
+        <button type="button" class="tab-btn" data-tab="members">Members</button>
+        <button type="button" class="tab-btn" data-tab="requests">Requests<span id="requests-badge" class="badge" hidden>0</span></button>
+        <button type="button" class="tab-btn" data-tab="messages">Messages<span id="messages-badge" class="badge" hidden>0</span></button>
+        <button type="button" class="tab-btn" data-tab="profile">My Profile</button>
+        <button type="button" class="tab-btn" id="admin-tab-btn" data-tab="admin" hidden>Admin<span id="admin-badge" class="badge" hidden>0</span></button>
+      </div>
+
+      <!-- STORIES -->
+      <div class="tab-panel active" id="tab-stories">
+        <div id="story-focus" hidden>
+          <button type="button" id="story-focus-back" class="btn btn-ghost btn-sm">← Back to feed</button>
+          <button type="button" id="story-focus-copy" class="btn btn-ghost btn-sm">🔗 Copy link</button>
+          <div id="story-focus-card"></div>
+        </div>
+        <div id="composer-wrap" hidden>
+          <button type="button" id="composer-toggle" class="btn btn-primary btn-sm composer-toggle-btn">+ New story</button>
+          <div id="composer" hidden>
+            <h2>New story</h2>
+            <form id="post-form">
+              <input type="text" id="post-title" class="field-input" placeholder="Title (optional for a voice note)" maxlength="120">
+              <textarea id="post-body" class="story-input" placeholder="Write your story or add a voice note..."></textarea>
+              <label class="file-label">Attach an image, video, audio, or document (optional)<input type="file" id="post-attachment" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"></label>
+              <div class="voice-tools" aria-label="Voice note recorder">
+                <button type="button" id="post-record-start" class="btn btn-ghost btn-sm">🎙 Record voice note</button>
+                <button type="button" id="post-record-stop" class="btn btn-ghost btn-sm" hidden>Stop recording</button>
+                <span id="post-record-status" class="form-note" aria-live="polite">Maximum 2 minutes</span>
+                <audio id="post-voice-preview" controls preload="metadata" hidden></audio>
+                <button type="button" id="post-voice-clear" class="btn btn-ghost btn-sm" hidden>Remove recording</button>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Post</button>
+                <button type="button" id="composer-cancel" class="btn btn-ghost btn-sm">Cancel</button>
+              </div>
+              <p id="post-status" class="form-note"></p>
+            </form>
+          </div>
+        </div>
+
+        <div id="request-access" hidden>
+          <p>Want to post stories? <button type="button" id="request-btn" class="btn btn-ghost btn-sm">Request posting access</button></p>
+          <p id="request-status" class="form-note"></p>
+        </div>
+
+        <div class="subtabs-row" id="feed-subtabs">
+          <button type="button" class="subtab-btn active" data-subtab="community">Community</button>
+          <button type="button" class="subtab-btn" data-subtab="friends">Friends</button>
+        </div>
+
+        <div class="member-tools feed-tools" id="feed-tools">
+          <input type="search" id="feed-search" class="field-input" placeholder="Search stories or authors..." autocomplete="off">
+          <select id="feed-sort" class="field-input" aria-label="Sort stories">
+            <option value="new">Newest</option>
+            <option value="liked">Most liked</option>
+          </select>
+          <select id="feed-filter" class="field-input" aria-label="Filter stories">
+            <option value="all">All</option>
+            <option value="media">With media</option>
+          </select>
+        </div>
+        <button type="button" id="new-stories-pill" class="new-pill" hidden></button>
+        <div id="feed"></div>
+      </div>
+
+      <!-- MEMBERS DIRECTORY -->
+      <div class="tab-panel" id="tab-members" hidden>
+        <p class="page-intro-sm">Everyone who's signed up. Connect to see each other's stories in your Friends feed.</p>
+        <p id="online-summary" class="online-summary" hidden></p>
+        <div class="member-tools" id="member-tools">
+          <input type="search" id="member-search" class="field-input" placeholder="Search name, location or interest..." autocomplete="off">
+          <select id="member-sort" class="field-input" aria-label="Sort members">
+            <option value="az">A–Z</option>
+            <option value="new">Newest</option>
+          </select>
+        </div>
+        <div id="members-list"></div>
+        <div id="member-profile" hidden>
+          <button type="button" id="member-profile-back" class="btn btn-ghost btn-sm">← Back to members</button>
+          <div id="member-profile-card"></div>
+          <h2 class="mt profile-section-title">Stories</h2>
+          <div id="member-profile-stories"></div>
+        </div>
+      </div>
+
+      <!-- FRIEND REQUESTS -->
+      <div class="tab-panel" id="tab-requests" hidden>
+        <h2>Incoming</h2>
+        <div id="incoming-requests-list"></div>
+        <h2 class="mt">Sent</h2>
+        <div id="outgoing-requests-list"></div>
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="tab-panel" id="tab-messages" hidden>
+        <div id="inbox-view">
+          <div id="inbox-list"></div>
+        </div>
+        <div id="thread-view" hidden>
+          <button type="button" id="thread-back" class="btn btn-ghost btn-sm">← Back to messages</button>
+          <h2 id="thread-with" class="thread-with"></h2>
+          <p id="thread-presence" class="thread-presence" hidden></p>
+          <div id="thread-messages"></div>
+          <p id="thread-typing" class="form-note thread-typing" hidden aria-live="polite">typing…</p>
+          <div class="message-tools">
+            <label class="file-label message-file-label">📎 Attach file
+              <input type="file" id="message-attachment" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt">
+            </label>
+            <button type="button" id="message-record-start" class="btn btn-ghost btn-sm">🎙 Voice note</button>
+            <button type="button" id="message-record-stop" class="btn btn-ghost btn-sm" hidden>Stop recording</button>
+            <span id="message-record-status" class="form-note" aria-live="polite">Voice notes up to 2 minutes</span>
+            <button type="button" id="message-file-clear" class="btn btn-ghost btn-sm" hidden>Remove file</button>
+            <audio id="message-voice-preview" controls preload="metadata" hidden></audio>
+            <button type="button" id="message-voice-clear" class="btn btn-ghost btn-sm" hidden>Remove recording</button>
+          </div>
+          <form id="thread-form">
+            <textarea id="thread-input" class="field-input" rows="1" maxlength="2000" placeholder="Write a message..." aria-label="Message text"></textarea>
+            <button type="submit" class="btn btn-primary btn-sm">Send</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- MY PROFILE -->
+      <div class="tab-panel" id="tab-profile" hidden>
+        <div class="profile-preview" id="profile-preview">
+          <div class="profile-banner" id="profile-banner"></div>
+          <div class="profile-preview-body">
+            <div class="profile-preview-top">
+              <span id="profile-preview-avatar" class="profile-avatar-wrap"></span>
+              <button type="button" id="profile-edit-btn" class="btn btn-ghost btn-sm profile-edit-btn">Edit profile</button>
+            </div>
+            <p class="profile-preview-name" id="profile-preview-name"></p>
+            <p class="presence presence-block" id="profile-presence-note" hidden></p>
+            <p class="profile-preview-location" id="profile-preview-location" hidden></p>
+            <p class="profile-preview-bio" id="profile-preview-bio"></p>
+            <div class="chips" id="profile-preview-chips"></div>
+            <div class="profile-complete" id="profile-complete" hidden>
+              <div class="profile-complete-head"><span id="profile-complete-text"></span><span id="profile-complete-pct"></span></div>
+              <div class="profile-complete-bar"><span id="profile-complete-fill"></span></div>
+            </div>
+            <div class="profile-stats" id="profile-stats"></div>
+          </div>
+        </div>
+        <form id="profile-form" hidden>
+          <label class="field-label">Name<input type="text" id="profile-name" class="field-input" required maxlength="60"></label>
+          <label class="field-label">Bio <span class="char-count" id="profile-bio-count">0/160</span><textarea id="profile-bio" class="story-input profile-bio-input" maxlength="160" placeholder="A line about yourself..."></textarea></label>
+          <label class="field-label">Interests (comma-separated, up to 6)<input type="text" id="profile-interests" class="field-input" placeholder="e.g. python, cybersecurity, hiking" maxlength="140"></label>
+          <label class="field-label">Location<input type="text" id="profile-location" class="field-input" placeholder="City, Country"></label>
+          <label class="file-label">Cover photo<input type="file" id="profile-cover" accept="image/*"></label>
+          <p id="profile-cover-pending" class="form-note pending-note" hidden>Preview only — not saved yet. <button type="button" id="profile-cover-cancel" class="btn btn-ghost btn-sm">Cancel</button></p>
+          <p class="form-note"><button type="button" id="profile-cover-remove" class="btn btn-ghost btn-sm" hidden>Remove cover photo</button></p>
+          <label class="file-label">Profile photo<input type="file" id="profile-photo" accept="image/*"></label>
+          <p id="profile-photo-pending" class="form-note pending-note" hidden>Preview only — not saved yet. <button type="button" id="profile-photo-cancel" class="btn btn-ghost btn-sm">Cancel</button></p>
+          <label class="check-label"><input type="checkbox" id="profile-hide-location"> Only friends can see my location</label>
+          <label class="check-label"><input type="checkbox" id="profile-hide-stats"> Hide my stats card from non-friends</label>
+          <label class="check-label"><input type="checkbox" id="profile-show-presence" checked> Show when I'm online and last seen (turn off to hide yours and not see others')</label>
+          <label class="check-label"><input type="checkbox" id="profile-show-friends" checked> Let my friends see which friends we have in common</label>
+          <label class="field-label" id="profile-dob-wrap">Date of birth (private — shown only to you, set once)<input type="date" id="profile-dob" class="field-input"></label>
+          <p class="form-note">Email: <span id="profile-email"></span> (can't be changed)</p>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save profile</button>
+            <button type="button" id="profile-cancel-btn" class="btn btn-ghost btn-sm">Cancel</button>
+          </div>
+          <p id="profile-status" class="form-note"></p>
+        </form>
+        <h2 class="mt profile-section-title">My stories</h2>
+        <div id="profile-stories"></div>
+        <h2 class="mt profile-section-title">Saved stories</h2>
+        <div id="profile-saved"></div>
+        <details class="danger-details">
+          <summary>Account settings</summary>
+        <h3 class="profile-section-title">Blocked members</h3>
+        <div id="blocked-list"></div>
+        <div class="danger-zone" id="danger-zone">
+          <h3>Delete account</h3>
+          <p class="form-note">This permanently deletes your profile, stories, comments, likes and friend connections. It can't be undone. Messages you've already sent stay in the other person's inbox.</p>
+          <button type="button" id="delete-account-btn" class="btn btn-ghost btn-sm btn-danger">Delete my account</button>
+          <form id="delete-account-form" hidden>
+            <label class="field-label">Confirm your password<input type="password" id="delete-password" class="field-input" autocomplete="current-password" required></label>
+            <label class="field-label">Type DELETE to confirm<input type="text" id="delete-confirm" class="field-input" autocomplete="off" required></label>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-ghost btn-sm btn-danger">Permanently delete</button>
+              <button type="button" id="delete-cancel-btn" class="btn btn-ghost btn-sm">Cancel</button>
+            </div>
+            <p id="delete-status" class="form-error"></p>
+          </form>
+        </div>
+        </details>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="tab-panel" id="tab-admin" hidden>
+        <h2>Pending posting requests</h2>
+        <div id="requests-list"></div>
+        <h2 class="mt">Approved posters</h2>
+        <div id="posters-list"></div>
+        <h2 class="mt">Reports</h2>
+        <div id="reports-list"></div>
+        <h2 class="mt">Privacy cleanup</h2>
+        <p class="form-note">Finds stories and comments where an email address was saved as the author's name, and replaces it with the member's display name.</p>
+        <button type="button" id="scrub-scan" class="btn btn-ghost btn-sm">Scan for emails in names</button>
+        <div id="scrub-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer><p>© 2026 <span>Fidel Kenyatta</span> · Nakuru, Kenya</p></footer>
+
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="members.js?v=38"></script>
+</body>
+</html>

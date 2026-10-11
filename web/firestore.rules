@@ -1,0 +1,355 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    function isPoster() {
+      return isSignedIn() &&
+        (isAdmin() || exists(/databases/$(database)/documents/posters/$(request.auth.uid)));
+    }
+
+    // True when a and b have an accepted friend request in either direction.
+    function isAcceptedFriend(a, b) {
+      return (exists(/databases/$(database)/documents/friendRequests/$(a + '_' + b)) &&
+              get(/databases/$(database)/documents/friendRequests/$(a + '_' + b)).data.status == 'accepted') ||
+             (exists(/databases/$(database)/documents/friendRequests/$(b + '_' + a)) &&
+              get(/databases/$(database)/documents/friendRequests/$(b + '_' + a)).data.status == 'accepted');
+    }
+
+    // Text is a string no longer than n (or absent).
+    function okStr(v, n) { return v == null || (v is string && v.size() <= n); }
+
+    // An uploaded-file link must point at this site's own Cloudinary account (or be empty).
+    function okUrl(v) {
+      return v == null || v == '' ||
+        (v is string && v.size() <= 600 && v.matches('https://res\\.cloudinary\\.com/d98pty0j/.*'));
+    }
+
+    // Other participant of a two-person conversation.
+    function otherOf(p, uid) { return p[0] == uid ? p[1] : p[0]; }
+
+    // True when `blocker` has blocked `blocked` (doc id is "{blocker}_{blocked}").
+    function isBlocked(blocker, blocked) {
+      return exists(/databases/$(database)/documents/blocks/$(blocker + '_' + blocked));
+    }
+
+    // Public profile info. Each user manages their own doc. Email addresses
+    // are no longer stored here (existing ones can only be removed, never
+    // changed or added); createdAt is locked after creation.
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        okStr(request.resource.data.get('displayName', null), 100) &&
+        okStr(request.resource.data.get('bio', null), 300) &&
+        okStr(request.resource.data.get('location', null), 100) &&
+        okUrl(request.resource.data.get('photoURL', null)) &&
+        okUrl(request.resource.data.get('coverURL', null));
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        (request.resource.data.get('displayName', null) == resource.data.get('displayName', null) ||
+         (request.resource.data.displayName is string && request.resource.data.displayName.size() > 0 &&
+          request.resource.data.displayName.size() <= 100)) &&
+        (request.resource.data.get('bio', null) == resource.data.get('bio', null) ||
+         okStr(request.resource.data.get('bio', null), 300)) &&
+        (request.resource.data.get('location', null) == resource.data.get('location', null) ||
+         okStr(request.resource.data.get('location', null), 100)) &&
+        (request.resource.data.get('photoURL', null) == resource.data.get('photoURL', null) ||
+         okUrl(request.resource.data.get('photoURL', null))) &&
+        (request.resource.data.get('coverURL', null) == resource.data.get('coverURL', null) ||
+         okUrl(request.resource.data.get('coverURL', null))) &&
+        (request.resource.data.get('email', null) == null ||
+         request.resource.data.get('email', null) == resource.data.get('email', null)) &&
+        request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null) &&
+        (!('dob' in resource.data) || resource.data.dob == null ||
+         !('dob' in request.resource.data) ||
+         request.resource.data.dob == resource.data.dob);
+      // Members can delete their own profile (account deletion).
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Date of birth: readable and writable only by its owner, set once.
+    match /userDob/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['dob']);
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.dob == resource.data.dob;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Friends-only location: used when a member hides their location on
+    // the public users doc. Readable by the owner and accepted friends.
+    match /userLocations/{uid} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == uid || isAcceptedFriend(request.auth.uid, uid));
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['location']) &&
+        request.resource.data.location is string &&
+        request.resource.data.location.size() <= 100;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Blocks. Only the blocker can see or manage their own; the blocked person
+    // can't read them, but the rules here use them to refuse messages,
+    // friend requests and notifications from the blocked member.
+    match /blocks/{blockId} {
+      allow read: if isSignedIn() && resource.data.blockerUid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.resource.data.blockerUid == request.auth.uid &&
+        request.resource.data.blockedUid != request.auth.uid &&
+        blockId == request.auth.uid + '_' + request.resource.data.blockedUid;
+      allow delete: if isSignedIn() && resource.data.blockerUid == request.auth.uid;
+    }
+
+    // Reports about a story or comment. Anyone signed in can file one (one per
+    // reporter per item); only admins can read, resolve or remove them.
+    match /reports/{reportId} {
+      allow create: if isSignedIn() &&
+        request.resource.data.reporterUid == request.auth.uid &&
+        reportId == request.auth.uid + '_' + request.resource.data.targetId &&
+        request.resource.data.keys().hasOnly(['type', 'targetId', 'postId', 'reportedUid', 'reportedName',
+          'reporterUid', 'reason', 'details', 'snippet', 'status', 'createdAt']) &&
+        request.resource.data.reason is string && request.resource.data.reason.size() <= 40 &&
+        request.resource.data.details.size() <= 300;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Online status: one doc per member holding just a server-stamped lastSeen.
+    // Members who hide their status delete their doc and stop writing it.
+    match /presence/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['lastSeen']) &&
+        request.resource.data.lastSeen == request.time;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Saved stories: private bookmarks. Only the owner can see or change them.
+    match /savedPosts/{id} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        id == request.auth.uid + '_' + request.resource.data.postId &&
+        request.resource.data.keys().hasOnly(['uid', 'postId', 'createdAt']) &&
+        request.resource.data.createdAt == request.time;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // Friend lists, for "mutual friends". Each member writes only their own list;
+    // it's readable by them and by their accepted friends (and nobody else).
+    match /friendLists/{uid} {
+      allow read: if isSignedIn() &&
+        (request.auth.uid == uid || isAcceptedFriend(request.auth.uid, uid));
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['uids']) &&
+        request.resource.data.uids is list && request.resource.data.uids.size() <= 500;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Admin allowlist. Add yourself here manually in the Firebase console
+    // after your first sign-up — the app can never write to this collection.
+    match /admins/{uid} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Partners approved to post. Only an admin can grant this.
+    match /posters/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // "Request posting access" requests. A member can create their own;
+    // only an admin can approve (update) or clear (delete) one.
+    match /posterRequests/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
+
+    // Friend (connect) requests. Doc id is "{fromUid}_{toUid}". Either
+    // side can read or delete (delete = cancel a pending request, or
+    // unfriend an accepted one). The recipient can accept/decline a
+    // pending request; the original sender can re-send after a decline.
+    match /friendRequests/{reqId} {
+      allow read: if isSignedIn() &&
+        (resource == null || resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUid == request.auth.uid &&
+        request.resource.data.toUid != request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        okStr(request.resource.data.get('fromName', null), 100) &&
+        okStr(request.resource.data.get('toName', null), 100) &&
+        !isBlocked(request.resource.data.toUid, request.auth.uid);
+      allow update: if isSignedIn() &&
+        request.resource.data.fromUid == resource.data.fromUid &&
+        request.resource.data.toUid == resource.data.toUid && (
+          (resource.data.toUid == request.auth.uid && resource.data.status == 'pending' &&
+           (request.resource.data.status == 'accepted' || request.resource.data.status == 'declined')) ||
+          (resource.data.fromUid == request.auth.uid && resource.data.status == 'declined' &&
+           request.resource.data.status == 'pending')
+        );
+      allow delete: if isSignedIn() &&
+        (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+    }
+
+    // Activity notifications (new message, a like on your post). Only the
+    // recipient can ever read their own notifications. Senders can create
+    // one for someone else but never for themselves; the recipient can
+    // only flip "read" and nothing else about an entry they didn't send.
+    match /notifications/{id} {
+      allow read: if isSignedIn() && resource.data.toUid == request.auth.uid;
+      // Only the kinds of notification the app really sends, with only the
+      // fields it writes, unread, server-timestamped and of sane length — so
+      // the collection can't be used to push arbitrary text at someone.
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUid == request.auth.uid &&
+        request.resource.data.toUid != request.auth.uid &&
+        !isBlocked(request.resource.data.toUid, request.auth.uid) &&
+        request.resource.data.type in ['like', 'comment', 'reply', 'message', 'friendRequest', 'friendAccept'] &&
+        request.resource.data.keys().hasOnly(['toUid', 'fromUid', 'fromName', 'type', 'read',
+          'createdAt', 'postId', 'postTitle', 'convId']) &&
+        request.resource.data.read == false &&
+        request.resource.data.createdAt == request.time &&
+        (!('fromName' in request.resource.data) || (request.resource.data.fromName is string &&
+          request.resource.data.fromName.size() <= 100)) &&
+        (!('postTitle' in request.resource.data) || request.resource.data.postTitle == null ||
+          (request.resource.data.postTitle is string && request.resource.data.postTitle.size() <= 300));
+      allow update: if isSignedIn() && resource.data.toUid == request.auth.uid &&
+        request.resource.data.toUid == resource.data.toUid &&
+        request.resource.data.fromUid == resource.data.fromUid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      // Recipients can clear their own notifications
+      allow delete: if isSignedIn() && resource.data.toUid == request.auth.uid;
+    }
+
+    // Direct messages. Conversation id is the two participant uids,
+    // sorted and joined with "_", so starting a chat with someone
+    // always resolves to the same thread. Any signed-in member can
+    // message any member — this isn't limited to friends.
+    match /conversations/{convId} {
+      allow read: if isSignedIn() &&
+        (resource == null || request.auth.uid in resource.data.participants);
+      // The id must be the two participants' uids, sorted and joined — so nobody
+      // can pre-create someone else's conversation under their id.
+      allow create: if isSignedIn() &&
+        request.auth.uid in request.resource.data.participants &&
+        request.resource.data.participants.size() == 2 &&
+        request.resource.data.participants[0] < request.resource.data.participants[1] &&
+        convId == request.resource.data.participants[0] + '_' + request.resource.data.participants[1] &&
+        okStr(request.resource.data.get('lastMessage', null), 2000);
+      allow update: if isSignedIn() &&
+        request.auth.uid in resource.data.participants &&
+        request.resource.data.participants == resource.data.participants &&
+        okStr(request.resource.data.get('lastMessage', null), 2000);
+
+      match /messages/{msgId} {
+        // Participants come from the conversation id itself, so a chat works before
+        // its conversation record exists (it's created with the first message).
+        allow read: if isSignedIn() && request.auth.uid in convId.split('_');
+        allow create: if isSignedIn() &&
+          request.auth.uid in convId.split('_') &&
+          request.resource.data.keys().hasOnly(['fromUid', 'text', 'createdAt', 'attachmentURL', 'attachmentType', 'attachmentName']) &&
+          request.resource.data.fromUid == request.auth.uid &&
+          request.resource.data.get('text', '') is string && request.resource.data.get('text', '').size() <= 2000 &&
+          (request.resource.data.get('text', '').size() > 0 ||
+           (request.resource.data.get('attachmentURL', null) is string && request.resource.data.get('attachmentURL', '').size() > 0 && okUrl(request.resource.data.get('attachmentURL', null)))) &&
+          okUrl(request.resource.data.get('attachmentURL', null)) &&
+          (request.resource.data.get('attachmentType', null) == null ||
+           request.resource.data.get('attachmentType', null) in ['image', 'video', 'audio', 'document']) &&
+          okStr(request.resource.data.get('attachmentName', null), 180) &&
+          !isBlocked(otherOf(convId.split('_'), request.auth.uid), request.auth.uid);
+        // You can delete your own messages
+        allow delete: if isSignedIn() && resource.data.fromUid == request.auth.uid;
+      }
+    }
+
+    // Stories. Counts are derived from postLikes/postComments documents in the
+    // client, so no client is allowed to write likeCount/commentCount fields.
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isPoster() && request.resource.data.authorUid == request.auth.uid &&
+        !('likeCount' in request.resource.data) && !('commentCount' in request.resource.data) &&
+        request.resource.data.title is string && request.resource.data.title.size() <= 200 &&
+        request.resource.data.body is string && request.resource.data.body.size() <= 10000 &&
+        okStr(request.resource.data.get('authorName', null), 100) &&
+        okUrl(request.resource.data.get('attachmentURL', null)) &&
+        okUrl(request.resource.data.get('photoURL', null));
+      // Authors/admins can edit story content, but cannot modify counters or
+      // change ownership/creation time. Counter values on old documents, if any,
+      // are immutable and are ignored by the updated client.
+      allow update: if isSignedIn() &&
+        (resource.data.authorUid == request.auth.uid || isAdmin()) &&
+        request.resource.data.authorUid == resource.data.authorUid &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'body', 'attachmentURL', 'attachmentType', 'attachmentName',
+          'photoURL', 'updatedAt', 'authorName'
+        ]) &&
+        (request.resource.data.get('title', null) == resource.data.get('title', null) ||
+         (request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200)) &&
+        (request.resource.data.get('body', null) == resource.data.get('body', null) ||
+         (request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 10000)) &&
+        (request.resource.data.get('attachmentURL', null) == resource.data.get('attachmentURL', null) ||
+         okUrl(request.resource.data.get('attachmentURL', null))) &&
+        (request.resource.data.get('photoURL', null) == resource.data.get('photoURL', null) ||
+         okUrl(request.resource.data.get('photoURL', null))) &&
+        (request.resource.data.get('authorName', null) == resource.data.get('authorName', null) ||
+         (isAdmin() && okStr(request.resource.data.get('authorName', null), 100)));
+      allow delete: if isSignedIn() &&
+        (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    // One like per signed-in member per post. The document ID is fixed to
+    // postId_uid so users cannot create multiple likes with custom IDs.
+    match /postLikes/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(['postId', 'uid', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.postId is string &&
+        id == request.resource.data.postId + '_' + request.auth.uid &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/posts/$(request.resource.data.postId));
+      allow delete: if isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        id == resource.data.postId + '_' + request.auth.uid;
+    }
+
+    // Comments count themselves by existing as documents; clients never update
+    // a post's counter. The comment must belong to an existing story.
+    match /postComments/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'createdAt', 'attachmentURL', 'attachmentType', 'attachmentName']) &&
+        request.resource.data.authorUid == request.auth.uid &&
+        request.resource.data.postId is string &&
+        exists(/databases/$(database)/documents/posts/$(request.resource.data.postId)) &&
+        (!('parentId' in request.resource.data) || request.resource.data.parentId is string) &&
+        ((!('text' in request.resource.data)) || (request.resource.data.text is string && request.resource.data.text.size() <= 1000)) &&
+        (('text' in request.resource.data && request.resource.data.text.size() > 0) || ('attachmentURL' in request.resource.data && request.resource.data.attachmentType == 'audio')) &&
+        (!('attachmentURL' in request.resource.data) || (request.resource.data.attachmentURL is string && request.resource.data.attachmentURL.size() > 0 && okUrl(request.resource.data.attachmentURL) && request.resource.data.attachmentType == 'audio')) &&
+        (!('attachmentType' in request.resource.data) || request.resource.data.attachmentType == 'audio') &&
+        (!('attachmentName' in request.resource.data) || okStr(request.resource.data.attachmentName, 200)) &&
+        okStr(request.resource.data.get('authorName', null), 100) &&
+        request.resource.data.createdAt == request.time;
+      allow update: if isSignedIn() && (
+        (
+          resource.data.authorUid == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt']) &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 1000
+        ) ||
+        (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['authorName']) &&
+          okStr(request.resource.data.get('authorName', null), 100))
+      );
+      allow delete: if isSignedIn() &&
+        (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+  }
+}
