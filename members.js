@@ -193,6 +193,17 @@
   // automatically at 120 seconds. The uploaded file still goes through the
   // same Cloudinary unsigned-upload flow and 20MB client-side size guard.
   var MAX_VOICE_MS = 120000;
+  // Voice notes: offer the original file first, then an MP3 version, so browsers that can't play
+  // the recording format (e.g. WebM on older iPhones) fall back to the MP3 automatically.
+  function setAudioSource(audioEl, url) {
+    var ext = (String(url).split('?')[0].split('.').pop() || '').toLowerCase();
+    var types = { webm: 'audio/webm', ogg: 'audio/ogg', m4a: 'audio/mp4', mp4: 'audio/mp4', mp3: 'audio/mpeg', wav: 'audio/wav', aac: 'audio/aac' };
+    var s1 = document.createElement('source'); s1.src = url; if (types[ext]) s1.type = types[ext];
+    audioEl.appendChild(s1);
+    var mp3 = String(url).replace(/\.[a-z0-9]+(\?.*)?$/i, '.mp3');
+    if (mp3 !== url) { var s2 = document.createElement('source'); s2.src = mp3; s2.type = 'audio/mpeg'; audioEl.appendChild(s2); }
+  }
+
   function startVoiceCapture(onFinish, onTick, onError) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
       onError(new Error('Voice recording is not supported by this browser. Try a recent Chrome or Firefox browser.'));
@@ -499,6 +510,33 @@
     commentCountsByPost = Object.create(null);
   }
 
+  // Redraws caused by OTHER people's activity (new likes, comments, stories) wait while you are
+  // typing a comment, recording a voice note, or listening to audio/video — a redraw would wipe them.
+  var feedDeferred = false;
+  function isFeedBusy() {
+    if (document.querySelector('#feed .comment-form[data-busy="1"]')) return true;
+    var media = document.querySelectorAll('#feed audio, #feed video');
+    // Only audio/video that is genuinely playing counts (a stalled or failed file must not block redraws).
+    for (var i = 0; i < media.length; i++) {
+      var m = media[i];
+      if (!m.paused && !m.ended && !m.error && m.readyState >= 3) return true;
+    }
+    return false;
+  }
+  function remoteRender() {
+    if (isFeedBusy()) { feedDeferred = true; return; }
+    renderFeedOnce();
+  }
+  setInterval(function () {
+    if (feedDeferred && !isFeedBusy()) { feedDeferred = false; renderFeedOnce(); }
+  }, 1500);
+
+  var countRenderTimer = null;
+  function scheduleCountRender() {
+    if (countRenderTimer) return;
+    countRenderTimer = setTimeout(function () { countRenderTimer = null; remoteRender(); }, 250);
+  }
+
   function startPostCountListeners() {
     stopPostCountListeners();
     // One collection listener per type. Initial reads use the normal Firestore
@@ -514,7 +552,7 @@
         next[d.postId] = (next[d.postId] || 0) + 1;
       });
       likeCountsByPost = next;
-      renderFeedOnce();
+      scheduleCountRender();
     }, function (err) { console.warn('Could not update like counts.', err); }));
     countUnsubs.push(db.collection('postComments').onSnapshot(function (snap) {
       var next = Object.create(null);
@@ -523,7 +561,7 @@
         if (postId) next[postId] = (next[postId] || 0) + 1;
       });
       commentCountsByPost = next;
-      renderFeedOnce();
+      scheduleCountRender();
     }, function (err) { console.warn('Could not update comment counts.', err); }));
   }
 
@@ -563,7 +601,7 @@
           return ((a.createdAt && a.createdAt.seconds) || 0) - ((b.createdAt && b.createdAt.seconds) || 0);
         });
         commentsCache[postId] = arr;
-        renderFeedOnce();
+        remoteRender();
       });
   }
 
@@ -672,13 +710,25 @@
           row.appendChild(ctext);
         }
         if (c.attachmentType === 'audio' && safeUrl(c.attachmentURL)) {
-          var voicePlayer = document.createElement('audio');
-          voicePlayer.className = 'comment-voice-player';
-          voicePlayer.controls = true;
-          voicePlayer.preload = 'metadata';
-          voicePlayer.src = safeUrl(c.attachmentURL);
-          voicePlayer.setAttribute('aria-label', 'Voice comment from ' + (c.authorName || 'member'));
-          row.appendChild(voicePlayer);
+          var voiceUrl = safeUrl(c.attachmentURL);
+          var voiceHolder = document.createElement('div');
+          voiceHolder.className = 'comment-voice';
+          var playBtn = document.createElement('button');
+          playBtn.type = 'button'; playBtn.className = 'btn btn-ghost btn-sm comment-voice-btn';
+          playBtn.textContent = '\u25b6 Play voice comment';
+          playBtn.setAttribute('aria-label', 'Play voice comment from ' + (c.authorName || 'member'));
+          playBtn.addEventListener('click', function () {
+            var player = document.createElement('audio');
+            player.className = 'comment-voice-player';
+            player.controls = true; player.preload = 'auto';
+            setAudioSource(player, voiceUrl);
+            player.setAttribute('aria-label', 'Voice comment from ' + (c.authorName || 'member'));
+            voiceHolder.replaceChild(player, playBtn);
+            var started = player.play();
+            if (started && started.catch) started.catch(function () {});
+          });
+          voiceHolder.appendChild(playBtn);
+          row.appendChild(voiceHolder);
         }
         if (currentUid && !isReply) {
           var replyBtn = document.createElement('button');
@@ -757,6 +807,8 @@
       form.appendChild(input); form.appendChild(voiceBtn); form.appendChild(btn);
       form.appendChild(voiceStop); form.appendChild(voiceCancel);
       form.appendChild(voiceStatus); form.appendChild(voicePlayer);
+      function syncBusy() { form.dataset.busy = (input.value.trim() || voiceBusy || voiceBlob) ? '1' : ''; }
+      input.addEventListener('input', syncBusy);
       function resetVoice(discard) {
         if (discard) {
           if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
@@ -772,6 +824,7 @@
         voiceStop.hidden = true; voiceCancel.hidden = !voiceBlob;
         voiceStatus.textContent = voiceBlob ? 'Voice note ready (' + Math.ceil(voiceBlob.size / 1024) + ' KB)' : '';
         btn.disabled = false;
+        syncBusy();
       }
       voiceBtn.addEventListener('click', function () {
         if (voiceBusy) return;
@@ -780,6 +833,7 @@
           voiceBlob = null; voicePreviewUrl = null;
         }
         voiceBusy = true; voiceBtn.disabled = true; btn.disabled = true;
+        syncBusy();
 	voicePlayer.hidden = true;
         voicePlayer.pause();
         voiceStop.hidden = false; voiceCancel.hidden = false;
@@ -853,7 +907,7 @@
     }
     if (type === 'audio') {
       var audio = document.createElement('audio');
-      audio.src = url; audio.controls = true; audio.preload = 'metadata'; audio.className = 'story-audio';
+      setAudioSource(audio, url); audio.controls = true; audio.preload = 'metadata'; audio.className = 'story-audio';
       return audio;
     }
     if (type === 'image') {
@@ -1509,7 +1563,7 @@
     photoRow.className = 'file-label';
     photoRow.textContent = hasAttachment ? 'Replace attachment' : 'Attach a photo, video, or document';
     var photoInput = document.createElement('input');
-    photoInput.type = 'file'; photoInput.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip';
+    photoInput.type = 'file'; photoInput.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt';
     photoRow.appendChild(photoInput);
 
     var removeRow = null, removeCheck = null;
@@ -1681,7 +1735,7 @@
       .onSnapshot(function (snap) {
         lastSnap = snap;
         trackNewStories(snap);
-        renderFeedOnce();
+        remoteRender();
       }, function () {
         feed.innerHTML = '<p class="form-note">Couldn\u2019t load stories.</p>';
       });
@@ -3057,6 +3111,7 @@
     if (messageVoiceUrl) URL.revokeObjectURL(messageVoiceUrl);
     messageVoiceUrl = null; messageVoicePreview.removeAttribute('src'); messageVoicePreview.hidden = true;
     messageVoiceClear.hidden = true; messageRecordStatus.textContent = 'Voice notes up to 2 minutes';
+    var fc = document.getElementById('message-file-clear'); if (fc) fc.hidden = true;
   }
   messageRecordStart.addEventListener('click', function () {
     if (messageAttachmentInput.files && messageAttachmentInput.files.length) messageAttachmentInput.value = '';
@@ -3078,7 +3133,19 @@
   });
   messageRecordStop.addEventListener('click', function () { if (messageRecorderSession) messageRecorderSession.stop(); });
   messageVoiceClear.addEventListener('click', clearMessageVoice);
-  messageAttachmentInput.addEventListener('change', function () { if (messageAttachmentInput.files.length) clearMessageVoice(); });
+  var messageFileClear = document.getElementById('message-file-clear');
+  messageAttachmentInput.addEventListener('change', function () {
+    var f = messageAttachmentInput.files[0];
+    if (!f) { messageFileClear.hidden = true; return; }
+    clearMessageVoice();
+    messageRecordStatus.textContent = '\ud83d\udcce ' + f.name + ' \u00b7 ' + (f.size < 1048576 ? Math.max(1, Math.round(f.size / 1024)) + ' KB' : (f.size / 1048576).toFixed(1) + ' MB');
+    messageFileClear.hidden = false;
+  });
+  messageFileClear.addEventListener('click', function () {
+    messageAttachmentInput.value = '';
+    messageFileClear.hidden = true;
+    messageRecordStatus.textContent = 'Voice notes up to 2 minutes';
+  });
 
   var inboxUnsub = null;
   var threadUnsub = null;
@@ -3252,9 +3319,9 @@
     } else if (type === 'video') {
       node = document.createElement('video'); node.src = url; node.controls = true; node.preload = 'metadata'; node.className = 'msg-attachment-video';
     } else if (type === 'audio') {
-      node = document.createElement('audio'); node.src = url; node.controls = true; node.preload = 'metadata'; node.className = 'msg-attachment-audio';
+      node = document.createElement('audio'); setAudioSource(node, url); node.controls = true; node.preload = 'metadata'; node.className = 'msg-attachment-audio';
     } else {
-      node = document.createElement('a'); node.href = url; node.target = '_blank'; node.rel = 'noopener';
+      node = document.createElement('a'); node.href = url; node.target = '_blank'; node.rel = 'noopener noreferrer';
       node.className = 'msg-attachment-file'; node.textContent = '📎 ' + (m.attachmentName || 'Download attachment');
     }
     return node;
@@ -3382,6 +3449,7 @@
 
   var coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
   function autosizeThreadInput() {
+    if (!threadInput.offsetParent) { threadInput.style.height = ''; return; }   // hidden: measuring would give 0
     threadInput.style.height = 'auto';
     threadInput.style.height = Math.min(threadInput.scrollHeight, 120) + 'px';
   }
