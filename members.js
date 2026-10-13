@@ -1952,11 +1952,10 @@
   /* ---------- admin: recalculate like/comment totals from the real records ---------- */
   var recountBtn = document.getElementById('recount-btn');
   var recountResult = document.getElementById('recount-result');
-  recountBtn.addEventListener('click', function () {
-    if (!window.confirm('Recalculate like and comment totals for every story now?')) return;
-    recountBtn.disabled = true;
-    recountResult.innerHTML = '<p class="form-note">Counting\u2026</p>';
-    Promise.all([db.collection('posts').get(), db.collection('postLikes').get(), db.collection('postComments').get()]).then(function (r) {
+  // Recounts likes and comments for every story from the real records. Admin only.
+  // Returns a promise resolving to the number of stories corrected.
+  function runRecount(onProgress) {
+    return Promise.all([db.collection('posts').get(), db.collection('postLikes').get(), db.collection('postComments').get()]).then(function (r) {
       var likes = Object.create(null), comments = Object.create(null);
       r[1].forEach(function (d) { var p = d.data().postId; likes[p] = (likes[p] || 0) + 1; });
       r[2].forEach(function (d) { var p = d.data().postId; comments[p] = (comments[p] || 0) + 1; });
@@ -1977,10 +1976,41 @@
         }
         return batch.commit().then(nextBatch);
       }
-      return nextBatch().then(function () {
-        recountResult.innerHTML = '<p class="form-success">\u2713 Checked ' + r[0].size + ' stories. ' +
-          (fixes.length ? 'Corrected ' + fixes.length + '.' : 'All totals were already correct.') + '</p>';
+      return nextBatch().then(function () { return { checked: r[0].size, corrected: fixes.length }; });
+    });
+  }
+
+  var RECOUNT_EVERY_MS = 7 * 24 * 3600 * 1000;
+  var autoRecountStarted = false;
+
+  // Runs automatically for admins when the totals are older than a week. One small read per admin
+  // sign-in; the recount itself happens at most once a week. Non-admins never reach this.
+  function maybeAutoRecount() {
+    if (autoRecountStarted || !currentUid) return;
+    autoRecountStarted = true;
+    var ref = db.collection('system').doc('storyCounts');
+    ref.get().then(function (d) {
+      var last = d.exists ? toDate(d.data().lastRun) : null;
+      if (last && Date.now() - last.getTime() < RECOUNT_EVERY_MS) return null;
+      return runRecount().then(function (res) {
+        return ref.set({ lastRun: FieldValue.serverTimestamp(), lastCorrected: res.corrected, lastChecked: res.checked });
       });
+    }).catch(function (err) {
+      autoRecountStarted = false;
+      if (window.console) console.warn('Automatic story recount skipped:', err && (err.code || err.message) || err);
+    });
+  }
+
+  // Manual button stays for an immediate recount.
+  recountBtn.addEventListener('click', function () {
+    if (!window.confirm('Recalculate like and comment totals for every story now?')) return;
+    recountBtn.disabled = true;
+    recountResult.innerHTML = '<p class="form-note">Counting\u2026</p>';
+    runRecount().then(function (res) {
+      return db.collection('system').doc('storyCounts').set({ lastRun: FieldValue.serverTimestamp(), lastCorrected: res.corrected, lastChecked: res.checked }).catch(function () {}).then(function () { return res; });
+    }).then(function (res) {
+      recountResult.innerHTML = '<p class="form-success">\u2713 Checked ' + res.checked + ' stories. ' +
+        (res.corrected ? 'Corrected ' + res.corrected + '.' : 'All totals were already correct.') + '</p>';
     }).catch(function (err) {
       recountResult.innerHTML = '<p class="form-error">Couldn\u2019t finish the recount' + (err && err.code ? ' (' + err.code + ')' : '') + '. Check the rules are published, then try again.</p>';
     }).then(function () { recountBtn.disabled = false; });
@@ -3874,6 +3904,7 @@
       updateDraftUI();
       requestBox.hidden = poster;
       adminTabBtn.hidden = !admin;
+      if (admin) maybeAutoRecount();
       if (!poster) checkRequestStatus(user.uid);
       if (admin) { loadPosterRequests(); loadReports(); }
       restoreTab();
