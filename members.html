@@ -41,7 +41,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css?v=52">
+  <link rel="stylesheet" href="styles.css?v=53">
   <div class="crop-modal lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview" hidden>
     <img id="lightbox-img" alt="">
     <button type="button" id="lightbox-close" class="btn btn-ghost btn-sm">Close</button>
@@ -354,6 +354,10 @@
         <p class="form-note">Finds stories and comments where an email address was saved as the author's name, and replaces it with the member's display name.</p>
         <button type="button" id="scrub-scan" class="btn btn-ghost btn-sm">Scan for emails in names</button>
         <div id="scrub-result"></div>
+        <h2 class="mt">Story counts</h2>
+        <p class="form-note">Recounts likes and comments for every story from the real records. Run once after the counting update, and whenever totals look wrong. Reads every story, like and comment once.</p>
+        <button type="button" id="recount-btn" class="btn btn-ghost btn-sm">Recalculate story counts</button>
+        <div id="recount-result"></div>
       </div>
     </div>
   </div>
@@ -364,6 +368,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="members.js?v=39"></script>
+  <script src="members.js?v=40"></script>
 </body>
 </html>

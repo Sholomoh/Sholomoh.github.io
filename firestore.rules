@@ -281,24 +281,63 @@ service cloud.firestore {
       // Authors/admins can edit story content, but cannot modify counters or
       // change ownership/creation time. Counter values on old documents, if any,
       // are immutable and are ignored by the updated client.
-      allow update: if isSignedIn() &&
-        (resource.data.authorUid == request.auth.uid || isAdmin()) &&
-        request.resource.data.authorUid == resource.data.authorUid &&
-        request.resource.data.createdAt == resource.data.createdAt &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'title', 'body', 'attachmentURL', 'attachmentType', 'attachmentName',
-          'photoURL', 'updatedAt', 'authorName'
-        ]) &&
-        (request.resource.data.get('title', null) == resource.data.get('title', null) ||
-         (request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200)) &&
-        (request.resource.data.get('body', null) == resource.data.get('body', null) ||
-         (request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 10000)) &&
-        (request.resource.data.get('attachmentURL', null) == resource.data.get('attachmentURL', null) ||
-         okUrl(request.resource.data.get('attachmentURL', null))) &&
-        (request.resource.data.get('photoURL', null) == resource.data.get('photoURL', null) ||
-         okUrl(request.resource.data.get('photoURL', null))) &&
-        (request.resource.data.get('authorName', null) == resource.data.get('authorName', null) ||
-         (isAdmin() && okStr(request.resource.data.get('authorName', null), 100)));
+      // Content edits: the author (or an admin), only the editable fields.
+      // Counters: a count may change only together with the real like or comment it counts,
+      // checked in the same batch with getAfter(). Admins may set counts (for the recalculation tool).
+      allow update: if isSignedIn() && (
+        (
+          (resource.data.authorUid == request.auth.uid || isAdmin()) &&
+          request.resource.data.authorUid == resource.data.authorUid &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title', 'body', 'attachmentURL', 'attachmentType', 'attachmentName',
+            'photoURL', 'updatedAt', 'authorName'
+          ]) &&
+          (request.resource.data.get('title', null) == resource.data.get('title', null) ||
+           (request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200)) &&
+          (request.resource.data.get('body', null) == resource.data.get('body', null) ||
+           (request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 10000)) &&
+          (request.resource.data.get('attachmentURL', null) == resource.data.get('attachmentURL', null) ||
+           okUrl(request.resource.data.get('attachmentURL', null))) &&
+          (request.resource.data.get('photoURL', null) == resource.data.get('photoURL', null) ||
+           okUrl(request.resource.data.get('photoURL', null))) &&
+          (request.resource.data.get('authorName', null) == resource.data.get('authorName', null) ||
+           (isAdmin() && okStr(request.resource.data.get('authorName', null), 100)))
+        ) ||
+        // A like was added: exactly +1, and this member's like document is created in the same batch.
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']) &&
+          request.resource.data.likeCount - resource.data.get('likeCount', 0) == 1 &&
+          !exists(/databases/$(database)/documents/postLikes/$(postId + '_' + request.auth.uid)) &&
+          exists(getAfter(/databases/$(database)/documents/postLikes/$(postId + '_' + request.auth.uid)))
+        ) ||
+        // A like was removed: exactly -1, and this member's like document is deleted in the same batch.
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']) &&
+          request.resource.data.likeCount - resource.data.get('likeCount', 0) == -1 &&
+          exists(/databases/$(database)/documents/postLikes/$(postId + '_' + request.auth.uid)) &&
+          !exists(getAfter(/databases/$(database)/documents/postLikes/$(postId + '_' + request.auth.uid)))
+        ) ||
+        // A comment was added: exactly +1, and the comment named in lastCommentId is created in this batch on this story.
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'lastCommentId']) &&
+          request.resource.data.commentCount - resource.data.get('commentCount', 0) == 1 &&
+          getAfter(/databases/$(database)/documents/postComments/$(request.resource.data.lastCommentId)).data.postId == postId
+        ) ||
+        // A comment was removed: exactly -1, and the comment named in lastCommentId is deleted in this batch from this story.
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'lastCommentId']) &&
+          request.resource.data.commentCount - resource.data.get('commentCount', 0) == -1 &&
+          exists(/databases/$(database)/documents/postComments/$(request.resource.data.lastCommentId)) &&
+          get(/databases/$(database)/documents/postComments/$(request.resource.data.lastCommentId)).data.postId == postId &&
+          !exists(getAfter(/databases/$(database)/documents/postComments/$(request.resource.data.lastCommentId)))
+        ) ||
+        // Admin recalculation of totals for older stories.
+        (
+          isAdmin() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount'])
+        )
+      );
       allow delete: if isSignedIn() &&
         (resource.data.authorUid == request.auth.uid || isAdmin());
     }

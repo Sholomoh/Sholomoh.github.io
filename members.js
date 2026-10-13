@@ -496,18 +496,18 @@
   var commentUnsubs = {};
   // Counts are derived from the real like/comment documents, not writable
   // counters on posts. This keeps the feature compatible with Firebase's free plan.
-  var likeCountsByPost = Object.create(null);
-  var commentCountsByPost = Object.create(null);
-  var countUnsubs = [];
-
-  function getLikeCount(postId) { return Number(likeCountsByPost[postId] || 0); }
-  function getCommentCount(postId) { return Number(commentCountsByPost[postId] || 0); }
-
-  function stopPostCountListeners() {
-    countUnsubs.forEach(function (unsub) { try { unsub(); } catch (e) {} });
-    countUnsubs = [];
-    likeCountsByPost = Object.create(null);
-    commentCountsByPost = Object.create(null);
+  // Like and comment totals live on each story (likeCount / commentCount). The Firestore rules only
+  // allow them to change by exactly one real like/comment, so showing them costs no extra reads.
+  var countRegistry = Object.create(null);   // postId -> { likes, comments }
+  function noteCounts(id, data) {
+    if (!id || !data) return;
+    countRegistry[id] = { likes: Math.max(0, Number(data.likeCount) || 0), comments: Math.max(0, Number(data.commentCount) || 0) };
+  }
+  function getLikeCount(postId) { return countRegistry[postId] ? countRegistry[postId].likes : 0; }
+  function getCommentCount(postId) { return countRegistry[postId] ? countRegistry[postId].comments : 0; }
+  function bumpCount(postId, field, delta) {
+    var c = countRegistry[postId] || (countRegistry[postId] = { likes: 0, comments: 0 });
+    c[field] = Math.max(0, c[field] + delta);
   }
 
   // Redraws caused by OTHER people's activity (new likes, comments, stories) wait while you are
@@ -531,53 +531,54 @@
     if (feedDeferred && !isFeedBusy()) { feedDeferred = false; renderFeedOnce(); }
   }, 1500);
 
-  var countRenderTimer = null;
-  function scheduleCountRender() {
-    if (countRenderTimer) return;
-    countRenderTimer = setTimeout(function () { countRenderTimer = null; remoteRender(); }, 250);
-  }
-
-  function startPostCountListeners() {
-    stopPostCountListeners();
-    // One collection listener per type. Initial reads use the normal Firestore
-    // free quota; subsequent snapshots contain only changed documents.
-    countUnsubs.push(db.collection('postLikes').onSnapshot(function (snap) {
-      var next = Object.create(null), seen = Object.create(null);
-      snap.forEach(function (doc) {
-        var d = doc.data();
-        if (!d.postId || !d.uid) return;
-        if (!seen[d.postId]) seen[d.postId] = Object.create(null);
-        if (seen[d.postId][d.uid]) return; // ignore any historical duplicate likes
-        seen[d.postId][d.uid] = true;
-        next[d.postId] = (next[d.postId] || 0) + 1;
-      });
-      likeCountsByPost = next;
-      scheduleCountRender();
-    }, function (err) { console.warn('Could not update like counts.', err); }));
-    countUnsubs.push(db.collection('postComments').onSnapshot(function (snap) {
-      var next = Object.create(null);
-      snap.forEach(function (doc) {
-        var postId = doc.data().postId;
-        if (postId) next[postId] = (next[postId] || 0) + 1;
-      });
-      commentCountsByPost = next;
-      scheduleCountRender();
-    }, function (err) { console.warn('Could not update comment counts.', err); }));
-  }
 
   function toggleLike(postId, alreadyLiked, postAuthorUid, postTitle) {
-    var likeDocId = postId + '_' + currentUid;
-    if (alreadyLiked) {
-      myLikedPostIds.delete(postId);
-      renderFeedOnce();
-      return db.collection('postLikes').doc(likeDocId).delete();
-    }
-    myLikedPostIds.add(postId);
+    var likeRef = db.collection('postLikes').doc(postId + '_' + currentUid);
+    var postRef = db.collection('posts').doc(postId);
+    if (alreadyLiked) myLikedPostIds.delete(postId); else myLikedPostIds.add(postId);
+    bumpCount(postId, 'likes', alreadyLiked ? -1 : 1);
     renderFeedOnce();
-    return db.collection('postLikes').doc(likeDocId).set({
-      postId: postId, uid: currentUid, createdAt: FieldValue.serverTimestamp()
+    var batch = db.batch();
+    if (alreadyLiked) {
+      batch.delete(likeRef);
+      batch.update(postRef, { likeCount: FieldValue.increment(-1) });
+    } else {
+      batch.set(likeRef, { postId: postId, uid: currentUid, createdAt: FieldValue.serverTimestamp() });
+      batch.update(postRef, { likeCount: FieldValue.increment(1) });
+    }
+    return batch.commit().catch(function () {
+      // The counter was refused (rules not updated yet, or an old story whose count hasn't been
+      // repaired). Still record the like itself; the admin "Recalculate counts" tool fixes totals.
+      bumpCount(postId, 'likes', alreadyLiked ? 1 : -1);
+      return alreadyLiked ? likeRef.delete()
+        : likeRef.set({ postId: postId, uid: currentUid, createdAt: FieldValue.serverTimestamp() });
     }).then(function () {
-      return notifyIfNotSelf(postAuthorUid, 'like', { postId: postId, postTitle: postTitle });
+      if (!alreadyLiked) return notifyIfNotSelf(postAuthorUid, 'like', { postId: postId, postTitle: postTitle });
+    });
+  }
+
+  // Comments: the new comment and the counter are written together; the rules check that the
+  // comment named in lastCommentId really is created (or deleted) in the same batch.
+  function addCommentWithCount(postId, payload) {
+    var ref = db.collection('postComments').doc();
+    var batch = db.batch();
+    batch.set(ref, payload);
+    batch.update(db.collection('posts').doc(postId), { commentCount: FieldValue.increment(1), lastCommentId: ref.id });
+    bumpCount(postId, 'comments', 1);
+    return batch.commit().catch(function () {
+      bumpCount(postId, 'comments', -1);
+      return ref.set(payload);
+    });
+  }
+  function deleteCommentWithCount(postId, commentId) {
+    var ref = db.collection('postComments').doc(commentId);
+    var batch = db.batch();
+    batch.delete(ref);
+    batch.update(db.collection('posts').doc(postId), { commentCount: FieldValue.increment(-1), lastCommentId: commentId });
+    bumpCount(postId, 'comments', -1);
+    return batch.commit().catch(function () {
+      bumpCount(postId, 'comments', 1);
+      return ref.delete();
     });
   }
 
@@ -642,7 +643,7 @@
         var val = rinput.value.trim();
         if (!val) return;
         rpost.disabled = true;
-        db.collection('postComments').add({
+        addCommentWithCount(postId, {
           postId: postId, parentId: parent.id, authorUid: currentUid,
           authorName: (myProfile && myProfile.displayName) || 'Member',
           text: val, createdAt: FieldValue.serverTimestamp()
@@ -759,7 +760,7 @@
           del.textContent = 'Delete';
           del.addEventListener('click', function () {
             del.disabled = true;
-            db.collection('postComments').doc(c.id).delete().then(function () {
+            deleteCommentWithCount(postId, c.id).then(function () {
               commentsCache[postId] = (commentsCache[postId] || []).filter(function (x) { return x.id !== c.id; });
               renderFeedOnce();
             }).catch(function () { del.disabled = false; });
@@ -877,7 +878,7 @@
             comment.attachmentType = 'audio';
             comment.attachmentName = upload.name;
           }
-          return db.collection('postComments').add(comment);
+          return addCommentWithCount(postId, comment);
         }).then(function () {
           input.value = '';
           resetVoice(true);
@@ -933,7 +934,8 @@
   /* ---------- online status / last seen + tab-title unread count ---------- */
   var presenceMap = {};              // uid -> last seen (ms)
   var presenceTimer = null, presenceFetchedAt = 0;
-  var PRESENCE_BEAT_MS = 90000, ONLINE_WITHIN_MS = 150000;
+  // Status is written every 2 minutes (fewer writes) and counts as online for 4 minutes.
+  var PRESENCE_BEAT_MS = 120000, ONLINE_WITHIN_MS = 240000;
   var baseTitle = document.title;
   var unreadNotifCount = 0, unreadMsgCount = 0;
 
@@ -960,9 +962,9 @@
     } else if (presenceFailed) {
       el.textContent = 'Online status couldn\u2019t load right now.';
     } else {
-      var n = allUsers.filter(function (u) { var i = presenceInfo(u.id); return i && i.online; }).length;
+      var n = Object.keys(presenceMap).filter(function (uid) { var i = presenceInfo(uid); return i && i.online; }).length;
       if (n) el.classList.add('has-online');
-      var anyRecorded = allUsers.some(function (u) { return !!presenceInfo(u.id); });
+      var anyRecorded = true;
       el.textContent = n ? '\u25cf ' + n + ' member' + (n === 1 ? '' : 's') + ' online now'
         : anyRecorded ? 'No other members online right now'
         : 'No one has shared a status yet \u2014 \u201cOnline\u201d and \u201cLast seen\u201d appear under each member\u2019s name once they\u2019ve opened the site.';
@@ -1046,12 +1048,18 @@
     el.textContent = info ? (info.online ? '\u25cf ' : '') + info.text : '';
   }
 
+  // Reads ONLY the members who were active in the last few minutes (a handful of documents),
+  // not everyone. "Last seen" for someone offline is fetched one-by-one when you open their
+  // profile or chat (see fetchPresenceFor).
   function refreshPresence(force) {
     if (!currentUid || (myProfile && myProfile.hidePresence)) return Promise.resolve();
     if (!force && Date.now() - presenceFetchedAt < 30000) return Promise.resolve();
     presenceFetchedAt = Date.now();
-    return db.collection('presence').get().then(function (snap) {
+    var since = firebase.firestore.Timestamp.fromMillis(Date.now() - ONLINE_WITHIN_MS);
+    return db.collection('presence').where('lastSeen', '>', since).get().then(function (snap) {
       var map = {};
+      // keep "last seen" times already fetched for individual members who are offline
+      Object.keys(presenceMap).forEach(function (k) { if (Date.now() - presenceMap[k] >= ONLINE_WITHIN_MS) map[k] = presenceMap[k]; });
       snap.forEach(function (d) {
         var t = toDate(d.data().lastSeen);
         if (t) map[d.id] = t.getTime();
@@ -1067,6 +1075,21 @@
       if (window.console) console.error('Presence read failed:', err && (err.code || err.message) || err);
       presenceFailed = true; updateOnlineSummary();
     });
+  }
+
+  var presenceFetchedFor = {};
+  function fetchPresenceFor(uid) {
+    if (!uid || uid === currentUid || (myProfile && myProfile.hidePresence)) return Promise.resolve();
+    if (presenceFetchedFor[uid] && Date.now() - presenceFetchedFor[uid] < 60000) return Promise.resolve();
+    presenceFetchedFor[uid] = Date.now();
+    return db.collection('presence').doc(uid).get().then(function (d) {
+      if (d.exists) {
+        var t = toDate(d.data().lastSeen);
+        if (t) presenceMap[uid] = t.getTime();
+      }
+      rerenderOpenProfileCard();
+      updateThreadPresence();
+    }).catch(function () {});
   }
 
   // Refresh periodically, but only while a screen that shows status is open.
@@ -1122,6 +1145,7 @@
     Promise.all(missing.map(function (id) {
       return db.collection('posts').doc(id).get().then(function (d) {
         savedPostCache[id] = d.exists ? d.data() : null;
+        if (d.exists) noteCounts(id, d.data());
         // A saved story that was deleted: tidy up your own bookmark.
         if (!d.exists) db.collection('savedPosts').doc(currentUid + '_' + id).delete().catch(function () {});
       }).catch(function () {});
@@ -1190,13 +1214,14 @@
 
   function loadFriendLists() {
     var jobs = [];
+    var uidsNeeded = Array.from(friendUids);
     friendUids.forEach(function (fid) {
       if (fid in friendListsCache) return;
       jobs.push(db.collection('friendLists').doc(fid).get().then(function (d) {
         friendListsCache[fid] = d.exists && Array.isArray(d.data().uids) ? d.data().uids : [];
       }).catch(function () {}));
     });
-    return Promise.all(jobs);
+    return Promise.all(jobs).then(function () { return ensureUsers(uidsNeeded); }).then(function () {});
   }
 
   function mutualWith(uid) {
@@ -1335,6 +1360,14 @@
       });
       likesList.innerHTML = '';
       if (!rows.length) { likesList.innerHTML = '<p class="form-note">No likes yet.</p>'; return; }
+      ensureUsers(rows.map(function (r) { return r.uid; })).then(function () { drawLikes(rows); });
+    }).catch(function () {
+      likesList.innerHTML = '<p class="form-note">Couldn\u2019t load the list.</p>';
+    });
+  }
+
+  function drawLikes(rows) {
+      likesList.innerHTML = '';
       rows.forEach(function (r) {
         var u = usersByUid[r.uid];
         var row = document.createElement('div');
@@ -1351,9 +1384,6 @@
         }
         likesList.appendChild(row);
       });
-    }).catch(function () {
-      likesList.innerHTML = '<p class="form-note">Couldn\u2019t load the list.</p>';
-    });
   }
 
   /* ---------- single story view (opened from notifications) ---------- */
@@ -1390,6 +1420,7 @@
     subscribeComments(postId);
     focusUnsub = db.collection('posts').doc(postId).onSnapshot(function (doc) {
       focusData = doc.exists ? doc.data() : null;
+      if (focusData) noteCounts(focusId, focusData);
       renderFocus();
     }, function () {
       focusData = null; renderFocus();
@@ -1631,6 +1662,7 @@
   }
 
   function trackNewStories(snap) {
+    snap.forEach(function (doc) { noteCounts(doc.id, doc.data()); });
     var ids = {};
     var maxMs = newestSeen;
     var reading = window.scrollY > 150;
@@ -1904,7 +1936,7 @@
         acts.appendChild(mk('View', false, function () { openStoryFocus(r.postId); return new Promise(function () {}); }));
         acts.appendChild(mk('Delete content', true, function () {
           var kill = r.type === 'comment'
-            ? db.collection('postComments').doc(r.targetId).delete()
+            ? deleteCommentWithCount(r.postId, r.targetId)
             : db.collection('posts').doc(r.targetId).delete();
           return kill.then(function () { return db.collection('reports').doc(doc.id).delete(); });
         }));
@@ -1917,6 +1949,44 @@
     });
   }
 
+  /* ---------- admin: recalculate like/comment totals from the real records ---------- */
+  var recountBtn = document.getElementById('recount-btn');
+  var recountResult = document.getElementById('recount-result');
+  recountBtn.addEventListener('click', function () {
+    if (!window.confirm('Recalculate like and comment totals for every story now?')) return;
+    recountBtn.disabled = true;
+    recountResult.innerHTML = '<p class="form-note">Counting\u2026</p>';
+    Promise.all([db.collection('posts').get(), db.collection('postLikes').get(), db.collection('postComments').get()]).then(function (r) {
+      var likes = Object.create(null), comments = Object.create(null);
+      r[1].forEach(function (d) { var p = d.data().postId; likes[p] = (likes[p] || 0) + 1; });
+      r[2].forEach(function (d) { var p = d.data().postId; comments[p] = (comments[p] || 0) + 1; });
+      var fixes = [];
+      r[0].forEach(function (d) {
+        var data = d.data();
+        var wantL = likes[d.id] || 0, wantC = comments[d.id] || 0;
+        if ((Number(data.likeCount) || 0) !== wantL || (Number(data.commentCount) || 0) !== wantC) {
+          fixes.push({ id: d.id, likeCount: wantL, commentCount: wantC });
+        }
+      });
+      var index = 0;
+      function nextBatch() {
+        if (index >= fixes.length) return Promise.resolve();
+        var batch = db.batch(), end = Math.min(index + 400, fixes.length);
+        for (; index < end; index++) {
+          batch.update(db.collection('posts').doc(fixes[index].id), { likeCount: fixes[index].likeCount, commentCount: fixes[index].commentCount });
+        }
+        return batch.commit().then(nextBatch);
+      }
+      return nextBatch().then(function () {
+        recountResult.innerHTML = '<p class="form-success">\u2713 Checked ' + r[0].size + ' stories. ' +
+          (fixes.length ? 'Corrected ' + fixes.length + '.' : 'All totals were already correct.') + '</p>';
+      });
+    }).catch(function (err) {
+      recountResult.innerHTML = '<p class="form-error">Couldn\u2019t finish the recount' + (err && err.code ? ' (' + err.code + ')' : '') + '. Check the rules are published, then try again.</p>';
+    }).then(function () { recountBtn.disabled = false; });
+  });
+
+  var posterNameTried = {};
   function loadPosterRequests() {
     var postersList = document.getElementById('posters-list');
     Promise.all([
@@ -1924,6 +1994,12 @@
       db.collection('posters').get()
     ]).then(function (r) {
       var snap = r[0], posters = r[1];
+      // Names of approved posters may not be loaded yet: fetch them once, then redraw.
+      var posterMissing = posters.docs.map(function (d) { return d.id; }).filter(function (uid) { return !usersByUid[uid] && !posterNameTried[uid]; });
+      if (posterMissing.length) {
+        posterMissing.forEach(function (uid) { posterNameTried[uid] = true; });
+        return ensureUsers(posterMissing).then(function () { loadPosterRequests(); });
+      }
       adminReqCount = snap.size; updateAdminBadge();
 
       requestsList.innerHTML = '';
@@ -2148,7 +2224,7 @@
     // No orderBy here on purpose: avoids needing a composite index; sort client-side.
     return db.collection('posts').where('authorUid', '==', uid).get().then(function (snap) {
       var arr = [];
-      snap.forEach(function (doc) { arr.push({ id: doc.id, data: doc.data() }); });
+      snap.forEach(function (doc) { noteCounts(doc.id, doc.data()); arr.push({ id: doc.id, data: doc.data() }); });
       arr.sort(function (a, b) {
         var ad = toDate(a.data.createdAt), bd = toDate(b.data.createdAt);
         return (bd ? bd.getTime() : 0) - (ad ? ad.getTime() : 0);
@@ -2337,6 +2413,7 @@
   function openMemberProfile(u) {
     openProfileUid = u.id;
     refreshPresence(false);
+    fetchPresenceFor(u.id);
     setHash('u=' + u.id);
     membersList.hidden = true;
     document.querySelector('#tab-members .page-intro-sm').hidden = true;
@@ -2829,17 +2906,61 @@
   var usersByUid = {};
   var allUsers = [];
 
-  function loadAllUsers() {
-    return db.collection('users').limit(200).get().then(function (snap) {
-      usersByUid = {}; allUsers = [];
+  // Members are loaded in pages of 25 (name order), with "Load more" at the bottom of the list.
+  // Searching and sorting work on the members already loaded. A single member's profile is fetched
+  // on demand when a notification, link or chat needs them, so nobody is ever missing.
+  var MEMBER_PAGE = 25;
+  var inDirectory = {};
+  var memberCursor = null, membersExhausted = false, membersLoading = false;
+
+  function loadAllUsers(reset) {
+    if (membersLoading) return Promise.resolve();
+    if (reset) { usersByUid = {}; allUsers = []; inDirectory = {}; memberCursor = null; membersExhausted = false; }
+    if (membersExhausted) return Promise.resolve();
+    membersLoading = true;
+    // Ordered by name, then by ID, so two members with the same name are never skipped.
+    var q = db.collection('users').orderBy('displayName').orderBy(firebase.firestore.FieldPath.documentId()).limit(MEMBER_PAGE);
+    if (memberCursor) q = q.startAfter(memberCursor[0], memberCursor[1]);
+    return q.get().then(function (snap) {
+      membersLoading = false;
+      if (snap.size < MEMBER_PAGE) membersExhausted = true;
+      if (snap.size) {
+        var lastDoc = snap.docs[snap.docs.length - 1];
+        memberCursor = [lastDoc.data().displayName || '', lastDoc.id];
+      }
       snap.forEach(function (doc) {
         var d = doc.data(); d.id = doc.id;
         usersByUid[doc.id] = d;
-        if (doc.id !== currentUid) allUsers.push(d);
+        // The directory list is tracked on its own: a member fetched earlier for friends or chats
+        // must still appear here when their page comes up.
+        if (doc.id !== currentUid && !inDirectory[doc.id]) { inDirectory[doc.id] = true; allUsers.push(d); }
       });
-      allUsers.sort(function (a, b) { return (a.displayName || '').localeCompare(b.displayName || ''); });
+      allUsers.sort(function (x, y) { return (x.displayName || '').localeCompare(y.displayName || ''); });
       renderMembersList();
+    }).catch(function (err) {
+      membersLoading = false;
+      if (window.console) console.error('Members load failed:', err && (err.code || err.message) || err);
     });
+  }
+
+  // Make sure every listed member's profile is loaded (friends, requests, chats, likers, admins).
+  // Only the missing ones are read, so repeated calls cost nothing.
+  function ensureUsers(uids) {
+    var missing = [];
+    (uids || []).forEach(function (uid) { if (uid && !usersByUid[uid] && missing.indexOf(uid) === -1) missing.push(uid); });
+    if (!missing.length) return Promise.resolve();
+    return Promise.all(missing.map(function (uid) { return ensureUser(uid); })).then(function () {});
+  }
+
+  // Fetch one member the page hasn't loaded yet (from a notification, shared link or chat).
+  function ensureUser(uid) {
+    if (!uid || usersByUid[uid]) return Promise.resolve(usersByUid[uid] || null);
+    return db.collection('users').doc(uid).get().then(function (doc) {
+      if (!doc.exists) return null;
+      var d = doc.data(); d.id = doc.id;
+      usersByUid[doc.id] = d;
+      return d;
+    }).catch(function () { return null; });
   }
 
   var memberSearch = document.getElementById('member-search');
@@ -2870,7 +2991,7 @@
     if (!allUsers.length) { membersList.innerHTML = '<p class="form-note">No other members yet.</p>'; return; }
     var shown = visibleMembers();
     membersList.innerHTML = '';
-    if (!shown.length) { membersList.innerHTML = '<p class="form-note">No members match your search.</p>'; return; }
+    if (!shown.length) { membersList.innerHTML = '<p class="form-note">No members match your search.</p>'; }
     shown.forEach(function (u) {
       var row = document.createElement('div');
       row.className = 'member-row';
@@ -2917,6 +3038,14 @@
       row.appendChild(actionsWrap);
       membersList.appendChild(row);
     });
+    if (!membersExhausted) {
+      var more = document.createElement('button');
+      more.type = 'button'; more.className = 'btn btn-ghost load-more-btn';
+      more.textContent = membersLoading ? 'Loading\u2026' : 'Load more members';
+      more.disabled = membersLoading;
+      more.addEventListener('click', function () { loadAllUsers(false); });
+      membersList.appendChild(more);
+    }
   }
 
   function buildRelationshipControl(u) {
@@ -3038,6 +3167,8 @@
       renderFeedOnce();
       refreshMyProfileExtras();
       rerenderOpenProfileCard();
+      var relUids = Array.from(friendUids).concat(incomingPending.map(function (x) { return x.uid; }), outgoingPending.map(function (x) { return x.uid; }));
+      ensureUsers(relUids).then(function () { renderMembersList(); rerenderOpenProfileCard(); });
       return loadFriendLocations().then(function () {
         renderMembersList();
         rerenderOpenProfileCard();
@@ -3180,6 +3311,19 @@
     inboxUnsub = db.collection('conversations')
       .where('participants', 'array-contains', currentUid)
       .onSnapshot(function (snap) {
+        var otherIds = [];
+        snap.forEach(function (doc) {
+          var pp = doc.data().participants || [];
+          otherIds.push(pp[0] === currentUid ? pp[1] : pp[0]);
+        });
+        ensureUsers(otherIds).then(function () { renderInboxFromSnap(snap); });
+      }, function () {
+        inboxList.innerHTML = '<p class="form-note">Couldn\u2019t load messages.</p>';
+      });
+  }
+
+  function renderInboxFromSnap(snap) {
+    {
         var convs = [];
         snap.forEach(function (doc) {
           var pp = doc.data().participants || [];
@@ -3232,9 +3376,7 @@
           row.addEventListener('click', function () { openConversation(other || { id: otherUid, displayName: 'Member' }); });
           inboxList.appendChild(row);
         });
-      }, function () {
-        inboxList.innerHTML = '<p class="form-note">Couldn\u2019t load messages.</p>';
-      });
+    }
   }
 
   function openConversation(otherUser) {
@@ -3247,6 +3389,7 @@
     autosizeThreadInput();
     updateThreadPresence();
     refreshPresence(false);
+    fetchPresenceFor(otherUser.id);
     inboxView.hidden = true;
     threadView.hidden = false;
     threadMessages.innerHTML = '<p class="form-note">Loading\u2026</p>';
@@ -3564,6 +3707,14 @@
   }
 
   function openNotifGroup(g) {
+    if (g.sample && g.sample.fromUid && !usersByUid[g.sample.fromUid]) {
+      ensureUser(g.sample.fromUid).then(function () { openNotifGroup2(g); });
+      return;
+    }
+    openNotifGroup2(g);
+  }
+
+  function openNotifGroup2(g) {
     g.items.forEach(function (n) {
       if (!n.data.read) db.collection('notifications').doc(n.id).update({ read: true }).catch(function () {});
     });
@@ -3660,9 +3811,12 @@
       if (focusId !== m[2]) openStoryFocus(m[2]);
     } else if (m[2] === currentUid) {
       document.querySelector('#main-tabs .tab-btn[data-tab="profile"]').click();
-    } else if (usersByUid[m[2]] && openProfileUid !== m[2]) {
-      document.querySelector('#main-tabs .tab-btn[data-tab="members"]').click();
-      openMemberProfile(usersByUid[m[2]]);
+    } else if (openProfileUid !== m[2]) {
+      ensureUser(m[2]).then(function (u) {
+        if (!u || openProfileUid === m[2]) return;
+        document.querySelector('#main-tabs .tab-btn[data-tab="members"]').click();
+        openMemberProfile(u);
+      });
     }
   }
   window.addEventListener('hashchange', handleHash);
@@ -3675,7 +3829,6 @@
     editingId = null;
     if (!user) {
       if (feedUnsub) { feedUnsub(); feedUnsub = null; }
-      stopPostCountListeners();
       if (inboxUnsub) { inboxUnsub(); inboxUnsub = null; }
       stopThread(); closeStoryFocus();
       if (notifUnsub) { notifUnsub(); notifUnsub = null; }
@@ -3702,7 +3855,6 @@
     authSection.hidden = true;
     appSection.hidden = false;
     currentUid = user.uid;
-    startPostCountListeners();
     restoreTab();
     whoAmI.textContent = user.displayName || user.email;
     renderFeed();
@@ -3728,7 +3880,7 @@
       renderFeedOnce();
     });
 
-    loadAllUsers().then(function () {
+    loadAllUsers(true).then(function () {
       return loadBlocks().then(function () { renderFeedOnce(); }).catch(function () {});
     }).then(function () {
       loadRelationships();
