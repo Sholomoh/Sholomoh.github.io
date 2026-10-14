@@ -123,6 +123,10 @@
   // Links to uploaded files are only trusted if they point at THIS site's own Cloudinary
   // account or Firebase Storage bucket (or are a local preview of a file you just picked).
   // Anything else — another website, a javascript: link, a data: URL — is ignored.
+  // Wrap a user-written name so right-to-left names (Hebrew, Arabic) don't scramble the
+  // punctuation and times that sit next to it. Unicode isolate marks; invisible on screen.
+  function iso(name) { return '\u2068' + String(name == null ? '' : name) + '\u2069'; }
+
   function safeUrl(u) {
     if (typeof u !== 'string' || !u || u.length > 600) return '';
     if (u.indexOf('blob:') === 0) return u;
@@ -675,7 +679,7 @@
         var head = document.createElement('p');
         head.className = 'comment-meta';
         var when = c.createdAt && c.createdAt.toDate ? relTime(c.createdAt.toDate()) : '';
-        head.textContent = (c.authorName || 'Member') + (when ? ' \u00b7 ' + when : '') + (c.editedAt ? ' \u00b7 edited' : '');
+        head.textContent = iso(c.authorName || 'Member') + (when ? ' \u00b7 ' + when : '') + (c.editedAt ? ' \u00b7 edited' : '');
         row.appendChild(head);
         if (editingCommentId === c.id) {
           var eform = document.createElement('form');
@@ -1472,7 +1476,7 @@
     var edited = p.updatedAt && p.createdAt && p.updatedAt.seconds !== p.createdAt.seconds;
     var authorLink = document.createElement('span');
     authorLink.className = 'author-link';
-    authorLink.textContent = p.authorName || '';
+    authorLink.textContent = iso(p.authorName || '');
     makeActivatable(authorLink, function () { goToAuthor(p.authorUid); });
     meta.appendChild(authorLink);
     meta.appendChild(document.createTextNode((when ? ' \u00b7 ' + when : '') + (edited ? ' \u00b7 edited' : '')));
@@ -3725,7 +3729,7 @@
 
   function groupText(g) {
     var n = g.names;
-    var who = n.length === 1 ? n[0] : n.length === 2 ? n[0] + ' and ' + n[1] : n[0] + ' and ' + (n.length - 1) + ' others';
+    var who = n.length === 1 ? iso(n[0]) : n.length === 2 ? iso(n[0]) + ' and ' + iso(n[1]) : iso(n[0]) + ' and ' + (n.length - 1) + ' others';
     var title = '\u201c' + (g.sample.postTitle || '') + '\u201d';
     if (g.type === 'like') return who + ' liked your story ' + title;
     if (g.type === 'comment') return who + ' commented on your story ' + title;
