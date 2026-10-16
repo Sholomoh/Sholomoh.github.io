@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Blog — Fidel Kenyatta</title>
+  <meta name="description" content="Tech stories, news and things I'm learning in cybersecurity, IT support and networking."/>
+  <link rel="canonical" href="https://sholomoh.github.io/blog.html"/>
+  <meta name="theme-color" content="#060a0f"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Fidel Kenyatta"/>
+  <meta property="og:title" content="Blog — Fidel Kenyatta"/>
+  <meta property="og:description" content="Tech stories, news and things I'm learning in cybersecurity, IT support and networking."/>
+  <meta property="og:url" content="https://sholomoh.github.io/blog.html"/>
+  <meta property="og:image" content="https://sholomoh.github.io/og-image.png"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="Blog — Fidel Kenyatta"/>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+  <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css?v=54">
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="nav-logo"><img src="avatar.jpg?v=1" alt="" class="nav-avatar" width="38" height="38"><span class="nav-name"><span class="nav-prefix">~/</span>fidelkenyatta</span></a>
+    <ul>
+      <li><a href="services.html">Services</a></li>
+      <li><a href="skills.html">Skills</a></li>
+      <li><a href="projects.html">Projects</a></li>
+      <li><a href="certs.html">Certs</a></li>
+      <li><a href="blog.html" class="active">Blog</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="contact.html">Contact</a></li>
+      <li><a href="members.html">Members</a></li>
+    </ul>
+  </nav>
+
+  <div class="page">
+    <a href="index.html" class="back-link">← Home</a>
+    <div id="blog-list-view">
+      <div class="page-label">// 08</div>
+      <h1 class="page-title">Blog</h1>
+      <p class="page-intro">Tech stories, news and what I'm learning as I build toward a security career.</p>
+      <div class="blog-toolbar">
+        <div id="blog-tags" class="blog-tags" role="group" aria-label="Filter by topic"></div>
+        <button type="button" id="blog-write-btn" class="btn btn-primary btn-sm" hidden>+ New post</button>
+      </div>
+      <p id="blog-status" class="form-note" role="status"></p>
+      <div id="blog-list" class="blog-list"></div>
+    </div>
+
+    <article id="blog-post-view" class="blog-post" hidden>
+      <button type="button" id="blog-post-back" class="btn btn-ghost btn-sm">← All posts</button>
+      <div id="blog-post-admin" class="blog-post-admin" hidden>
+        <button type="button" id="blog-post-edit" class="btn btn-ghost btn-sm">Edit post</button>
+      </div>
+      <div id="blog-post-content"></div>
+    </article>
+
+    <section id="blog-editor" class="blog-editor" hidden aria-labelledby="blog-editor-title">
+      <button type="button" id="blog-editor-back" class="btn btn-ghost btn-sm">← Cancel</button>
+      <h2 id="blog-editor-title" class="blog-editor-title">New post</h2>
+      <form id="blog-form" novalidate>
+        <label class="field-label">Title
+          <input type="text" id="blog-title" class="field-input" maxlength="120" required>
+        </label>
+        <label class="field-label">Short summary (shown on the list)
+          <textarea id="blog-excerpt" class="story-input" rows="2" maxlength="240"></textarea>
+        </label>
+        <label class="field-label">Topics (comma-separated, up to 5)
+          <input type="text" id="blog-tags-input" class="field-input" maxlength="140" placeholder="e.g. cybersecurity, networking, news">
+        </label>
+        <label class="field-label">Cover image (optional)
+          <input type="file" id="blog-cover" accept="image/*">
+        </label>
+        <p id="blog-cover-note" class="form-note" hidden></p>
+
+        <h3 class="blog-editor-sub">Content</h3>
+        <div id="blog-blocks" class="blog-blocks"></div>
+        <div class="blog-add-row" role="group" aria-label="Add content">
+          <button type="button" class="btn btn-ghost btn-sm" data-add="text">+ Paragraph</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-add="quote">+ Quote</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-add="photo">+ Photo</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-add="video">+ Video upload</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-add="embed">+ YouTube / Vimeo link</button>
+        </div>
+
+        <label class="field-label">Status
+          <select id="blog-status-input" class="field-input">
+            <option value="draft">Draft (only you can see it)</option>
+            <option value="published">Published (public)</option>
+          </select>
+        </label>
+        <p id="blog-form-status" class="form-error" role="alert"></p>
+        <div class="form-actions">
+          <button type="submit" id="blog-save" class="btn btn-primary btn-sm">Save</button>
+          <button type="button" id="blog-delete" class="btn btn-ghost btn-sm btn-danger" hidden>Delete post</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <footer><p>© 2026 <span>Fidel Kenyatta</span> · Nakuru, Kenya</p></footer>
+
+  <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  <script src="app.js?v=2" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="blog.js?v=1"></script>
+</body>
+</html>

@@ -154,6 +154,21 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Blog posts. Anyone (signed in or not) can read PUBLISHED posts; only admins can read drafts,
+    // create, change or delete posts.
+    match /blogs/{postId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow create, update: if isAdmin() &&
+        request.resource.data.title is string && request.resource.data.title.size() > 0 &&
+        request.resource.data.title.size() <= 120 &&
+        okStr(request.resource.data.get('excerpt', null), 240) &&
+        request.resource.data.get('tags', []) is list && request.resource.data.get('tags', []).size() <= 5 &&
+        request.resource.data.status in ['draft', 'published'] &&
+        request.resource.data.get('blocks', []) is list && request.resource.data.get('blocks', []).size() <= 60 &&
+        okUrl(request.resource.data.get('coverURL', null));
+      allow delete: if isAdmin();
+    }
+
     // Admin allowlist. Add yourself here manually in the Firebase console
     // after your first sign-up — the app can never write to this collection.
     match /admins/{uid} {

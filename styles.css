@@ -1287,3 +1287,44 @@ button.chip:hover { background: rgba(0,210,211,0.16); }
 /* Hidden audio players must stay hidden whatever else sets their display */
 audio[hidden], video[hidden] { display: none !important; }
 .comment-voice { margin: 0.4rem 0; }
+
+/* BLOG */
+.blog-toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+.blog-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.blog-tags .chip { cursor: pointer; background: none; font: inherit; }
+.blog-tags .chip.is-active { background: rgba(0,255,136,0.14); border-color: rgba(0,255,136,0.6); color: var(--green); }
+.blog-list { display: grid; gap: 1rem; }
+.blog-card {
+  display: flex; gap: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 1rem; cursor: pointer; transition: border-color 0.2s, transform 0.2s;
+}
+.blog-card:hover, .blog-card:focus-visible { border-color: rgba(0,255,136,0.45); transform: translateY(-2px); }
+.blog-card-cover { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #0a1420; }
+.blog-card-body { min-width: 0; flex: 1; }
+.blog-card-title { color: var(--white); font-size: 1.1rem; line-height: 1.3; margin-bottom: 0.3rem; }
+.blog-card-meta { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.4rem; }
+.blog-card-excerpt { color: var(--text); font-size: 0.9rem; line-height: 1.6; margin-bottom: 0.4rem; }
+.blog-draft-badge { display: inline-block; font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; color: #ffb347; border: 1px solid rgba(255,179,71,0.5); border-radius: 999px; padding: 0.1rem 0.55rem; margin-bottom: 0.4rem; }
+.blog-post { max-width: 720px; }
+.blog-post-admin { margin: 0.8rem 0; }
+.blog-post-title { font-size: clamp(1.6rem, 5vw, 2.2rem); }
+.blog-text { color: var(--text); line-height: 1.8; font-size: 1rem; margin: 1rem 0; white-space: pre-wrap; word-break: break-word; }
+.blog-quote { border-left: 3px solid var(--green); padding: 0.4rem 1rem; margin: 1.4rem 0; color: var(--white); font-size: 1.1rem; line-height: 1.6; font-style: italic; white-space: pre-wrap; }
+.blog-figure { margin: 1.4rem 0; }
+.blog-img, .blog-video { display: block; width: 100%; max-height: 520px; object-fit: contain; border-radius: 10px; background: #0a1420; }
+.blog-embed iframe { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; border-radius: 10px; background: #000; }
+.blog-caption { color: var(--muted); font-size: 0.82rem; margin-top: 0.4rem; font-family: 'Share Tech Mono', monospace; }
+.blog-editor { max-width: 760px; }
+.blog-editor-title { color: var(--white); margin: 0.8rem 0 1rem; }
+.blog-editor-sub { color: var(--white); margin: 1.4rem 0 0.6rem; font-size: 1rem; }
+.blog-blocks { display: grid; gap: 0.8rem; margin-bottom: 0.8rem; }
+.blog-block { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; display: grid; gap: 0.5rem; }
+.blog-block-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.blog-block-type { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--green); text-transform: uppercase; letter-spacing: 0.08em; }
+.blog-block-tools { display: flex; gap: 0.3rem; }
+.blog-add-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.2rem; }
+.blog-editor input[type="file"] { color: var(--muted); font-size: 0.85rem; max-width: 100%; }
+@media (max-width: 520px) {
+  .blog-card { flex-direction: column; }
+  .blog-card-cover { width: 100%; height: 160px; }
+}
