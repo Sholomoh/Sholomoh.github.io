@@ -3740,6 +3740,7 @@
     if (g.type === 'comment') return who + ' commented on your story ' + title;
     if (g.type === 'reply') return who + ' replied to your comment on ' + title;
     if (g.type === 'blogReply') return who + ' replied to your comment on the blog: ' + title;
+    if (g.type === 'blogLike') return who + ' liked your comment on the blog: ' + title;
     if (g.type === 'message') return g.items.length > 1 ? who + ' sent you ' + g.items.length + ' messages' : who + ' sent you a message';
     if (g.type === 'friendRequest') return who + ' sent you a friend request';
     if (g.type === 'friendAccept') return who + ' accepted your friend request';
@@ -3760,7 +3761,7 @@
     });
     notifPanel.hidden = true;
     var d = g.sample;
-    if (g.type === 'blogReply' && d.postId) { window.location.href = 'blog.html#post=' + encodeURIComponent(d.postId); return; }
+    if ((g.type === 'blogReply' || g.type === 'blogLike') && d.postId) { window.location.href = 'blog.html#post=' + encodeURIComponent(d.postId); return; }
     if ((g.type === 'like' || g.type === 'comment' || g.type === 'reply') && d.postId) {
       openStoryFocus(d.postId);
     } else if (g.type === 'message') {

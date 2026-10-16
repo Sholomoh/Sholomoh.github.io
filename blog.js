@@ -461,6 +461,7 @@
   var likedIds = {};               // commentId -> true, for the signed-in viewer
   var discussionSort = 'new';
   var discussionTitle = '';
+  var blockedByMe = {};
   var discussionEls = {
     box: document.getElementById('blog-discussion'),
     count: document.getElementById('discussion-count'),
@@ -494,7 +495,7 @@
     renderCompose();
     var comments = db.collection('blogComments').where('postId', '==', postId).get();
     var likes = currentUser ? db.collection('blogCommentLikes').where('uid', '==', currentUser.uid).get() : Promise.resolve(null);
-    Promise.all([comments, likes]).then(function (r) {
+    Promise.all([comments, likes, loadMyBlocks()]).then(function (r) {
       if (discussionPostId !== postId) return;   // the reader moved to another post
       discussionItems = [];
       r[0].forEach(function (doc) { discussionItems.push({ id: doc.id, data: doc.data() }); });
@@ -505,6 +506,31 @@
     }).catch(function () {
       setDiscussionStatus('Couldn\u2019t load comments. Check your connection and try again.', true);
     });
+  }
+
+  // Members the signed-in viewer has blocked: their comments are hidden here too.
+  function loadMyBlocks() {
+    blockedByMe = {};
+    if (!currentUser) return Promise.resolve();
+    return db.collection('blocks').where('blockerUid', '==', currentUser.uid).get().then(function (snap) {
+      snap.forEach(function (d) { blockedByMe[d.data().blockedUid] = true; });
+    }).catch(function () {});
+  }
+
+  // A short banner for signed-in members with unread notifications (they're read on the Members page).
+  function loadUnreadBanner() {
+    var box = document.getElementById('blog-unread');
+    if (!box) return;
+    box.hidden = true;
+    if (!currentUser) return;
+    db.collection('notifications').where('toUid', '==', currentUser.uid).where('read', '==', false).get().then(function (snap) {
+      var n = snap.size;
+      if (!n) return;
+      box.textContent = 'You have ' + n + ' unread notification' + (n === 1 ? '' : 's') + '. ';
+      var a = el('a', '', 'See them on Members'); a.href = 'members.html';
+      box.appendChild(a);
+      box.hidden = false;
+    }).catch(function () {});
   }
 
   function renderCompose() {
@@ -647,6 +673,9 @@
     list.innerHTML = '';
     var ids = {};
     discussionItems.forEach(function (it) { ids[it.id] = true; });
+    discussionItems = discussionItems.filter(function (it) { return !blockedByMe[it.data.authorUid]; });
+    ids = {};
+    discussionItems.forEach(function (it) { ids[it.id] = true; });
     var topLevel = discussionItems.filter(function (it) { return !it.data.parentId || !ids[it.data.parentId]; });
     var children = {};
     discussionItems.forEach(function (it) {
@@ -754,7 +783,22 @@
     likedIds[it.id] = !liked;
     it.data.likeCount = Math.max(0, (Number(it.data.likeCount) || 0) + (liked ? -1 : 1));
     renderDiscussion();
-    batch.commit().catch(function () {
+    batch.commit().then(function () {
+      if (!liked && it.data.authorUid && it.data.authorUid !== uid) {
+        viewerName().then(function (name) {
+          db.collection('notifications').add({
+            toUid: it.data.authorUid,
+            fromUid: uid,
+            fromName: name,
+            type: 'blogLike',
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            postId: discussionPostId,
+            postTitle: (discussionTitle || 'a post').slice(0, 300)
+          }).catch(function () {});
+        });
+      }
+    }).catch(function () {
       likedIds[it.id] = liked;
       it.data.likeCount = Math.max(0, (Number(it.data.likeCount) || 0) + (liked ? 1 : -1));
       renderDiscussion();
@@ -773,6 +817,7 @@
   auth.onAuthStateChanged(function (user) {
     currentUser = user || null;
     nameCache = null;
+    loadUnreadBanner();
     checkAdmin(user).then(function () {
       if (location.hash === '#write' && isAdmin) openEditor(null); else route();
     });

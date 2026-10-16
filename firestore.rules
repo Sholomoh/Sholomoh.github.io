@@ -286,7 +286,7 @@ service cloud.firestore {
         request.resource.data.fromUid == request.auth.uid &&
         request.resource.data.toUid != request.auth.uid &&
         !isBlocked(request.resource.data.toUid, request.auth.uid) &&
-        request.resource.data.type in ['like', 'comment', 'reply', 'message', 'friendRequest', 'friendAccept', 'blogReply'] &&
+        request.resource.data.type in ['like', 'comment', 'reply', 'message', 'friendRequest', 'friendAccept', 'blogReply', 'blogLike'] &&
         request.resource.data.keys().hasOnly(['toUid', 'fromUid', 'fromName', 'type', 'read',
           'createdAt', 'postId', 'postTitle', 'convId']) &&
         request.resource.data.read == false &&

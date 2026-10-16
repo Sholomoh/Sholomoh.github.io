@@ -1367,3 +1367,7 @@ audio[hidden], video[hidden] { display: none !important; }
 .discussion-report { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.6rem; }
 .discussion-report select { width: auto; }
 .discussion-report .form-note { width: 100%; margin: 0; }
+
+.blog-unread { font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--green); background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.3); border-radius: 8px; padding: 0.5rem 0.8rem; margin: 0 0 1rem; }
+.blog-unread[hidden] { display: none; }
+.blog-unread a { color: var(--green); text-decoration: underline; }
