@@ -1921,7 +1921,7 @@
         row.className = 'report-row';
         var title = document.createElement('p');
         title.className = 'report-title';
-        title.textContent = (r.type === 'comment' ? 'Comment' : 'Story') + ' by ' + (r.reportedName || 'Member') + ' \u2014 ' + (r.reason || 'Reported');
+        title.textContent = (r.type === 'blogComment' ? 'Blog comment' : r.type === 'comment' ? 'Comment' : 'Story') + ' by ' + (r.reportedName || 'Member') + ' \u2014 ' + (r.reason || 'Reported');
         row.appendChild(title);
         if (r.snippet) { var sn = document.createElement('p'); sn.className = 'report-snippet'; sn.textContent = r.snippet; row.appendChild(sn); }
         if (r.details) { var dt = document.createElement('p'); dt.className = 'form-note'; dt.textContent = 'Reporter says: ' + r.details; row.appendChild(dt); }
@@ -1937,9 +1937,14 @@
           });
           return b;
         }
-        acts.appendChild(mk('View', false, function () { openStoryFocus(r.postId); return new Promise(function () {}); }));
+        acts.appendChild(mk('View', false, function () {
+          if (r.type === 'blogComment') { window.location.href = 'blog.html#post=' + encodeURIComponent(r.postId); return new Promise(function () {}); }
+          openStoryFocus(r.postId); return new Promise(function () {});
+        }));
         acts.appendChild(mk('Delete content', true, function () {
-          var kill = r.type === 'comment'
+          var kill = r.type === 'blogComment'
+            ? db.collection('blogComments').doc(r.targetId).delete()
+            : r.type === 'comment'
             ? deleteCommentWithCount(r.postId, r.targetId)
             : db.collection('posts').doc(r.targetId).delete();
           return kill.then(function () { return db.collection('reports').doc(doc.id).delete(); });
@@ -3734,6 +3739,7 @@
     if (g.type === 'like') return who + ' liked your story ' + title;
     if (g.type === 'comment') return who + ' commented on your story ' + title;
     if (g.type === 'reply') return who + ' replied to your comment on ' + title;
+    if (g.type === 'blogReply') return who + ' replied to your comment on the blog: ' + title;
     if (g.type === 'message') return g.items.length > 1 ? who + ' sent you ' + g.items.length + ' messages' : who + ' sent you a message';
     if (g.type === 'friendRequest') return who + ' sent you a friend request';
     if (g.type === 'friendAccept') return who + ' accepted your friend request';
@@ -3754,6 +3760,7 @@
     });
     notifPanel.hidden = true;
     var d = g.sample;
+    if (g.type === 'blogReply' && d.postId) { window.location.href = 'blog.html#post=' + encodeURIComponent(d.postId); return; }
     if ((g.type === 'like' || g.type === 'comment' || g.type === 'reply') && d.postId) {
       openStoryFocus(d.postId);
     } else if (g.type === 'message') {

@@ -1363,3 +1363,7 @@ audio[hidden], video[hidden] { display: none !important; }
 .discussion-action.is-liked { color: #ff6b81; border-color: rgba(255,107,129,0.5); }
 .discussion-danger:hover { color: var(--red); border-color: rgba(255,71,87,0.5); }
 @media (pointer: coarse) { .discussion-action, .discussion-form .btn { min-height: 44px; } }
+
+.discussion-report { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.6rem; }
+.discussion-report select { width: auto; }
+.discussion-report .form-note { width: 100%; margin: 0; }

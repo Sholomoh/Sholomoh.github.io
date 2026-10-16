@@ -175,6 +175,7 @@
       postAdminEl.hidden = !isAdmin;
       editBtn.onclick = function () { openEditor({ id: id, data: d }); };
       renderPost(d);
+      discussionTitle = d.title || '';
       showDiscussion(id, d.status === 'published');
     }).catch(function () {
       contentEl.innerHTML = '';
@@ -459,6 +460,7 @@
   var discussionItems = [];        // { id, data }
   var likedIds = {};               // commentId -> true, for the signed-in viewer
   var discussionSort = 'new';
+  var discussionTitle = '';
   var discussionEls = {
     box: document.getElementById('blog-discussion'),
     count: document.getElementById('discussion-count'),
@@ -550,20 +552,75 @@
 
   function postComment(parentId, text) {
     if (!currentUser) return Promise.reject(new Error('signed out'));
+    var parent = parentId ? discussionItems.filter(function (x) { return x.id === parentId; })[0] : null;
+    var postId = discussionPostId;
     return viewerName().then(function (name) {
       return db.collection('blogComments').add({
-        postId: discussionPostId,
+        postId: postId,
         parentId: parentId || null,
         authorUid: currentUser.uid,
         authorName: name,
         text: text,
         likeCount: 0,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function () {
+        // Tell the person being replied to (not if they replied to themselves).
+        if (parent && parent.data.authorUid && parent.data.authorUid !== currentUser.uid) {
+          db.collection('notifications').add({
+            toUid: parent.data.authorUid,
+            fromUid: currentUser.uid,
+            fromName: name,
+            type: 'blogReply',
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            postId: postId,
+            postTitle: (discussionTitle || 'a post').slice(0, 300)
+          }).catch(function () {});
+        }
       });
     }).then(function () {
       discussionEls.box.hidden = false;
       return reloadDiscussion();
     });
+  }
+
+  // Report a comment: a small panel with a reason. One report per person per comment.
+  function openReportPanel(it, art, btn) {
+    var existing = art.querySelector('.discussion-report');
+    if (existing) { existing.remove(); return; }
+    var panel = el('div', 'discussion-report');
+    var sel = el('select', 'field-input');
+    ['Spam', 'Harassment or bullying', 'Inappropriate content', 'Other'].forEach(function (r) {
+      var o = el('option', '', r); o.value = r; sel.appendChild(o);
+    });
+    sel.setAttribute('aria-label', 'Reason for reporting');
+    var send = el('button', 'btn btn-primary btn-sm', 'Send report'); send.type = 'button';
+    var note = el('p', 'form-note', '');
+    send.addEventListener('click', function () {
+      send.disabled = true;
+      db.collection('reports').doc(currentUser.uid + '_' + it.id).set({
+        type: 'blogComment',
+        targetId: it.id,
+        postId: discussionPostId,
+        reportedUid: it.data.authorUid || '',
+        reportedName: String(it.data.authorName || 'Member').slice(0, 100),
+        reporterUid: currentUser.uid,
+        reason: sel.value,
+        details: '',
+        snippet: String(it.data.text || '').slice(0, 160),
+        status: 'open',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function () {
+        panel.innerHTML = '';
+        panel.appendChild(el('p', 'form-success', '\u2713 Thanks. An admin will review it.'));
+        btn.disabled = true;
+      }).catch(function () {
+        send.disabled = false;
+        note.textContent = 'You\u2019ve already reported this comment, or it couldn\u2019t be sent.';
+      });
+    });
+    panel.appendChild(sel); panel.appendChild(send); panel.appendChild(note);
+    art.appendChild(panel);
   }
 
   function reloadDiscussion() {
@@ -645,6 +702,11 @@
         art.appendChild(f);
       });
       actions.appendChild(reply);
+    }
+    if (currentUser && d.authorUid !== currentUser.uid) {
+      var rep = el('button', 'discussion-action', 'Report'); rep.type = 'button';
+      rep.addEventListener('click', function () { openReportPanel(it, art, rep); });
+      actions.appendChild(rep);
     }
     if (currentUser && d.authorUid === currentUser.uid) {
       var edit = el('button', 'discussion-action', 'Edit'); edit.type = 'button';
