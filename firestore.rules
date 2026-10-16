@@ -169,6 +169,62 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Blog discussion comments. Anyone can read them; only signed-in members can write.
+    // Comments can only be added to PUBLISHED posts. Like counts change only together with
+    // the real like document (same batch), checked with getAfter().
+    match /blogComments/{id} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'likeCount', 'createdAt']) &&
+        request.resource.data.authorUid == request.auth.uid &&
+        request.resource.data.postId is string &&
+        get(/databases/$(database)/documents/blogs/$(request.resource.data.postId)).data.status == 'published' &&
+        (request.resource.data.parentId == null || request.resource.data.parentId is string) &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 1000 &&
+        okStr(request.resource.data.get('authorName', null), 100) &&
+        request.resource.data.likeCount == 0 &&
+        request.resource.data.createdAt == request.time;
+      allow update: if isSignedIn() && (
+        // The author edits their own text.
+        (
+          resource.data.authorUid == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt']) &&
+          request.resource.data.text is string && request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 1000
+        ) ||
+        // A like was added: exactly +1, with this member's like document created in the same batch.
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']) &&
+          request.resource.data.likeCount - resource.data.get('likeCount', 0) == 1 &&
+          !exists(/databases/$(database)/documents/blogCommentLikes/$(id + '_' + request.auth.uid)) &&
+          exists(getAfter(/databases/$(database)/documents/blogCommentLikes/$(id + '_' + request.auth.uid)))
+        ) ||
+        // A like was removed: exactly -1, with this member's like document deleted in the same batch.
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']) &&
+          request.resource.data.likeCount - resource.data.get('likeCount', 0) == -1 &&
+          exists(/databases/$(database)/documents/blogCommentLikes/$(id + '_' + request.auth.uid)) &&
+          !exists(getAfter(/databases/$(database)/documents/blogCommentLikes/$(id + '_' + request.auth.uid)))
+        )
+      );
+      allow delete: if isSignedIn() && (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    // One like per member per comment. Document id is commentId_uid.
+    match /blogCommentLikes/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(['commentId', 'uid', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.commentId is string &&
+        id == request.resource.data.commentId + '_' + request.auth.uid &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/blogComments/$(request.resource.data.commentId));
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid &&
+        id == resource.data.commentId + '_' + request.auth.uid;
+    }
+
     // Admin allowlist. Add yourself here manually in the Firebase console
     // after your first sign-up — the app can never write to this collection.
     match /admins/{uid} {

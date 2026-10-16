@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=55">
+  <link rel="stylesheet" href="styles.css?v=56">
 </head>
 <body>
   <nav>
@@ -59,6 +59,20 @@
         <button type="button" id="blog-post-edit" class="btn btn-ghost btn-sm">Edit post</button>
       </div>
       <div id="blog-post-content"></div>
+      <section id="blog-discussion" class="discussion" hidden aria-labelledby="discussion-title">
+        <h2 id="discussion-title" class="discussion-title">Discussion <span id="discussion-count" class="discussion-count"></span></h2>
+        <div class="discussion-tools">
+          <label class="discussion-sort">Sort
+            <select id="discussion-sort" class="field-input">
+              <option value="new">Newest</option>
+              <option value="top">Most liked</option>
+            </select>
+          </label>
+        </div>
+        <div id="discussion-compose"></div>
+        <p id="discussion-status" class="form-note" role="status"></p>
+        <div id="discussion-list" class="discussion-list"></div>
+      </section>
     </article>
 
     <section id="blog-editor" class="blog-editor" hidden aria-labelledby="blog-editor-title">
@@ -112,6 +126,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="blog.js?v=1"></script>
+  <script src="blog.js?v=2"></script>
 </body>
 </html>

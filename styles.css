@@ -1333,3 +1333,33 @@ audio[hidden], video[hidden] { display: none !important; }
 .card-blog { border-top: 2px solid #bd93f9; }
 .card-blog:hover { box-shadow: 0 20px 50px rgba(189,147,249,0.14); border-color: #bd93f9; }
 @media (max-width: 700px) { .card-contact { grid-column: 1 / -1; } }
+
+/* BLOG DISCUSSION */
+.discussion { margin-top: 2.4rem; padding-top: 1.4rem; border-top: 1px solid var(--border); }
+.discussion-title { color: var(--white); font-size: 1.2rem; margin-bottom: 0.8rem; }
+.discussion-count { color: var(--muted); font-weight: 400; font-size: 0.95rem; }
+.discussion-tools { display: flex; justify-content: flex-end; margin-bottom: 0.8rem; }
+.discussion-sort { font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
+.discussion-sort select { width: auto; }
+.discussion-signin { margin-bottom: 1rem; }
+.discussion-signin a { color: var(--green); }
+.discussion-form { display: grid; gap: 0.5rem; margin-bottom: 1rem; }
+.discussion-form textarea { min-height: 84px; }
+.discussion-form-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+.discussion-count-small { margin-right: auto; font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+.discussion-reply-form { margin: 0.5rem 0 0.2rem 1.2rem; }
+.discussion-list { display: grid; gap: 0.8rem; }
+.discussion-comment { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 1rem; }
+.discussion-comment.is-reply { margin-left: 1.2rem; border-left: 2px solid rgba(0,255,136,0.35); }
+.discussion-meta { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.4rem; }
+.discussion-meta bdi { color: var(--green); }
+.discussion-text { color: var(--text); font-size: 0.92rem; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+.discussion-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.discussion-action {
+  background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 999px;
+  padding: 0.2rem 0.7rem; font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; cursor: pointer; min-height: 32px;
+}
+.discussion-action:hover { color: var(--text); border-color: rgba(0,255,136,0.45); }
+.discussion-action.is-liked { color: #ff6b81; border-color: rgba(255,107,129,0.5); }
+.discussion-danger:hover { color: var(--red); border-color: rgba(255,71,87,0.5); }
+@media (pointer: coarse) { .discussion-action, .discussion-form .btn { min-height: 44px; } }

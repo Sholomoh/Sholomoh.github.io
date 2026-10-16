@@ -175,6 +175,7 @@
       postAdminEl.hidden = !isAdmin;
       editBtn.onclick = function () { openEditor({ id: id, data: d }); };
       renderPost(d);
+      showDiscussion(id, d.status === 'published');
     }).catch(function () {
       contentEl.innerHTML = '';
       contentEl.appendChild(el('p', 'form-error', 'Couldn\u2019t load this post.'));
@@ -451,6 +452,254 @@
     route();
   });
 
+  /* ---------- discussion (comments, replies, likes) ---------- */
+  var currentUser = null;
+  var nameCache = null;
+  var discussionPostId = null;
+  var discussionItems = [];        // { id, data }
+  var likedIds = {};               // commentId -> true, for the signed-in viewer
+  var discussionSort = 'new';
+  var discussionEls = {
+    box: document.getElementById('blog-discussion'),
+    count: document.getElementById('discussion-count'),
+    list: document.getElementById('discussion-list'),
+    compose: document.getElementById('discussion-compose'),
+    status: document.getElementById('discussion-status'),
+    sort: document.getElementById('discussion-sort')
+  };
+  discussionEls.sort.addEventListener('change', function () { discussionSort = discussionEls.sort.value; renderDiscussion(); });
+
+  function setDiscussionStatus(msg, isError) {
+    discussionEls.status.textContent = msg || '';
+    discussionEls.status.className = 'form-note' + (isError ? ' form-error' : '');
+  }
+
+  function viewerName() {
+    if (nameCache) return Promise.resolve(nameCache);
+    return db.collection('users').doc(currentUser.uid).get().then(function (d) {
+      nameCache = (d.exists && d.data().displayName) || 'Member';
+      return nameCache;
+    }).catch(function () { return 'Member'; });
+  }
+
+  function showDiscussion(postId, isPublished) {
+    discussionPostId = postId;
+    discussionEls.box.hidden = !isPublished;
+    if (!isPublished) return;
+    discussionEls.list.innerHTML = '';
+    discussionEls.count.textContent = '';
+    setDiscussionStatus('Loading comments…');
+    renderCompose();
+    var comments = db.collection('blogComments').where('postId', '==', postId).get();
+    var likes = currentUser ? db.collection('blogCommentLikes').where('uid', '==', currentUser.uid).get() : Promise.resolve(null);
+    Promise.all([comments, likes]).then(function (r) {
+      if (discussionPostId !== postId) return;   // the reader moved to another post
+      discussionItems = [];
+      r[0].forEach(function (doc) { discussionItems.push({ id: doc.id, data: doc.data() }); });
+      likedIds = {};
+      if (r[1]) r[1].forEach(function (doc) { likedIds[doc.data().commentId] = true; });
+      setDiscussionStatus('');
+      renderDiscussion();
+    }).catch(function () {
+      setDiscussionStatus('Couldn\u2019t load comments. Check your connection and try again.', true);
+    });
+  }
+
+  function renderCompose() {
+    var wrap = discussionEls.compose;
+    wrap.innerHTML = '';
+    if (!currentUser) {
+      var p = el('p', 'form-note discussion-signin', 'Sign in with your Members account to join the discussion. ');
+      var a = el('a', '', 'Sign in'); a.href = 'members.html';
+      p.appendChild(a);
+      wrap.appendChild(p);
+      return;
+    }
+    wrap.appendChild(composer('', function (text) { return postComment(null, text); }, 'Share your thoughts…', 'Post comment'));
+  }
+
+  // A reusable box for writing a comment or a reply. Returns the form element.
+  function composer(startText, onSubmit, placeholder, buttonText, onCancel) {
+    var form = el('form', 'discussion-form');
+    var ta = el('textarea', 'story-input'); ta.rows = 3; ta.maxLength = 1000; ta.value = startText || '';
+    ta.placeholder = placeholder; ta.setAttribute('aria-label', placeholder);
+    var row = el('div', 'discussion-form-row');
+    var count = el('span', 'discussion-count-small', (ta.value.length) + '/1000');
+    ta.addEventListener('input', function () { count.textContent = ta.value.length + '/1000'; });
+    var btn = el('button', 'btn btn-primary btn-sm', buttonText); btn.type = 'submit';
+    row.appendChild(count); row.appendChild(btn);
+    if (onCancel) {
+      var c = el('button', 'btn btn-ghost btn-sm', 'Cancel'); c.type = 'button';
+      c.addEventListener('click', onCancel); row.appendChild(c);
+    }
+    form.appendChild(ta); form.appendChild(row);
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var text = ta.value.trim();
+      if (!text) { setDiscussionStatus('Write something first.', true); return; }
+      btn.disabled = true;
+      Promise.resolve(onSubmit(text)).then(function () {
+        setDiscussionStatus('');
+      }).catch(function (err) {
+        setDiscussionStatus('Couldn\u2019t post that' + (err && err.code ? ' (' + err.code + ')' : '') + '. Check the rules are published and try again.', true);
+      }).then(function () { btn.disabled = false; });
+    });
+    setTimeout(function () { if (!startText) ta.focus(); }, 0);
+    return form;
+  }
+
+  function postComment(parentId, text) {
+    if (!currentUser) return Promise.reject(new Error('signed out'));
+    return viewerName().then(function (name) {
+      return db.collection('blogComments').add({
+        postId: discussionPostId,
+        parentId: parentId || null,
+        authorUid: currentUser.uid,
+        authorName: name,
+        text: text,
+        likeCount: 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }).then(function () {
+      discussionEls.box.hidden = false;
+      return reloadDiscussion();
+    });
+  }
+
+  function reloadDiscussion() {
+    var pid = discussionPostId;
+    discussionPostId = null;        // allow showDiscussion to run again for the same post
+    showDiscussion(pid, true);
+    return Promise.resolve();
+  }
+
+  // Short "5m ago / 3d ago" text. (The Members script has its own copy; this page loads only this one.)
+  function relTime(date) {
+    var s = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    if (s < 604800) return Math.floor(s / 86400) + 'd ago';
+    return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  }
+
+  function ms2(t) { return t && t.toDate ? t.toDate().getTime() : (t && t.seconds ? t.seconds * 1000 : 0); }
+
+  function renderDiscussion() {
+    var list = discussionEls.list;
+    list.innerHTML = '';
+    var ids = {};
+    discussionItems.forEach(function (it) { ids[it.id] = true; });
+    var topLevel = discussionItems.filter(function (it) { return !it.data.parentId || !ids[it.data.parentId]; });
+    var children = {};
+    discussionItems.forEach(function (it) {
+      if (it.data.parentId && ids[it.data.parentId]) (children[it.data.parentId] = children[it.data.parentId] || []).push(it);
+    });
+    topLevel.sort(function (a, b) {
+      if (discussionSort === 'top') {
+        var diff = (Number(b.data.likeCount) || 0) - (Number(a.data.likeCount) || 0);
+        if (diff) return diff;
+      }
+      return ms2(b.data.createdAt) - ms2(a.data.createdAt);
+    });
+    discussionEls.count.textContent = discussionItems.length ? '(' + discussionItems.length + ')' : '';
+    if (!discussionItems.length) {
+      list.appendChild(el('p', 'form-note', 'No comments yet. Be the first to share a thought.'));
+      return;
+    }
+    topLevel.forEach(function (it) {
+      list.appendChild(buildComment(it, false));
+      (children[it.id] || []).sort(function (a, b) { return ms2(a.data.createdAt) - ms2(b.data.createdAt); })
+        .forEach(function (r) { list.appendChild(buildComment(r, true)); });
+    });
+  }
+
+  function buildComment(it, isReply) {
+    var d = it.data;
+    var art = el('article', 'discussion-comment' + (isReply ? ' is-reply' : ''));
+    var head = el('p', 'discussion-meta');
+    head.appendChild(el('bdi', '', d.authorName || 'Member'));
+    var when = ms2(d.createdAt) ? relTime(new Date(ms2(d.createdAt))) : '';
+    head.appendChild(document.createTextNode((when ? ' \u00b7 ' + when : '') + (d.editedAt ? ' \u00b7 edited' : '')));
+    art.appendChild(head);
+    var textEl = el('p', 'discussion-text', d.text || '');
+    art.appendChild(textEl);
+
+    var actions = el('div', 'discussion-actions');
+    var liked = !!likedIds[it.id];
+    var likeCount = Number(d.likeCount) || 0;
+    var like = el('button', 'discussion-action' + (liked ? ' is-liked' : ''), (liked ? '\u2665 ' : '\u2661 ') + likeCount);
+    like.type = 'button';
+    like.setAttribute('aria-pressed', liked ? 'true' : 'false');
+    like.setAttribute('aria-label', (liked ? 'Unlike' : 'Like') + ' this comment, ' + likeCount + ' likes');
+    like.addEventListener('click', function () { toggleCommentLike(it, like); });
+    actions.appendChild(like);
+
+    if (currentUser && !isReply) {
+      var reply = el('button', 'discussion-action', 'Reply'); reply.type = 'button';
+      reply.addEventListener('click', function () {
+        var existing = art.querySelector('.discussion-form');
+        if (existing) { existing.remove(); return; }
+        var f = composer('', function (t) { return postComment(it.id, t); }, 'Write a reply…', 'Reply', function () { f.remove(); });
+        f.classList.add('discussion-reply-form');
+        art.appendChild(f);
+      });
+      actions.appendChild(reply);
+    }
+    if (currentUser && d.authorUid === currentUser.uid) {
+      var edit = el('button', 'discussion-action', 'Edit'); edit.type = 'button';
+      edit.addEventListener('click', function () { startEdit(it, art, textEl); });
+      actions.appendChild(edit);
+    }
+    if (currentUser && (d.authorUid === currentUser.uid || isAdmin)) {
+      var del = el('button', 'discussion-action discussion-danger', 'Delete'); del.type = 'button';
+      del.addEventListener('click', function () {
+        if (!window.confirm('Delete this comment?')) return;
+        db.collection('blogComments').doc(it.id).delete()
+          .then(function () { return reloadDiscussion(); })
+          .catch(function () { setDiscussionStatus('Couldn\u2019t delete that comment.', true); });
+      });
+      actions.appendChild(del);
+    }
+    art.appendChild(actions);
+    return art;
+  }
+
+  function startEdit(it, art, textEl) {
+    var f = composer(it.data.text || '', function (t) {
+      return db.collection('blogComments').doc(it.id).update({ text: t, editedAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .then(function () { return reloadDiscussion(); });
+    }, 'Edit your comment…', 'Save', function () { f.remove(); textEl.hidden = false; });
+    textEl.hidden = true;
+    art.insertBefore(f, art.querySelector('.discussion-actions'));
+  }
+
+  function toggleCommentLike(it, btn) {
+    if (!currentUser) { setDiscussionStatus('Sign in to like comments.', true); return; }
+    var uid = currentUser.uid;
+    var liked = !!likedIds[it.id];
+    var likeRef = db.collection('blogCommentLikes').doc(it.id + '_' + uid);
+    var commentRef = db.collection('blogComments').doc(it.id);
+    var batch = db.batch();
+    if (liked) {
+      batch.delete(likeRef);
+      batch.update(commentRef, { likeCount: firebase.firestore.FieldValue.increment(-1) });
+    } else {
+      batch.set(likeRef, { commentId: it.id, uid: uid, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      batch.update(commentRef, { likeCount: firebase.firestore.FieldValue.increment(1) });
+    }
+    // Optimistic update so the heart responds at once; roll back if the write is refused.
+    likedIds[it.id] = !liked;
+    it.data.likeCount = Math.max(0, (Number(it.data.likeCount) || 0) + (liked ? -1 : 1));
+    renderDiscussion();
+    batch.commit().catch(function () {
+      likedIds[it.id] = liked;
+      it.data.likeCount = Math.max(0, (Number(it.data.likeCount) || 0) + (liked ? 1 : -1));
+      renderDiscussion();
+      setDiscussionStatus('Couldn\u2019t update that like. Try again.', true);
+    });
+  }
+
   /* ---------- start ---------- */
   if (typeof firebase === 'undefined' || !window.FIREBASE_CONFIG) {
     setStatus('The blog couldn\u2019t load. Check your connection and refresh.', true);
@@ -460,6 +709,8 @@
   db = firebase.firestore();
   auth = firebase.auth();
   auth.onAuthStateChanged(function (user) {
+    currentUser = user || null;
+    nameCache = null;
     checkAdmin(user).then(function () {
       if (location.hash === '#write' && isAdmin) openEditor(null); else route();
     });
