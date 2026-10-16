@@ -28,6 +28,11 @@ service cloud.firestore {
         (v is string && v.size() <= 600 && v.matches('https://res\\.cloudinary\\.com/d98pty0j/.*'));
     }
 
+    // Warrior Fellowship: only approved members (a fellowshipMembers document exists) can read or post.
+    function isFellow() {
+      return isSignedIn() && exists(/databases/$(database)/documents/fellowshipMembers/$(request.auth.uid));
+    }
+
     // Other participant of a two-person conversation.
     function otherOf(p, uid) { return p[0] == uid ? p[1] : p[0]; }
 
@@ -225,6 +230,146 @@ service cloud.firestore {
         id == resource.data.commentId + '_' + request.auth.uid;
     }
 
+    // Join requests. A member asks to join (one request per person); an admin approves or declines.
+    // Declining deletes the request, so the person can ask again later.
+    match /fellowshipRequests/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['uid', 'name', 'status', 'requestedAt']) &&
+        request.resource.data.uid == uid && request.resource.data.status == 'pending' &&
+        request.resource.data.requestedAt == request.time &&
+        okStr(request.resource.data.get('name', null), 100);
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
+
+    // Approved members. Only admins add or remove them; members can also leave.
+    match /fellowshipMembers/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['uid', 'name', 'approvedAt']) &&
+        request.resource.data.uid == uid &&
+        request.resource.data.approvedAt == request.time;
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
+
+    // Fellowship posts. Approved members only. Authors edit their own text; counts change only
+    // together with the real like or comment (same batch), checked with getAfter().
+    match /fellowshipPosts/{postId} {
+      allow read: if isFellow() || isAdmin();
+      allow create: if isFellow() && request.resource.data.authorUid == request.auth.uid &&
+        request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'body', 'attachments', 'createdAt',
+          'likeCount', 'commentCount', 'reshareOf', 'reshareNote']) &&
+        request.resource.data.body is string && request.resource.data.body.size() <= 4000 &&
+        request.resource.data.get('attachments', []) is list && request.resource.data.get('attachments', []).size() <= 10 &&
+        request.resource.data.likeCount == 0 && request.resource.data.commentCount == 0 &&
+        okStr(request.resource.data.get('authorName', null), 100) &&
+        okStr(request.resource.data.get('reshareNote', null), 500) &&
+        (request.resource.data.get('reshareOf', null) == null ||
+          (request.resource.data.reshareOf is string &&
+           exists(/databases/$(database)/documents/fellowshipPosts/$(request.resource.data.reshareOf)))) &&
+        request.resource.data.createdAt == request.time;
+      allow update: if isFellow() && (
+        (
+          (resource.data.authorUid == request.auth.uid || isAdmin()) &&
+          request.resource.data.authorUid == resource.data.authorUid &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['body', 'updatedAt']) &&
+          request.resource.data.body is string && request.resource.data.body.size() <= 4000
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']) &&
+          request.resource.data.likeCount - resource.data.get('likeCount', 0) == 1 &&
+          !exists(/databases/$(database)/documents/fellowshipLikes/$(postId + '_' + request.auth.uid)) &&
+          exists(getAfter(/databases/$(database)/documents/fellowshipLikes/$(postId + '_' + request.auth.uid)))
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']) &&
+          request.resource.data.likeCount - resource.data.get('likeCount', 0) == -1 &&
+          exists(/databases/$(database)/documents/fellowshipLikes/$(postId + '_' + request.auth.uid)) &&
+          !exists(getAfter(/databases/$(database)/documents/fellowshipLikes/$(postId + '_' + request.auth.uid)))
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'lastCommentId']) &&
+          request.resource.data.commentCount - resource.data.get('commentCount', 0) == 1 &&
+          getAfter(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.lastCommentId)).data.postId == postId
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'lastCommentId']) &&
+          request.resource.data.commentCount - resource.data.get('commentCount', 0) == -1 &&
+          exists(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.lastCommentId)) &&
+          get(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.lastCommentId)).data.postId == postId &&
+          !exists(getAfter(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.lastCommentId)))
+        ) ||
+        (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount']))
+      );
+      allow delete: if isFellow() && (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    // One like per member per fellowship post (document id postId_uid).
+    match /fellowshipLikes/{id} {
+      allow read: if isFellow() || isAdmin();
+      allow create: if isFellow() &&
+        request.resource.data.keys().hasOnly(['postId', 'uid', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.postId is string &&
+        id == request.resource.data.postId + '_' + request.auth.uid &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/fellowshipPosts/$(request.resource.data.postId));
+      allow delete: if isFellow() && resource.data.uid == request.auth.uid &&
+        id == resource.data.postId + '_' + request.auth.uid;
+    }
+
+    // Discussion comments on fellowship posts (replies carry a parentId). Edit own text; delete own or admin.
+    match /fellowshipComments/{id} {
+      allow read: if isFellow() || isAdmin();
+      allow create: if isFellow() &&
+        request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'likeCount', 'createdAt']) &&
+        request.resource.data.authorUid == request.auth.uid &&
+        request.resource.data.postId is string &&
+        exists(/databases/$(database)/documents/fellowshipPosts/$(request.resource.data.postId)) &&
+        (request.resource.data.parentId == null || request.resource.data.parentId is string) &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 1000 &&
+        okStr(request.resource.data.get('authorName', null), 100) &&
+        request.resource.data.likeCount == 0 &&
+        request.resource.data.createdAt == request.time;
+      allow update: if isFellow() && (
+        (
+          resource.data.authorUid == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'editedAt']) &&
+          request.resource.data.text is string && request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 1000
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']) &&
+          request.resource.data.likeCount - resource.data.get('likeCount', 0) == 1 &&
+          !exists(/databases/$(database)/documents/fellowshipCommentLikes/$(id + '_' + request.auth.uid)) &&
+          exists(getAfter(/databases/$(database)/documents/fellowshipCommentLikes/$(id + '_' + request.auth.uid)))
+        ) ||
+        (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount']) &&
+          request.resource.data.likeCount - resource.data.get('likeCount', 0) == -1 &&
+          exists(/databases/$(database)/documents/fellowshipCommentLikes/$(id + '_' + request.auth.uid)) &&
+          !exists(getAfter(/databases/$(database)/documents/fellowshipCommentLikes/$(id + '_' + request.auth.uid)))
+        )
+      );
+      allow delete: if isFellow() && (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    // One like per member per fellowship comment (document id commentId_uid).
+    match /fellowshipCommentLikes/{id} {
+      allow read: if isFellow() || isAdmin();
+      allow create: if isFellow() &&
+        request.resource.data.keys().hasOnly(['commentId', 'uid', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.commentId is string &&
+        id == request.resource.data.commentId + '_' + request.auth.uid &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.commentId));
+      allow delete: if isFellow() && resource.data.uid == request.auth.uid &&
+        id == resource.data.commentId + '_' + request.auth.uid;
+    }
+
     // Admin allowlist. Add yourself here manually in the Firebase console
     // after your first sign-up — the app can never write to this collection.
     match /admins/{uid} {
@@ -286,7 +431,7 @@ service cloud.firestore {
         request.resource.data.fromUid == request.auth.uid &&
         request.resource.data.toUid != request.auth.uid &&
         !isBlocked(request.resource.data.toUid, request.auth.uid) &&
-        request.resource.data.type in ['like', 'comment', 'reply', 'message', 'friendRequest', 'friendAccept', 'blogReply', 'blogLike'] &&
+        request.resource.data.type in ['like', 'comment', 'reply', 'message', 'friendRequest', 'friendAccept', 'blogReply', 'blogLike', 'fellowComment', 'fellowReply', 'fellowLike', 'fellowApproved'] &&
         request.resource.data.keys().hasOnly(['toUid', 'fromUid', 'fromName', 'type', 'read',
           'createdAt', 'postId', 'postTitle', 'convId']) &&
         request.resource.data.read == false &&

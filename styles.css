@@ -1371,3 +1371,64 @@ audio[hidden], video[hidden] { display: none !important; }
 .blog-unread { font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; color: var(--green); background: rgba(0,255,136,0.08); border: 1px solid rgba(0,255,136,0.3); border-radius: 8px; padding: 0.5rem 0.8rem; margin: 0 0 1rem; }
 .blog-unread[hidden] { display: none; }
 .blog-unread a { color: var(--green); text-decoration: underline; }
+
+/* WARRIOR FELLOWSHIP: red, gold and lapis lazuli on the site's circuit background */
+.fw-page { --fw-red: #d64545; --fw-gold: #d4a72c; --fw-lapis: #26619c; }
+.fw-title, .fw-section-title { color: var(--fw-gold); }
+.fw-label { color: var(--fw-red); }
+.fw-intro { color: var(--muted); }
+.fw-gate-box, .fw-compose, .fw-post, .fw-admin { background: rgba(10,16,24,0.92); border: 1px solid rgba(38,97,156,0.5); border-top: 2px solid var(--fw-gold); border-radius: 12px; padding: 1rem; margin-bottom: 1.2rem; }
+.fw-gate-text { color: var(--text); line-height: 1.6; margin-bottom: 1rem; }
+.fw-compose { border-top-color: var(--fw-red); }
+.fw-composer { display: grid; gap: 0.6rem; }
+.fw-composer input[type="file"] { color: var(--muted); font-size: 0.85rem; max-width: 100%; }
+.fw-chosen { margin: 0; }
+.fw-composer-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+.fw-hint { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+.fw-post { border-top-color: var(--fw-lapis); }
+.fw-post.is-highlight { box-shadow: 0 0 0 2px var(--fw-gold); }
+.fw-post-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.7rem; }
+.fw-avatar { width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(38,97,156,0.35); border: 1px solid var(--fw-lapis); color: #fff; font-weight: 700; }
+.fw-author { color: var(--fw-gold); font-weight: 700; }
+.fw-time { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+.fw-body { color: var(--text); line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin-bottom: 0.7rem; }
+.fw-reshare-label { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--fw-gold); margin-bottom: 0.4rem; }
+.fw-reshare-note { color: var(--text); margin-bottom: 0.5rem; white-space: pre-wrap; }
+.fw-embed { border-left: 3px solid var(--fw-red); background: rgba(214,69,69,0.06); border-radius: 8px; padding: 0.7rem 0.9rem; margin-bottom: 0.7rem; }
+.fw-embed-author { color: var(--fw-gold); font-weight: 700; font-size: 0.9rem; }
+.fw-embed-text { color: var(--text); font-size: 0.88rem; line-height: 1.5; margin: 0.3rem 0; }
+.fw-embed-link { color: var(--fw-lapis); font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; }
+.fw-attachments { display: grid; gap: 0.6rem; margin-bottom: 0.7rem; }
+.fw-img { display: block; width: 100%; max-height: 480px; object-fit: contain; border-radius: 8px; background: #0a1420; }
+.fw-video { display: block; width: 100%; max-height: 420px; border-radius: 8px; background: #000; }
+.fw-file { display: inline-block; color: var(--fw-gold); font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; border: 1px solid rgba(212,167,44,0.45); border-radius: 8px; padding: 0.4rem 0.7rem; word-break: break-all; }
+.fw-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+.fw-action { background: none; border: 1px solid rgba(38,97,156,0.6); color: var(--text); border-radius: 999px; padding: 0.25rem 0.75rem; font-family: 'Share Tech Mono', monospace; font-size: 0.74rem; cursor: pointer; min-height: 34px; }
+.fw-action:hover { border-color: var(--fw-gold); color: var(--fw-gold); }
+.fw-action.is-liked { color: var(--fw-red); border-color: var(--fw-red); }
+.fw-danger-soft { color: #ff8a8a; }
+.fw-danger-soft:hover { color: var(--fw-red); border-color: var(--fw-red); }
+.fw-panel { margin-top: 0.7rem; display: grid; gap: 0.5rem; border-top: 1px solid rgba(38,97,156,0.5); padding-top: 0.7rem; }
+.fw-panel select { width: auto; }
+.fw-discussion { margin-top: 0.9rem; border-top: 1px solid rgba(38,97,156,0.5); padding-top: 0.8rem; }
+.fw-comments { display: grid; gap: 0.6rem; margin-bottom: 0.8rem; }
+.fw-comment { background: rgba(6,10,15,0.7); border: 1px solid rgba(38,97,156,0.4); border-radius: 10px; padding: 0.6rem 0.8rem; }
+.fw-comment.is-reply { margin-left: 1.2rem; border-left: 2px solid var(--fw-gold); }
+.fw-comment-meta { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--muted); margin-bottom: 0.3rem; }
+.fw-comment-meta bdi { color: var(--fw-gold); }
+.fw-comment-text { color: var(--text); font-size: 0.9rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+.fw-comment-form { display: grid; gap: 0.5rem; margin: 0.4rem 0; }
+.fw-comment-form textarea { min-height: 64px; }
+.fw-more { display: block; margin: 0.6rem auto 1.2rem; }
+.fw-admin-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; padding: 0.5rem 0; border-bottom: 1px solid rgba(38,97,156,0.35); }
+.fw-admin-name { color: var(--text); }
+.fw-page .btn-primary { background: var(--fw-gold); color: #120d00; }
+.fw-page .btn-ghost { color: var(--fw-lapis); border-color: rgba(38,97,156,0.7); }
+.fw-page .btn-ghost:hover { color: var(--fw-gold); }
+.fw-page .btn-danger { color: #ff8a8a; }
+@media (pointer: coarse) { .fw-action, .fw-page .btn { min-height: 44px; } }
+
+/* HOME: Warrior Fellowship card (red, gold and lapis lazuli) */
+.card-fellowship { border-top: 2px solid #d4a72c; }
+.card-fellowship:hover { box-shadow: 0 20px 50px rgba(38,97,156,0.22); border-color: #26619c; }
+.card-fellowship { grid-column: 1 / -1; }

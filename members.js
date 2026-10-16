@@ -1921,7 +1921,7 @@
         row.className = 'report-row';
         var title = document.createElement('p');
         title.className = 'report-title';
-        title.textContent = (r.type === 'blogComment' ? 'Blog comment' : r.type === 'comment' ? 'Comment' : 'Story') + ' by ' + (r.reportedName || 'Member') + ' \u2014 ' + (r.reason || 'Reported');
+        title.textContent = (r.type === 'fellowshipPost' ? 'Fellowship post' : r.type === 'fellowshipComment' ? 'Fellowship comment' : r.type === 'blogComment' ? 'Blog comment' : r.type === 'comment' ? 'Comment' : 'Story') + ' by ' + (r.reportedName || 'Member') + ' \u2014 ' + (r.reason || 'Reported');
         row.appendChild(title);
         if (r.snippet) { var sn = document.createElement('p'); sn.className = 'report-snippet'; sn.textContent = r.snippet; row.appendChild(sn); }
         if (r.details) { var dt = document.createElement('p'); dt.className = 'form-note'; dt.textContent = 'Reporter says: ' + r.details; row.appendChild(dt); }
@@ -1939,10 +1939,18 @@
         }
         acts.appendChild(mk('View', false, function () {
           if (r.type === 'blogComment') { window.location.href = 'blog.html#post=' + encodeURIComponent(r.postId); return new Promise(function () {}); }
+          if (r.type === 'fellowshipPost' || r.type === 'fellowshipComment') { window.location.href = 'fellowship.html#post=' + encodeURIComponent(r.postId); return new Promise(function () {}); }
           openStoryFocus(r.postId); return new Promise(function () {});
         }));
         acts.appendChild(mk('Delete content', true, function () {
-          var kill = r.type === 'blogComment'
+          var kill = r.type === 'fellowshipPost' ? db.collection('fellowshipPosts').doc(r.targetId).delete()
+            : r.type === 'fellowshipComment' ? (function () {
+                var b = db.batch();
+                b.delete(db.collection('fellowshipComments').doc(r.targetId));
+                b.update(db.collection('fellowshipPosts').doc(r.postId), { commentCount: firebase.firestore.FieldValue.increment(-1) });
+                return b.commit();
+              })()
+            : r.type === 'blogComment'
             ? db.collection('blogComments').doc(r.targetId).delete()
             : r.type === 'comment'
             ? deleteCommentWithCount(r.postId, r.targetId)
@@ -3741,6 +3749,10 @@
     if (g.type === 'reply') return who + ' replied to your comment on ' + title;
     if (g.type === 'blogReply') return who + ' replied to your comment on the blog: ' + title;
     if (g.type === 'blogLike') return who + ' liked your comment on the blog: ' + title;
+    if (g.type === 'fellowComment') return who + ' commented on your Warrior Fellowship post';
+    if (g.type === 'fellowReply') return who + ' replied to your comment in Warrior Fellowship';
+    if (g.type === 'fellowLike') return who + ' liked your Warrior Fellowship post or comment';
+    if (g.type === 'fellowApproved') return 'You\u2019ve been approved to join Warrior Fellowship';
     if (g.type === 'message') return g.items.length > 1 ? who + ' sent you ' + g.items.length + ' messages' : who + ' sent you a message';
     if (g.type === 'friendRequest') return who + ' sent you a friend request';
     if (g.type === 'friendAccept') return who + ' accepted your friend request';
@@ -3761,6 +3773,8 @@
     });
     notifPanel.hidden = true;
     var d = g.sample;
+    if (g.type === 'fellowApproved') { window.location.href = 'fellowship.html'; return; }
+    if ((g.type === 'fellowComment' || g.type === 'fellowReply' || g.type === 'fellowLike') && d.postId) { window.location.href = 'fellowship.html#post=' + encodeURIComponent(d.postId); return; }
     if ((g.type === 'blogReply' || g.type === 'blogLike') && d.postId) { window.location.href = 'blog.html#post=' + encodeURIComponent(d.postId); return; }
     if ((g.type === 'like' || g.type === 'comment' || g.type === 'reply') && d.postId) {
       openStoryFocus(d.postId);
