@@ -20,7 +20,8 @@
     { key: 'testimony', label: 'Testimony' },
     { key: 'prayer', label: 'Prayer' },
     { key: 'teaching', label: 'Teaching' },
-    { key: 'other', label: 'Other' }
+    { key: 'other', label: 'Other' },
+    { key: 'answered', label: 'Answered' }
   ];
   var activeKind = 'all';
   var kindNames = { encouragement: 'Encouragement', testimony: 'Testimony', prayer: 'Prayer request', teaching: 'Teaching', other: 'Other' };
@@ -158,7 +159,8 @@
   function applyFilter() {
     Array.prototype.forEach.call(feedEl.querySelectorAll('.fw-post'), function (card) {
       var k = card.getAttribute('data-kind') || 'other';
-      card.hidden = !(activeKind === 'all' || k === activeKind);
+      var show = activeKind === 'all' || (activeKind === 'answered' ? card.getAttribute('data-answered') === '1' : k === activeKind);
+      card.hidden = !show;
     });
   }
 
@@ -291,13 +293,17 @@
     var q = db.collection('fellowshipPosts').orderBy('createdAt', 'desc').limit(pageSize);
     if (cursor) q = q.startAfter(cursor);
     setStatus(reset ? 'Loading…' : '');
-    return Promise.all([q.get(), db.collection('fellowshipLikes').where('uid', '==', me.uid).get()]).then(function (r) {
+    var pinnedFirst = reset ? loadPinned() : Promise.resolve();
+    return pinnedFirst.then(function () {
+      return Promise.all([q.get(), db.collection('fellowshipLikes').where('uid', '==', me.uid).get()]);
+    }).then(function (r) {
       var snap = r[0];
       r[1].forEach(function (d) { myLikes[d.data().postId] = true; });
       if (snap.size) cursor = snap.docs[snap.docs.length - 1];
       moreBtn.hidden = snap.size < pageSize;
       if (reset && !snap.size) feedEl.appendChild(el('p', 'form-note', 'No posts yet. Be the first to share.'));
       snap.forEach(function (doc) {
+        if (doc.data().pinned) return;   // shown at the top instead
         posts[doc.id] = doc.data();
         feedEl.appendChild(buildPost(doc.id, doc.data()));
       });
@@ -309,6 +315,30 @@
     });
   }
   moreBtn.addEventListener('click', function () { loadPosts(false); });
+
+  // Pinned posts (announcements, a weekly verse) appear at the top of a fresh feed.
+  function loadPinned() {
+    return db.collection('fellowshipPosts').where('pinned', '==', true).get().then(function (snap) {
+      var arr = [];
+      snap.forEach(function (doc) { arr.push({ id: doc.id, data: doc.data() }); });
+      arr.sort(function (a, b) { return ms(b.data.createdAt) - ms(a.data.createdAt); });
+      if (!arr.length) return;
+      feedEl.appendChild(el('p', 'fw-pinned-label', '\ud83d\udccc Pinned'));
+      arr.forEach(function (x) { posts[x.id] = x.data; feedEl.appendChild(buildPost(x.id, x.data)); });
+      feedEl.appendChild(el('p', 'fw-pinned-label fw-latest-label', 'Latest'));
+    }).catch(function () {});
+  }
+
+  function setAnswered(id, d, on) {
+    db.collection('fellowshipPosts').doc(id).update({ answered: !!on, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+      .then(function () { return loadPosts(true); })
+      .catch(function () { setStatus('Couldn\u2019t update that prayer request.', true); });
+  }
+  function setPinned(id, on) {
+    db.collection('fellowshipPosts').doc(id).update({ pinned: !!on })
+      .then(function () { return loadPosts(true); })
+      .catch(function () { setStatus('Couldn\u2019t update the pin.', true); });
+  }
 
   function openFromHash() {
     var m = /^#post=([A-Za-z0-9_-]+)$/.exec(location.hash);
@@ -325,6 +355,7 @@
     var card = el('article', 'fw-post');
     card.setAttribute('data-post', id);
     card.setAttribute('data-kind', d.kind || 'other');
+    card.setAttribute('data-answered', d.kind === 'prayer' && d.answered ? '1' : '0');
     var head = el('div', 'fw-post-head');
     var av = el('span', 'fw-avatar', (d.authorName || 'M').trim().charAt(0).toUpperCase());
     head.appendChild(av);
@@ -333,6 +364,7 @@
     meta.appendChild(el('span', 'fw-time', ' \u00b7 ' + timeAgo(d.createdAt) + (d.updatedAt ? ' \u00b7 edited' : '')));
     head.appendChild(meta);
     if (d.kind && kindNames[d.kind]) head.appendChild(el('span', 'fw-kind fw-kind-' + d.kind, kindNames[d.kind]));
+    if (d.kind === 'prayer' && d.answered) head.appendChild(el('span', 'fw-kind fw-kind-answered', 'Answered'));
     card.appendChild(head);
 
     if (d.reshareOf) {
@@ -389,6 +421,16 @@
       var ed = el('button', 'fw-action', 'Edit'); ed.type = 'button';
       ed.addEventListener('click', function () { editPost(card, id, d); });
       actions.appendChild(ed);
+    }
+    if (d.kind === 'prayer' && (d.authorUid === me.uid || isAdmin)) {
+      var ans = el('button', 'fw-action', d.answered ? 'Mark not answered' : '\ud83d\ude4f Mark answered'); ans.type = 'button';
+      ans.addEventListener('click', function () { setAnswered(id, d, !d.answered); });
+      actions.appendChild(ans);
+    }
+    if (isAdmin) {
+      var pin = el('button', 'fw-action', d.pinned ? 'Unpin' : '\ud83d\udccc Pin to top'); pin.type = 'button';
+      pin.addEventListener('click', function () { setPinned(id, !d.pinned); });
+      actions.appendChild(pin);
     }
     if (d.authorUid === me.uid || isAdmin) {
       var dl = el('button', 'fw-action fw-danger-soft', 'Delete'); dl.type = 'button';

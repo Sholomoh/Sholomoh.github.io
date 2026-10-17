@@ -302,6 +302,19 @@ service cloud.firestore {
           get(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.lastCommentId)).data.postId == postId &&
           !exists(getAfter(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.lastCommentId)))
         ) ||
+        // Prayer requests: the author (or an admin) can mark a prayer request answered.
+        (
+          (resource.data.authorUid == request.auth.uid || isAdmin()) &&
+          resource.data.get('kind', null) == 'prayer' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['answered', 'updatedAt']) &&
+          request.resource.data.get('answered', false) is bool
+        ) ||
+        // Pinning: admins can pin or unpin a post (shown at the top of the feed).
+        (
+          isAdmin() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned']) &&
+          request.resource.data.get('pinned', false) is bool
+        ) ||
         (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount']))
       );
       allow delete: if isFellow() && (resource.data.authorUid == request.auth.uid || isAdmin());

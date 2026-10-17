@@ -1515,3 +1515,9 @@ audio[hidden], video[hidden] { display: none !important; }
   .fw-kind { margin-left: 0; }
 }
 @media (pointer: coarse) { .fw-filter, .fw-admin > summary { min-height: 44px; display: flex; align-items: center; } }
+
+/* Prayer answered, pinned posts */
+.fw-kind-answered { color: #7fe3a1; border-color: rgba(127,227,161,0.7); }
+.fw-pinned-label { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fw-gold); margin: 0.2rem 0 0.6rem; }
+.fw-latest-label { color: var(--muted); margin-top: 1.2rem; }
+.fw-post.is-pinned { border-top-color: var(--fw-gold); }
