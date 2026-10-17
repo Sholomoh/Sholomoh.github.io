@@ -467,6 +467,12 @@
     if (open && !card.querySelector('.fw-discussion')) open.click();
   }
 
+  function closeMenus() {
+    Array.prototype.forEach.call(document.querySelectorAll('.fw-menu'), function (m) { m.hidden = true; });
+    Array.prototype.forEach.call(document.querySelectorAll('.fw-more-btn'), function (b) { b.setAttribute('aria-expanded', 'false'); });
+  }
+  document.addEventListener('click', closeMenus);
+
   function buildPost(id, d) {
     var card = el('article', 'fw-post');
     card.setAttribute('data-post', id);
@@ -507,6 +513,7 @@
     var liked = !!myLikes[id];
     var like = el('button', 'fw-action' + (liked ? ' is-liked' : ''), (liked ? '\u2665 ' : '\u2661 ') + (Number(d.likeCount) || 0));
     like.type = 'button'; like.setAttribute('aria-pressed', liked ? 'true' : 'false');
+    like.setAttribute('aria-label', (liked ? 'Unlike' : 'Like') + ', ' + (Number(d.likeCount) || 0) + ' likes');
     like.addEventListener('click', function () { togglePostLike(id, d, like); });
     actions.appendChild(like);
 
@@ -520,41 +527,62 @@
     actions.appendChild(disc);
 
     var rs = el('button', 'fw-action', '\u21bb Reshare'); rs.type = 'button';
+    rs.setAttribute('aria-label', 'Reshare this post');
     rs.addEventListener('click', function () { openReshare(card, id, d); });
     actions.appendChild(rs);
 
-    var cp = el('button', 'fw-action', '\ud83d\udd17 Copy link'); cp.type = 'button';
+    var cp = el('button', 'fw-action fw-icon', '\ud83d\udd17'); cp.type = 'button';
+    cp.setAttribute('aria-label', 'Copy link to this post'); cp.title = 'Copy link';
     cp.addEventListener('click', function () { copyLink(cp, id); });
     actions.appendChild(cp);
 
+    // Less-used actions live in one "⋯" menu, so each post stays compact on phones.
+    var menuItems = [];
     if (d.authorUid !== me.uid) {
-      var rp = el('button', 'fw-action fw-danger-soft', '\u2691 Report'); rp.type = 'button';
+      var rp = el('button', 'fw-menu-item fw-danger-soft', '\u2691 Report'); rp.type = 'button';
       rp.addEventListener('click', function () { openReport(card, id, d); });
-      actions.appendChild(rp);
+      menuItems.push(rp);
     }
     if (d.authorUid === me.uid && !d.reshareOf) {
-      var ed = el('button', 'fw-action', 'Edit'); ed.type = 'button';
+      var ed = el('button', 'fw-menu-item', 'Edit'); ed.type = 'button';
       ed.addEventListener('click', function () { editPost(card, id, d); });
-      actions.appendChild(ed);
+      menuItems.push(ed);
     }
     if (d.kind === 'prayer' && (d.authorUid === me.uid || isAdmin)) {
-      var ans = el('button', 'fw-action', d.answered ? 'Mark not answered' : '\ud83d\ude4f Mark answered'); ans.type = 'button';
+      var ans = el('button', 'fw-menu-item', d.answered ? 'Mark not answered' : '\ud83d\ude4f Mark answered'); ans.type = 'button';
       ans.addEventListener('click', function () { setAnswered(id, d, !d.answered); });
-      actions.appendChild(ans);
+      menuItems.push(ans);
     }
     if (isAdmin) {
-      var pin = el('button', 'fw-action', d.pinned ? 'Unpin' : '\ud83d\udccc Pin to top'); pin.type = 'button';
+      var pin = el('button', 'fw-menu-item', d.pinned ? 'Unpin' : '\ud83d\udccc Pin to top'); pin.type = 'button';
       pin.addEventListener('click', function () { setPinned(id, !d.pinned); });
-      actions.appendChild(pin);
+      menuItems.push(pin);
     }
     if (d.authorUid === me.uid || isAdmin) {
-      var dl = el('button', 'fw-action fw-danger-soft', 'Delete'); dl.type = 'button';
+      var dl = el('button', 'fw-menu-item fw-danger-soft', 'Delete'); dl.type = 'button';
       dl.addEventListener('click', function () {
         if (!window.confirm('Delete this post?')) return;
         db.collection('fellowshipPosts').doc(id).delete().then(function () { card.remove(); })
           .catch(function () { setStatus('Couldn\u2019t delete that post.', true); });
       });
-      actions.appendChild(dl);
+      menuItems.push(dl);
+    }
+    if (menuItems.length) {
+      var wrap = el('div', 'fw-more-wrap');
+      var mb = el('button', 'fw-action fw-icon fw-more-btn', '\u22ef'); mb.type = 'button';
+      mb.setAttribute('aria-label', 'More actions'); mb.setAttribute('aria-expanded', 'false');
+      var menu = el('div', 'fw-menu'); menu.hidden = true;
+      menuItems.forEach(function (b) { menu.appendChild(b); });
+      mb.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var open = menu.hidden;
+        closeMenus();
+        menu.hidden = !open;
+        mb.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      menu.addEventListener('click', function (e) { e.stopPropagation(); closeMenus(); });
+      wrap.appendChild(mb); wrap.appendChild(menu);
+      actions.appendChild(wrap);
     }
     card.appendChild(actions);
     return card;

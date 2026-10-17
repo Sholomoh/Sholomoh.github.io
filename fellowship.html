@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=61">
+  <link rel="stylesheet" href="styles.css?v=62">
 </head>
 <body class="fw-page">
   <nav>
@@ -45,36 +45,39 @@
       </div>
     </header>
 
-    <section class="fw-verse-card" aria-labelledby="fw-verse-title">
-      <p class="fw-kicker">Read together</p>
-      <h2 id="fw-verse-title" class="fw-verse-ref">Hebrews 10:25 (TPT)</h2>
-      <p id="fw-verse-text" class="fw-verse-text" hidden></p>
-      <p class="fw-verse-links"><a href="https://www.biblegateway.com/passage/?search=Hebrews+10%3A25&amp;version=TPT" target="_blank" rel="noopener noreferrer">Read in TPT</a><span aria-hidden="true"> · </span><a href="https://www.biblegateway.com/passage/?search=Hebrews+10%3A25&amp;version=AMP" target="_blank" rel="noopener noreferrer">Read in AMP</a></p>
-    </section>
+    <div class="fw-layout">
+      <aside class="fw-side">
+        <section class="fw-verse-card" aria-labelledby="fw-verse-title">
+          <p class="fw-kicker">Read together</p>
+          <h2 id="fw-verse-title" class="fw-verse-ref">Hebrews 10:25 (TPT)</h2>
+          <p id="fw-verse-text" class="fw-verse-text" hidden></p>
+          <p class="fw-verse-links"><a href="https://www.biblegateway.com/passage/?search=Hebrews+10%3A25&amp;version=TPT" target="_blank" rel="noopener noreferrer">Read in TPT</a><span aria-hidden="true"> · </span><a href="https://www.biblegateway.com/passage/?search=Hebrews+10%3A25&amp;version=AMP" target="_blank" rel="noopener noreferrer">Read in AMP</a></p>
+        </section>
+        <section id="fw-me" class="fw-me" aria-label="Your fellowship profile" hidden></section>
+        <details id="fw-admin" class="fw-admin" hidden>
+          <summary id="fw-admin-summary">Admin</summary>
+          <div class="fw-admin-body">
+            <h3 class="fw-admin-h">Join requests</h3>
+            <div id="fw-requests"></div>
+            <h3 class="fw-admin-h">Members</h3>
+            <div id="fw-members"></div>
+          </div>
+        </details>
+      </aside>
 
-    <section id="fw-gate" class="fw-gate" hidden></section>
-
-    <div id="fw-main" hidden>
-      <section id="fw-me" class="fw-me" aria-label="Your fellowship profile" hidden></section>
-      <section id="fw-compose" class="fw-compose" aria-label="Write a post"></section>
-      <p id="fw-status" class="form-note" role="status"></p>
-
-      <div class="fw-feed-head">
-        <h2 class="fw-section-title">Latest</h2>
-        <div id="fw-filters" class="fw-filters" role="group" aria-label="Filter posts by type"></div>
-      </div>
-      <div id="fw-feed" class="fw-feed"></div>
-      <button type="button" id="fw-more" class="btn btn-ghost btn-sm fw-more" hidden>Load older posts</button>
-
-      <details id="fw-admin" class="fw-admin" hidden>
-        <summary id="fw-admin-summary">Admin</summary>
-        <div class="fw-admin-body">
-          <h3 class="fw-admin-h">Join requests</h3>
-          <div id="fw-requests"></div>
-          <h3 class="fw-admin-h">Members</h3>
-          <div id="fw-members"></div>
+      <div class="fw-col">
+        <section id="fw-gate" class="fw-gate" hidden></section>
+        <div id="fw-main" hidden>
+          <section id="fw-compose" class="fw-compose" aria-label="Write a post"></section>
+          <p id="fw-status" class="form-note" role="status"></p>
+          <div class="fw-feed-head">
+            <h2 class="fw-section-title">Latest</h2>
+            <div id="fw-filters" class="fw-filters" role="group" aria-label="Filter posts by type"></div>
+          </div>
+          <div id="fw-feed" class="fw-feed"></div>
+          <button type="button" id="fw-more" class="btn btn-ghost btn-sm fw-more" hidden>Load older posts</button>
         </div>
-      </details>
+      </div>
     </div>
   </div>
 
@@ -87,6 +90,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="fellowship.js?v=9"></script>
+  <script src="fellowship.js?v=10"></script>
 </body>
 </html>

@@ -1557,3 +1557,67 @@ audio[hidden], video[hidden] { display: none !important; }
 .fw-field-label { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
 .fw-profile-form input[type="file"] { color: var(--muted); font-size: 0.85rem; max-width: 100%; }
 @media (max-width: 480px) { .fw-me-top { gap: 0.8rem; } .fw-me-avatar, .fw-me-avatar.fw-avatar-img { width: 60px; height: 60px; } }
+
+/* ===== Fellowship layout v3: sidebar on wide screens, ordered single column on phones ===== */
+.fw-layout { display: flex; flex-direction: column; gap: 1.1rem; margin-top: 0.4rem; }
+.fw-side, .fw-col { display: contents; }                 /* phones: children flow as one column */
+.fw-verse-card { order: 1; margin-bottom: 0; }
+#fw-me { order: 2; margin-bottom: 0; }
+#fw-gate { order: 3; }
+#fw-main { order: 3; display: grid; gap: 0.9rem; }
+#fw-main[hidden], #fw-gate[hidden] { display: none; }
+#fw-admin { order: 9; margin-top: 0.4rem; }
+.fw-feed { display: grid; gap: 1rem; }
+.fw-compose { margin: 0; }
+
+/* post card: clear header, comfortable spacing */
+.fw-post { padding: 1.05rem 1.1rem 0.9rem; border-radius: 14px; }
+.fw-post-head { margin-bottom: 0.65rem; align-items: center; }
+.fw-post-meta { min-width: 0; flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.1rem 0.4rem; }
+.fw-post-meta .fw-time { white-space: nowrap; }
+.fw-post-head .fw-kind { margin-left: auto; }
+.fw-body { font-size: 0.96rem; line-height: 1.65; margin-bottom: 0.8rem; }
+
+/* compact action row: icons with counts; the rest in a menu */
+.fw-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.7rem; padding-top: 0.6rem; border-top: 1px solid rgba(38,97,156,0.28); position: relative; }
+.fw-action { min-height: 34px; padding: 0.22rem 0.7rem; font-size: 0.74rem; }
+.fw-icon { min-width: 36px; justify-content: center; padding: 0.22rem 0.55rem; }
+.fw-more-wrap { position: relative; margin-left: auto; }
+.fw-menu {
+  position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 30; min-width: 180px;
+  background: #0b1420; border: 1px solid rgba(38,97,156,0.7); border-radius: 12px; padding: 0.35rem;
+  box-shadow: 0 14px 36px rgba(0,0,0,0.55); display: grid; gap: 0.1rem;
+}
+.fw-menu[hidden] { display: none; }
+.fw-menu-item {
+  background: none; border: 0; color: var(--text); text-align: left; cursor: pointer; border-radius: 8px;
+  padding: 0.6rem 0.75rem; font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; min-height: 40px;
+}
+.fw-menu-item:hover, .fw-menu-item:focus-visible { background: rgba(212,167,44,0.12); color: var(--fw-gold); }
+.fw-menu-item.fw-danger-soft { color: #ff8a8a; }
+
+/* composer, reshare and edit panels read as part of the card */
+.fw-composer { box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+.fw-panel { background: rgba(6,10,15,0.5); border: 1px solid rgba(38,97,156,0.4); border-radius: 10px; padding: 0.7rem; margin-top: 0.7rem; }
+
+@media (min-width: 900px) {
+  .fw-page .fw-wrap { max-width: 1120px; }
+  .fw-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 1.6rem; align-items: start; }
+  .fw-side { display: flex; flex-direction: column; gap: 1.1rem; position: sticky; top: 1rem; }
+  .fw-col { display: block; }
+  .fw-side .fw-verse-card, .fw-side #fw-me, .fw-side #fw-admin { order: 0; margin: 0; }
+  #fw-main { order: 0; }
+  #fw-gate { order: 0; }
+  #fw-admin { order: 0; margin-top: 0; }
+  .fw-verse-card { padding: 1.1rem; }
+  .fw-verse-text { font-size: 0.95rem; }
+  .fw-hero { margin-bottom: 1.2rem; }
+  .fw-feed { gap: 1.2rem; }
+  .fw-post { padding: 1.2rem 1.3rem 1rem; }
+}
+@media (max-width: 480px) {
+  .fw-post { padding: 0.95rem 0.9rem 0.8rem; }
+  .fw-post-head .fw-kind { margin-left: 0; }
+  .fw-action { padding: 0.2rem 0.6rem; }
+  .fw-menu { min-width: 170px; }
+}
