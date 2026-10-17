@@ -258,7 +258,9 @@ service cloud.firestore {
       allow read: if isFellow() || isAdmin();
       allow create: if isFellow() && request.resource.data.authorUid == request.auth.uid &&
         request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'body', 'attachments', 'createdAt',
-          'likeCount', 'commentCount', 'reshareOf', 'reshareNote']) &&
+          'likeCount', 'commentCount', 'reshareOf', 'reshareNote', 'kind']) &&
+        (request.resource.data.get('kind', null) == null ||
+          request.resource.data.kind in ['encouragement', 'testimony', 'prayer', 'teaching', 'other']) &&
         request.resource.data.body is string && request.resource.data.body.size() <= 4000 &&
         request.resource.data.get('attachments', []) is list && request.resource.data.get('attachments', []).size() <= 10 &&
         request.resource.data.likeCount == 0 && request.resource.data.commentCount == 0 &&

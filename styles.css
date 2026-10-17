@@ -1439,3 +1439,79 @@ audio[hidden], video[hidden] { display: none !important; }
 
 .fw-verse-ref { color: var(--text); margin-bottom: 0.4rem; }
 .fw-verse-links a { color: var(--fw-gold, #d4a72c); text-decoration: underline; }
+
+/* ===== WARRIOR FELLOWSHIP — refined layout (red, gold and lapis lazuli) ===== */
+.fw-page .fw-wrap { max-width: 760px; }
+.fw-hero { margin-bottom: 1.4rem; }
+.fw-hero .fw-intro { color: var(--muted); line-height: 1.7; max-width: 60ch; margin: 0.6rem 0 0.9rem; }
+.fw-stats { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.fw-chip { font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--text); background: rgba(38,97,156,0.22); border: 1px solid rgba(38,97,156,0.7); border-radius: 999px; padding: 0.25rem 0.75rem; }
+.fw-chip-gold { color: #120d00; background: var(--fw-gold); border-color: var(--fw-gold); }
+.fw-chip[hidden] { display: none; }
+
+.fw-verse-card {
+  position: relative; margin: 0 0 1.6rem; padding: 1.2rem 1.3rem 1.1rem;
+  background: linear-gradient(135deg, rgba(212,167,44,0.10), rgba(38,97,156,0.10));
+  border: 1px solid rgba(212,167,44,0.45); border-radius: 14px;
+}
+.fw-kicker { font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fw-red); margin: 0 0 0.35rem; }
+.fw-verse-ref { font-size: 1.15rem; color: var(--fw-gold); margin: 0 0 0.6rem; }
+.fw-verse-text { color: var(--white); font-size: 1rem; line-height: 1.75; white-space: pre-wrap; margin: 0 0 0.8rem; }
+.fw-verse-links { margin: 0; font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; }
+.fw-verse-links a { color: var(--fw-lapis); text-decoration: none; border-bottom: 1px solid rgba(38,97,156,0.6); }
+.fw-verse-links a:hover { color: var(--fw-gold); border-bottom-color: var(--fw-gold); }
+
+.fw-gate { margin-bottom: 1.4rem; }
+.fw-gate-box { background: rgba(10,16,24,0.92); border: 1px solid rgba(38,97,156,0.5); border-top: 2px solid var(--fw-gold); border-radius: 12px; padding: 1.2rem; }
+.fw-gate-text { color: var(--text); line-height: 1.7; margin: 0 0 1rem; }
+
+.fw-compose {
+  background: rgba(10,16,24,0.92); border: 1px solid rgba(38,97,156,0.5); border-top: 2px solid var(--fw-red);
+  border-radius: 12px; padding: 1rem; margin-bottom: 1.2rem;
+}
+.fw-composer { display: grid; gap: 0.6rem; }
+.fw-kind-row { display: flex; align-items: center; gap: 0.6rem; font-family: 'Share Tech Mono', monospace; font-size: 0.74rem; color: var(--muted); }
+.fw-kind-row select { width: auto; min-width: 180px; }
+.fw-composer input[type="file"] { color: var(--muted); font-size: 0.85rem; max-width: 100%; }
+
+.fw-feed-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.7rem; margin: 0.4rem 0 0.9rem; }
+.fw-feed-head .fw-section-title { margin: 0; font-size: 1.2rem; }
+.fw-filters { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.fw-filter {
+  background: none; border: 1px solid rgba(38,97,156,0.6); color: var(--text); border-radius: 999px;
+  padding: 0.25rem 0.7rem; font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; cursor: pointer; min-height: 30px;
+}
+.fw-filter:hover { border-color: var(--fw-gold); color: var(--fw-gold); }
+.fw-filter.is-active { background: var(--fw-gold); border-color: var(--fw-gold); color: #120d00; }
+
+.fw-kind { font-family: 'Share Tech Mono', monospace; font-size: 0.64rem; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 999px; padding: 0.15rem 0.55rem; margin-left: auto; border: 1px solid; white-space: nowrap; }
+.fw-kind-encouragement { color: var(--fw-gold); border-color: rgba(212,167,44,0.6); }
+.fw-kind-testimony { color: #8fb8e6; border-color: rgba(38,97,156,0.9); }
+.fw-kind-prayer { color: #ff8a8a; border-color: rgba(214,69,69,0.7); }
+.fw-kind-teaching { color: #7fd1c7; border-color: rgba(60,160,150,0.7); }
+.fw-kind-other { color: var(--muted); border-color: rgba(139,148,158,0.5); }
+.fw-post-head { flex-wrap: wrap; }
+.fw-post[hidden] { display: none; }
+.fw-post { border-top-color: var(--fw-lapis); }
+
+.fw-admin {
+  margin-top: 2rem; background: rgba(10,16,24,0.92); border: 1px solid rgba(38,97,156,0.5); border-radius: 12px; padding: 0;
+}
+.fw-admin[hidden] { display: none; }
+.fw-admin > summary {
+  cursor: pointer; list-style: none; padding: 0.9rem 1rem; color: var(--fw-gold); font-family: 'Share Tech Mono', monospace; font-size: 0.8rem;
+}
+.fw-admin > summary::-webkit-details-marker { display: none; }
+.fw-admin > summary::before { content: '\25B8  '; }
+.fw-admin[open] > summary::before { content: '\25BE  '; }
+.fw-admin-body { padding: 0 1rem 1rem; }
+.fw-admin-h { font-size: 0.95rem; color: var(--white); margin: 0.9rem 0 0.4rem; }
+.fw-admin-row { padding: 0.55rem 0; border-bottom: 1px solid rgba(38,97,156,0.3); }
+.fw-admin-body .form-note { margin: 0.2rem 0 0.6rem; }
+
+.fw-more { display: block; margin: 0.8rem auto 1.4rem; }
+@media (max-width: 480px) {
+  .fw-verse-card { padding: 1rem; }
+  .fw-kind { margin-left: 0; }
+}
+@media (pointer: coarse) { .fw-filter, .fw-admin > summary { min-height: 44px; display: flex; align-items: center; } }

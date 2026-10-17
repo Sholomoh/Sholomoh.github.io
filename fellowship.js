@@ -11,6 +11,20 @@
   var statusEl = document.getElementById('fw-status');
   var moreBtn = document.getElementById('fw-more');
 
+  // The verse text: paste it from your own TPT (or AMP) copy between the backticks. Leave it empty to show links only.
+  var VERSE_TEXT = ``;
+
+  var KINDS = [
+    { key: 'all', label: 'All' },
+    { key: 'encouragement', label: 'Encouragement' },
+    { key: 'testimony', label: 'Testimony' },
+    { key: 'prayer', label: 'Prayer' },
+    { key: 'teaching', label: 'Teaching' },
+    { key: 'other', label: 'Other' }
+  ];
+  var activeKind = 'all';
+  var kindNames = { encouragement: 'Encouragement', testimony: 'Testimony', prayer: 'Prayer request', teaching: 'Teaching', other: 'Other' };
+
   var db = null, auth = null, me = null;
   var isAdmin = false;
   var isMember = false;
@@ -117,10 +131,47 @@
     });
   }
 
+  function setVerse() {
+    var t = document.getElementById('fw-verse-text');
+    var s = String(VERSE_TEXT || '').trim();
+    if (s) { t.textContent = s; t.hidden = false; }
+  }
+
+  function loadMemberCount() {
+    db.collection('fellowshipMembers').get().then(function (snap) {
+      document.getElementById('fw-count').textContent = snap.size + (snap.size === 1 ? ' member' : ' members');
+    }).catch(function () {});
+  }
+
+  function renderFilters() {
+    var box = document.getElementById('fw-filters');
+    box.innerHTML = '';
+    KINDS.forEach(function (k) {
+      var b = el('button', 'fw-filter' + (activeKind === k.key ? ' is-active' : ''), k.label);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', activeKind === k.key ? 'true' : 'false');
+      b.addEventListener('click', function () { activeKind = k.key; renderFilters(); applyFilter(); });
+      box.appendChild(b);
+    });
+  }
+
+  function applyFilter() {
+    Array.prototype.forEach.call(feedEl.querySelectorAll('.fw-post'), function (card) {
+      var k = card.getAttribute('data-kind') || 'other';
+      card.hidden = !(activeKind === 'all' || k === activeKind);
+    });
+  }
+
   function openFellowship() {
     gateEl.hidden = true; mainEl.hidden = false;
     adminEl.hidden = !isAdmin;
     if (isAdmin) loadAdmin();
+    setVerse();
+    loadMemberCount();
+    renderFilters();
+    var role = document.getElementById('fw-role');
+    role.hidden = false;
+    role.textContent = isAdmin ? 'Admin' : 'Member';
     if (isMember) renderComposer(); else renderAdminJoin();
     loadPosts(true);
   }
@@ -160,6 +211,13 @@
     var box = el('form', 'fw-composer');
     var ta = el('textarea', 'story-input'); ta.rows = 3; ta.maxLength = 4000; ta.placeholder = 'Share an encouragement, testimony, prayer request or teaching…';
     ta.setAttribute('aria-label', 'Your post');
+    var kindRow = el('label', 'fw-kind-row', 'Type ');
+    var kindSel = el('select', 'field-input');
+    ['encouragement', 'testimony', 'prayer', 'teaching', 'other'].forEach(function (k) {
+      var o = el('option', '', kindNames[k]); o.value = k; kindSel.appendChild(o);
+    });
+    kindSel.setAttribute('aria-label', 'Type of post');
+    kindRow.appendChild(kindSel);
     var fileIn = el('input'); fileIn.type = 'file'; fileIn.multiple = true;
     fileIn.accept = 'image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv';
     fileIn.setAttribute('aria-label', 'Attach photos, videos or documents');
@@ -182,7 +240,7 @@
       });
       chosen.textContent = files.length ? files.length + ' file' + (files.length === 1 ? '' : 's') + ' ready' + (msg.length ? '. Skipped: ' + msg.join(', ') : '') : (msg.length ? 'Skipped: ' + msg.join(', ') : '');
     });
-    box.appendChild(ta); box.appendChild(fileIn); box.appendChild(chosen); box.appendChild(row);
+    box.appendChild(kindRow); box.appendChild(ta); box.appendChild(fileIn); box.appendChild(chosen); box.appendChild(row);
     box.addEventListener('submit', function (e) {
       e.preventDefault();
       var body = ta.value.trim();
@@ -193,7 +251,7 @@
           return db.collection('fellowshipPosts').add({
             authorUid: me.uid, authorName: name, body: body, attachments: atts,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            likeCount: 0, commentCount: 0, reshareOf: null, reshareNote: ''
+            likeCount: 0, commentCount: 0, reshareOf: null, reshareNote: '', kind: kindSel.value
           });
         });
       }).then(function () {
@@ -244,6 +302,7 @@
         feedEl.appendChild(buildPost(doc.id, doc.data()));
       });
       setStatus('');
+      applyFilter();
       openFromHash();
     }).catch(function () {
       setStatus('Couldn\u2019t load posts. Check your connection and try again.', true);
@@ -265,6 +324,7 @@
   function buildPost(id, d) {
     var card = el('article', 'fw-post');
     card.setAttribute('data-post', id);
+    card.setAttribute('data-kind', d.kind || 'other');
     var head = el('div', 'fw-post-head');
     var av = el('span', 'fw-avatar', (d.authorName || 'M').trim().charAt(0).toUpperCase());
     head.appendChild(av);
@@ -272,6 +332,7 @@
     meta.appendChild(el('bdi', 'fw-author', d.authorName || 'Member'));
     meta.appendChild(el('span', 'fw-time', ' \u00b7 ' + timeAgo(d.createdAt) + (d.updatedAt ? ' \u00b7 edited' : '')));
     head.appendChild(meta);
+    if (d.kind && kindNames[d.kind]) head.appendChild(el('span', 'fw-kind fw-kind-' + d.kind, kindNames[d.kind]));
     card.appendChild(head);
 
     if (d.reshareOf) {
@@ -355,7 +416,7 @@
     var wrap = el('div', 'fw-attachments');
     list.forEach(function (a) {
       var url = ownMedia(a.url);
-      if (!url) { wrap.appendChild(el('p', 'form-note', 'Attachment unavailable.')); return; }
+      if (!url) return;   // links we can't trust are not shown at all
       if (a.type === 'image') {
         var img = el('img', 'fw-img'); img.src = url; img.alt = a.name || 'Photo'; img.loading = 'lazy';
         wrap.appendChild(img);
@@ -690,7 +751,12 @@
   function loadAdmin() {
     var reqEl = document.getElementById('fw-requests');
     var memEl = document.getElementById('fw-members');
+    var sumEl = document.getElementById('fw-admin-summary');
+    var reqCount = 0;
     db.collection('fellowshipRequests').get().then(function (snap) {
+      reqCount = snap.size;
+      // Open the admin panel by itself when someone is waiting to be approved.
+      if (reqCount > 0) document.getElementById('fw-admin').open = true;
       reqEl.innerHTML = '';
       if (snap.empty) reqEl.appendChild(el('p', 'form-note', 'No pending requests.'));
       snap.forEach(function (doc) {
@@ -721,6 +787,7 @@
     db.collection('fellowshipMembers').get().then(function (snap) {
       memEl.innerHTML = '';
       if (snap.empty) memEl.appendChild(el('p', 'form-note', 'No members yet.'));
+      sumEl.textContent = 'Admin · ' + reqCount + (reqCount === 1 ? ' request' : ' requests') + ' · ' + snap.size + (snap.size === 1 ? ' member' : ' members');
       snap.forEach(function (doc) {
         var m = doc.data();
         var row = el('div', 'fw-admin-row');
