@@ -467,6 +467,68 @@
     if (open && !card.querySelector('.fw-discussion')) open.click();
   }
 
+  // Make a name or photo open the member's profile (keyboard and screen-reader friendly).
+  function makeClickable(node, fn, label) {
+    node.classList.add('fw-clickable');
+    node.setAttribute('role', 'button');
+    node.tabIndex = 0;
+    node.setAttribute('aria-label', label);
+    node.addEventListener('click', function (e) { e.stopPropagation(); fn(); });
+    node.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); }
+    });
+  }
+
+  // Member profile viewer: fellowship details, how long they've been a member, and a link to their Members profile.
+  function openProfile(uid, fallbackName) {
+    var box = document.getElementById('fw-profile-view');
+    var body = document.getElementById('fw-profile-body');
+    body.innerHTML = '';
+    body.appendChild(el('p', 'form-note', 'Loading…'));
+    box.hidden = false;
+    document.body.classList.add('fw-noscroll');
+    document.getElementById('fw-profile-close').focus();
+    Promise.all([
+      db.collection('fellowshipMembers').doc(uid).get(),
+      db.collection('users').doc(uid).get()
+    ]).then(function (r) {
+      var fm = r[0].exists ? r[0].data() : null;
+      var um = r[1].exists ? r[1].data() : null;
+      var p = profiles[uid] || {};
+      body.innerHTML = '';
+      body.appendChild(avatarFor(uid, fallbackName, 'fw-prof-avatar'));
+      body.appendChild(el('p', 'fw-prof-kicker', fm ? 'Warrior Fellowship member' : 'Not currently a member'));
+      body.appendChild(el('h2', 'fw-prof-name', nameFor(uid, fallbackName)));
+      body.appendChild(el('p', fp(p.bio) ? 'fw-prof-bio' : 'fw-prof-bio fw-me-empty', p.bio || 'No bio yet.'));
+      var shown = Object.keys(posts).filter(function (id) { return posts[id].authorUid === uid; }).length;
+      var facts = el('div', 'fw-prof-facts');
+      if (fm && fm.approvedAt) facts.appendChild(el('span', 'fw-chip', 'Member since ' + new Date(ms(fm.approvedAt)).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })));
+      facts.appendChild(el('span', 'fw-chip', shown + (shown === 1 ? ' post' : ' posts') + ' shown'));
+      body.appendChild(facts);
+      if (um && uid !== me.uid) {
+        var link = el('a', 'btn btn-ghost btn-sm fw-prof-link', 'View their Members profile');
+        link.href = 'members.html#u=' + encodeURIComponent(uid);
+        body.appendChild(link);
+      }
+      if (uid === me.uid) {
+        var edit = el('a', 'btn btn-ghost btn-sm fw-prof-link', 'Edit your profile');
+        edit.href = '#'; edit.addEventListener('click', function (e) { e.preventDefault(); closeProfile(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        body.appendChild(edit);
+      }
+    }).catch(function () {
+      body.innerHTML = '';
+      body.appendChild(el('p', 'form-error', 'Couldn\u2019t load this profile. Try again.'));
+    });
+  }
+  function fp(s) { return String(s || '').trim().length > 0; }
+  function closeProfile() {
+    document.getElementById('fw-profile-view').hidden = true;
+    document.body.classList.remove('fw-noscroll');
+  }
+  document.getElementById('fw-profile-close').addEventListener('click', closeProfile);
+  document.getElementById('fw-profile-view').addEventListener('click', function (e) { if (e.target === this) closeProfile(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('fw-profile-view').hidden) closeProfile(); });
+
   function closeMenus() {
     Array.prototype.forEach.call(document.querySelectorAll('.fw-menu'), function (m) { m.hidden = true; });
     Array.prototype.forEach.call(document.querySelectorAll('.fw-more-btn'), function (b) { b.setAttribute('aria-expanded', 'false'); });
@@ -479,9 +541,13 @@
     card.setAttribute('data-kind', d.kind || 'other');
     card.setAttribute('data-answered', d.kind === 'prayer' && d.answered ? '1' : '0');
     var head = el('div', 'fw-post-head');
-    head.appendChild(avatarFor(d.authorUid, d.authorName, 'fw-avatar'));
+    var postAv = avatarFor(d.authorUid, d.authorName, 'fw-avatar');
+    makeClickable(postAv, function () { openProfile(d.authorUid, d.authorName); }, 'View ' + nameFor(d.authorUid, d.authorName) + '\u2019s profile');
+    head.appendChild(postAv);
     var meta = el('div', 'fw-post-meta');
-    meta.appendChild(el('bdi', 'fw-author', nameFor(d.authorUid, d.authorName)));
+    var postName = el('bdi', 'fw-author', nameFor(d.authorUid, d.authorName));
+    makeClickable(postName, function () { openProfile(d.authorUid, d.authorName); }, 'View ' + nameFor(d.authorUid, d.authorName) + '\u2019s profile');
+    meta.appendChild(postName);
     meta.appendChild(el('span', 'fw-time', ' \u00b7 ' + timeAgo(d.createdAt) + (d.updatedAt ? ' \u00b7 edited' : '')));
     head.appendChild(meta);
     if (d.kind && kindNames[d.kind]) head.appendChild(el('span', 'fw-kind fw-kind-' + d.kind, kindNames[d.kind]));
@@ -818,7 +884,9 @@
     var c = it.data;
     var art = el('article', 'fw-comment' + (isReply ? ' is-reply' : ''));
     var head = el('p', 'fw-comment-meta');
-    head.appendChild(el('bdi', '', nameFor(c.authorUid, c.authorName)));
+    var cName = el('bdi', '', nameFor(c.authorUid, c.authorName));
+    makeClickable(cName, function () { openProfile(c.authorUid, c.authorName); }, 'View ' + nameFor(c.authorUid, c.authorName) + '\u2019s profile');
+    head.appendChild(cName);
     head.appendChild(document.createTextNode(' \u00b7 ' + timeAgo(c.createdAt) + (c.editedAt ? ' \u00b7 edited' : '')));
     art.appendChild(head);
     var txt = el('p', 'fw-comment-text', c.text || '');

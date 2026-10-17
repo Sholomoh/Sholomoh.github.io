@@ -1621,3 +1621,30 @@ audio[hidden], video[hidden] { display: none !important; }
   .fw-action { padding: 0.2rem 0.6rem; }
   .fw-menu { min-width: 170px; }
 }
+
+/* Clickable names and photos, member profile viewer */
+.fw-clickable { cursor: pointer; }
+.fw-clickable:hover { filter: brightness(1.15); }
+.fw-clickable:focus-visible { outline: 2px solid var(--fw-gold); outline-offset: 3px; border-radius: 6px; }
+.fw-author.fw-clickable:hover { text-decoration: underline; text-underline-offset: 3px; }
+.fw-noscroll { overflow: hidden; }
+.fw-profile-view { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.fw-profile-view[hidden] { display: none; }
+.fw-profile-card {
+  position: relative; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+  background: #0b1420; border: 1px solid rgba(38,97,156,0.7); border-top: 3px solid var(--fw-gold);
+  border-radius: 16px; padding: 1.5rem 1.4rem 1.3rem; box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+}
+.fw-profile-close {
+  position: absolute; top: 0.5rem; right: 0.6rem; background: none; border: 0; color: var(--muted);
+  font-size: 1.6rem; line-height: 1; cursor: pointer; min-width: 44px; min-height: 44px;
+}
+.fw-profile-close:hover { color: var(--fw-gold); }
+#fw-profile-body { display: grid; gap: 0.7rem; justify-items: start; }
+.fw-prof-avatar { width: 96px; height: 96px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; color: #fff; background: rgba(38,97,156,0.35); border: 3px solid var(--fw-gold); object-fit: cover; }
+img.fw-prof-avatar { background: #0a1420; }
+.fw-prof-kicker { font-family: 'Share Tech Mono', monospace; font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fw-red); margin: 0; }
+.fw-prof-name { font-size: 1.4rem; color: var(--fw-gold); margin: 0; }
+.fw-prof-bio { color: var(--text); line-height: 1.6; margin: 0; white-space: pre-wrap; word-break: break-word; }
+.fw-prof-facts { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.fw-prof-link { margin-top: 0.3rem; }
