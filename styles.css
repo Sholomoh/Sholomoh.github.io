@@ -1655,3 +1655,15 @@ img.fw-prof-avatar { background: #0a1420; }
 .verify-text { color: var(--text); line-height: 1.6; margin: 0 0 0.7rem; font-size: 0.92rem; }
 .verify-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .verify-status { font-family: 'Share Tech Mono', monospace; font-size: 0.74rem; color: var(--muted); margin: 0.6rem 0 0; }
+
+/* Google sign-in */
+.google-wrap { display: grid; gap: 0.5rem; margin-bottom: 0.9rem; }
+.google-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem; width: 100%; min-height: 46px;
+  background: #fff; color: #1f1f1f; border: 0; border-radius: 10px; padding: 0.6rem 1rem; cursor: pointer;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+}
+.google-btn:hover { filter: brightness(0.96); }
+.google-btn:disabled { opacity: 0.7; cursor: default; }
+.google-or { display: flex; align-items: center; gap: 0.7rem; margin: 0.2rem 0 0; font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+.google-or::before, .google-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }

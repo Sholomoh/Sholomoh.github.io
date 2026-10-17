@@ -115,7 +115,11 @@
       'auth/weak-password': 'Password should be at least 6 characters.',
       'auth/too-many-requests': 'Too many attempts. Please wait a few minutes and try again.',
       'auth/network-request-failed': 'Network problem \u2014 check your connection and try again.',
-      'auth/user-disabled': 'This account has been disabled.'
+      'auth/user-disabled': 'This account has been disabled.',
+      'auth/account-exists-with-different-credential': 'That email already has an account. Sign in with email and password instead.',
+      'auth/popup-closed-by-user': 'Sign-in was cancelled.',
+      'auth/cancelled-popup-request': 'Sign-in was cancelled.',
+      'auth/popup-blocked': 'Your browser blocked the Google window. Trying another way…'
     };
     return (err && (m[err.code] || err.message)) || 'Something went wrong.';
   }
@@ -358,6 +362,45 @@
       });
     }).catch(function (err) { showAuthError(friendlyError(err)); });
   });
+
+  /* ---------- Google sign-in and sign-up ---------- */
+  var googleBtn = document.getElementById('google-btn');
+  var googleStatus = document.getElementById('google-status');
+  function googleProvider() {
+    var p = new firebase.auth.GoogleAuthProvider();
+    p.setCustomParameters({ prompt: 'select_account' });
+    return p;
+  }
+  // Google accounts get the same profile record as email accounts, using their Google name.
+  function ensureProfile(user) {
+    var ref = db.collection('users').doc(user.uid);
+    return ref.get().then(function (d) {
+      if (d.exists) return;
+      return ref.set({
+        displayName: String(user.displayName || 'Member').slice(0, 100),
+        bio: '', location: '', photoURL: null,
+        createdAt: FieldValue.serverTimestamp()
+      });
+    });
+  }
+  function googleSignIn() {
+    googleStatus.className = 'form-note';
+    googleStatus.textContent = 'Opening Google…';
+    return auth.signInWithPopup(googleProvider()).then(function (cred) {
+      return ensureProfile(cred.user);
+    }).then(function () { googleStatus.textContent = ''; })
+    .catch(function (err) {
+      if (err && (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')) {
+        // Some phone browsers block pop-ups: continue on the Google page instead.
+        return auth.signInWithRedirect(googleProvider());
+      }
+      googleStatus.className = 'form-error';
+      googleStatus.textContent = friendlyError(err);
+    });
+  }
+  googleBtn.addEventListener('click', function () { googleBtn.disabled = true; googleSignIn().then(function () { googleBtn.disabled = false; }); });
+  // Returning from the Google page (redirect fallback).
+  auth.getRedirectResult().then(function (r) { if (r && r.user) return ensureProfile(r.user); }).catch(function () {});
 
   function clearLocalPrivateData() {
     try {
@@ -2201,6 +2244,13 @@
 
   deleteBtn.addEventListener('click', function () {
     deleteForm.hidden = false; deleteBtn.hidden = true;
+    // Google-only accounts have no password: confirm with Google when deleting instead.
+    var dUser = auth.currentUser;
+    var usesPassword = !!dUser && (dUser.providerData || []).some(function (p) { return p.providerId === 'password'; });
+    var dPw = document.getElementById('delete-password');
+    dPw.required = usesPassword; dPw.hidden = !usesPassword;
+    if (dPw.labels && dPw.labels[0]) dPw.labels[0].hidden = !usesPassword;
+    document.getElementById('delete-password-note') && (document.getElementById('delete-password-note').hidden = usesPassword);
     document.getElementById('delete-password').focus();
   });
   document.getElementById('delete-cancel-btn').addEventListener('click', function () {
@@ -2262,9 +2312,12 @@
     submitBtn.disabled = true;
     deleteStatus.className = 'form-note';
     deleteStatus.textContent = 'Deleting\u2026';
-    var cred = firebase.auth.EmailAuthProvider.credential(user.email, document.getElementById('delete-password').value);
-    // Re-check the password first so nothing is removed on a wrong one.
-    user.reauthenticateWithCredential(cred).then(function () {
+    var hasPassword = (user.providerData || []).some(function (p) { return p.providerId === 'password'; });
+    // Re-check first so nothing is removed unless the person confirms again.
+    var recheck = hasPassword
+      ? user.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(user.email, document.getElementById('delete-password').value))
+      : user.reauthenticateWithPopup(googleProvider());
+    recheck.then(function () {
       return deleteMyData(user.uid);
     }).then(function () {
       return user.delete();
