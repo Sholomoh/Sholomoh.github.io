@@ -12,7 +12,8 @@
   var moreBtn = document.getElementById('fw-more');
 
   // The verse text: paste it from your own TPT (or AMP) copy between the backticks. Leave it empty to show links only.
-  var VERSE_TEXT = ``;
+  var VERSE_TEXT = `"This is not the time to pull away and neglect meeting together, as some have formed the habit of doing. In fact, we should come together even more frequently, eager to encourage and urge each other onward as we anticipate that day dawning."`;
+  var VERSE_REF = 'Hebrews 10:25 (TPT)';
 
   var KINDS = [
     { key: 'all', label: 'All' },
@@ -134,6 +135,8 @@
 
   function setVerse() {
     var t = document.getElementById('fw-verse-text');
+    var ref = document.getElementById('fw-verse-title');
+    if (ref && VERSE_REF) ref.textContent = VERSE_REF;
     var s = String(VERSE_TEXT || '').trim();
     if (s) { t.textContent = s; t.hidden = false; }
   }
