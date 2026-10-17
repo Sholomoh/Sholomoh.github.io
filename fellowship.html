@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=67">
+  <link rel="stylesheet" href="styles.css?v=68">
 </head>
 <body class="fw-page">
   <nav>
@@ -82,6 +82,11 @@
     </div>
   </div>
 
+  <div id="fw-lightbox" class="fw-lightbox" hidden>
+    <button type="button" id="fw-lightbox-close" class="fw-profile-close" aria-label="Close photo">×</button>
+    <img id="fw-lightbox-img" alt="">
+  </div>
+
   <div id="fw-profile-view" class="fw-profile-view" hidden>
     <div class="fw-profile-card" role="dialog" aria-modal="true" aria-label="Member profile">
       <button type="button" id="fw-profile-close" class="fw-profile-close" aria-label="Close profile">×</button>
@@ -99,6 +104,6 @@
   <script src="https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script src="verify.js?v=1"></script>
-  <script src="fellowship.js?v=11"></script>
+  <script src="fellowship.js?v=12"></script>
 </body>
 </html>

@@ -1667,3 +1667,25 @@ img.fw-prof-avatar { background: #0a1420; }
 .google-btn:disabled { opacity: 0.7; cursor: default; }
 .google-or { display: flex; align-items: center; gap: 0.7rem; margin: 0.2rem 0 0; font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--muted); }
 .google-or::before, .google-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Fellowship feed: previews, thumbnails, full-size viewer */
+.fw-body.is-clamped { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.fw-read-more { background: none; border: 0; padding: 0.2rem 0; margin: 0 0 0.4rem; cursor: pointer; color: var(--fw-gold); font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; min-height: 36px; }
+.fw-read-more:hover { text-decoration: underline; }
+.fw-thumbs { display: grid; gap: 0.4rem; margin-bottom: 0.6rem; }
+.fw-thumbs-1 { grid-template-columns: minmax(0, 1fr); }
+.fw-thumbs-2 { grid-template-columns: 1fr 1fr; }
+.fw-thumbs-3 { grid-template-columns: 2fr 1fr; grid-template-rows: auto auto; }
+.fw-thumbs-3 .fw-thumb-cell:first-child { grid-row: span 2; }
+.fw-thumb-cell { position: relative; border: 0; padding: 0; border-radius: 8px; overflow: hidden; cursor: pointer; background: #0a1420; min-height: 90px; display: block; }
+.fw-thumbs-1 .fw-thumb-cell { min-height: 0; }
+.fw-thumb { display: block; width: 100%; height: 100%; min-height: 90px; max-height: 200px; object-fit: cover; }
+.fw-thumbs-1 .fw-thumb { max-height: 240px; }
+.fw-thumb-cell:focus-visible { outline: 2px solid var(--fw-gold); outline-offset: 2px; }
+.fw-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #fff; background: rgba(0,0,0,0.35); pointer-events: none; }
+.fw-more-count { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Share Tech Mono', monospace; font-size: 1.3rem; color: #fff; background: rgba(0,0,0,0.6); }
+.fw-lightbox { position: fixed; inset: 0; z-index: 2100; background: rgba(0,0,0,0.92); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.fw-lightbox[hidden] { display: none; }
+.fw-lightbox img { max-width: 100%; max-height: 88vh; object-fit: contain; border-radius: 8px; }
+.fw-lightbox video.fw-lightbox-video { max-width: 100%; max-height: 88vh; border-radius: 8px; }
+.fw-lightbox .fw-profile-close { top: 0.6rem; right: 0.8rem; color: #fff; }

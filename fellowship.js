@@ -572,7 +572,23 @@
       });
     }
 
-    if (d.body) card.appendChild(el('p', 'fw-body', d.body));
+    if (d.body) {
+      var bodyEl = el('p', 'fw-body', d.body);
+      card.appendChild(bodyEl);
+      // Long posts show a short preview; "Read more" opens the full text.
+      var longPost = d.body.length > 220 || (d.body.match(/\n/g) || []).length >= 4;
+      if (longPost) {
+        bodyEl.classList.add('is-clamped');
+        var more = el('button', 'fw-read-more', 'Read more'); more.type = 'button';
+        more.setAttribute('aria-expanded', 'false');
+        more.addEventListener('click', function () {
+          var open = bodyEl.classList.toggle('is-clamped') === false;
+          more.textContent = open ? 'Show less' : 'Read more';
+          more.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        card.appendChild(more);
+      }
+    }
     if ((d.attachments || []).length) card.appendChild(buildAttachments(d.attachments));
 
     var actions = el('div', 'fw-actions');
@@ -663,18 +679,66 @@
     }).catch(function () { return null; });
   }
 
+  // Full-size viewer for photos and videos opened from a thumbnail.
+  function openLightbox(url, name, isVideo) {
+    var box = document.getElementById('fw-lightbox');
+    var img = document.getElementById('fw-lightbox-img');
+    var old = box.querySelector('video'); if (old) old.remove();
+    if (isVideo) {
+      img.hidden = true;
+      var v = el('video'); v.src = url; v.controls = true; v.autoplay = true; v.setAttribute('playsinline', '');
+      v.className = 'fw-lightbox-video'; box.appendChild(v);
+    } else {
+      img.hidden = false; img.src = url; img.alt = name || 'Photo';
+    }
+    box.hidden = false;
+    document.body.classList.add('fw-noscroll');
+    document.getElementById('fw-lightbox-close').focus();
+  }
+  function closeLightbox() {
+    var box = document.getElementById('fw-lightbox');
+    box.hidden = true;
+    var v = box.querySelector('video'); if (v) { v.pause(); v.remove(); }
+    document.getElementById('fw-lightbox-img').src = '';
+    document.body.classList.remove('fw-noscroll');
+  }
+  document.getElementById('fw-lightbox-close').addEventListener('click', closeLightbox);
+  document.getElementById('fw-lightbox').addEventListener('click', function (e) { if (e.target === this) closeLightbox(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('fw-lightbox').hidden) closeLightbox(); });
+
   function buildAttachments(list) {
     var wrap = el('div', 'fw-attachments');
+    var media = [], files = [];
     list.forEach(function (a) {
       var url = ownMedia(a.url);
       if (!url) return;   // links we can't trust are not shown at all
-      if (a.type === 'image') {
-        var img = el('img', 'fw-img'); img.src = url; img.alt = a.name || 'Photo'; img.loading = 'lazy';
-        wrap.appendChild(img);
-      } else if (a.type === 'video') {
-        var v = el('video', 'fw-video'); v.controls = true; v.preload = 'metadata'; v.setAttribute('playsinline', ''); v.src = url;
-        wrap.appendChild(v);
-      } else {
+      if (a.type === 'image' || a.type === 'video') media.push({ a: a, url: url }); else files.push({ a: a, url: url });
+    });
+    if (media.length) {
+      var grid = el('div', 'fw-thumbs fw-thumbs-' + Math.min(media.length, 3));
+      var shown = media.slice(0, 3);
+      shown.forEach(function (m, i) {
+        var cell = el('button', 'fw-thumb-cell'); cell.type = 'button';
+        cell.setAttribute('aria-label', (m.a.type === 'video' ? 'Play video' : 'View photo') + (m.a.name ? ': ' + m.a.name : ''));
+        if (m.a.type === 'image') {
+          var img = el('img', 'fw-thumb'); img.src = m.url; img.alt = ''; img.loading = 'lazy';
+          cell.appendChild(img);
+          cell.addEventListener('click', function () { openLightbox(m.url, m.a.name); });
+        } else {
+          var v = el('video', 'fw-thumb'); v.src = m.url; v.preload = 'metadata'; v.muted = true; v.setAttribute('playsinline', '');
+          cell.appendChild(v);
+          cell.appendChild(el('span', 'fw-play', '▶'));
+          cell.addEventListener('click', function () { openLightbox(m.url, m.a.name, true); });
+        }
+        if (i === 2 && media.length > 3) cell.appendChild(el('span', 'fw-more-count', '+' + (media.length - 3)));
+        grid.appendChild(cell);
+      });
+      wrap.appendChild(grid);
+    }
+    files.forEach(function (f) {
+      var a = f.a;
+      var url = f.url;
+      {
         var link = el('a', 'fw-file', '\ud83d\udcce ' + (a.name || 'Document') + (a.size ? ' \u00b7 ' + Math.max(1, Math.round(a.size / 1024)) + ' KB' : ''));
         link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
         wrap.appendChild(link);
