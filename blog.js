@@ -74,7 +74,7 @@
   function showList() {
     editorView.hidden = true; postView.hidden = true; listView.hidden = false;
     currentPostId = null;
-    document.title = 'Blog — Fidel Kenyatta';
+    document.title = 'Blog — שלמה';
     loadList();
   }
 
@@ -171,7 +171,7 @@
         return;
       }
       var d = doc.data();
-      document.title = (d.title || 'Post') + ' — Fidel Kenyatta';
+      document.title = (d.title || 'Post') + ' — שלמה';
       postAdminEl.hidden = !isAdmin;
       editBtn.onclick = function () { openEditor({ id: id, data: d }); };
       renderPost(d);
