@@ -186,7 +186,7 @@ service cloud.firestore {
     // the real like document (same batch), checked with getAfter().
     match /blogComments/{id} {
       allow read: if true;
-      allow create: if isVerified() && (isSignedIn() &&
+      allow create: if isSignedIn() &&
         request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'likeCount', 'createdAt']) &&
         request.resource.data.authorUid == request.auth.uid &&
         request.resource.data.postId is string &&
@@ -196,7 +196,7 @@ service cloud.firestore {
         request.resource.data.text.size() <= 1000 &&
         okStr(request.resource.data.get('authorName', null), 100) &&
         request.resource.data.likeCount == 0 &&
-        request.resource.data.createdAt == request.time);
+        request.resource.data.createdAt == request.time;
       allow update: if isSignedIn() && (
         // The author edits their own text.
         (
@@ -226,13 +226,13 @@ service cloud.firestore {
     // One like per member per comment. Document id is commentId_uid.
     match /blogCommentLikes/{id} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && (isSignedIn() &&
+      allow create: if isSignedIn() &&
         request.resource.data.keys().hasOnly(['commentId', 'uid', 'createdAt']) &&
         request.resource.data.uid == request.auth.uid &&
         request.resource.data.commentId is string &&
         id == request.resource.data.commentId + '_' + request.auth.uid &&
         request.resource.data.createdAt == request.time &&
-        exists(/databases/$(database)/documents/blogComments/$(request.resource.data.commentId)));
+        exists(/databases/$(database)/documents/blogComments/$(request.resource.data.commentId));
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid &&
         id == resource.data.commentId + '_' + request.auth.uid;
     }
@@ -255,11 +255,11 @@ service cloud.firestore {
     // Declining deletes the request, so the person can ask again later.
     match /fellowshipRequests/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isVerified() && (isSignedIn() && request.auth.uid == uid &&
+      allow create: if isSignedIn() && request.auth.uid == uid &&
         request.resource.data.keys().hasOnly(['uid', 'name', 'status', 'requestedAt']) &&
         request.resource.data.uid == uid && request.resource.data.status == 'pending' &&
         request.resource.data.requestedAt == request.time &&
-        okStr(request.resource.data.get('name', null), 100));
+        okStr(request.resource.data.get('name', null), 100);
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
     }
 
@@ -277,7 +277,7 @@ service cloud.firestore {
     // together with the real like or comment (same batch), checked with getAfter().
     match /fellowshipPosts/{postId} {
       allow read: if isFellow() || isAdmin();
-      allow create: if isVerified() && (isFellow() && request.resource.data.authorUid == request.auth.uid &&
+      allow create: if isFellow() && request.resource.data.authorUid == request.auth.uid &&
         request.resource.data.keys().hasOnly(['authorUid', 'authorName', 'body', 'attachments', 'createdAt',
           'likeCount', 'commentCount', 'reshareOf', 'reshareNote', 'kind']) &&
         (request.resource.data.get('kind', null) == null ||
@@ -290,7 +290,7 @@ service cloud.firestore {
         (request.resource.data.get('reshareOf', null) == null ||
           (request.resource.data.reshareOf is string &&
            exists(/databases/$(database)/documents/fellowshipPosts/$(request.resource.data.reshareOf)))) &&
-        request.resource.data.createdAt == request.time);
+        request.resource.data.createdAt == request.time;
       allow update: if isFellow() && (
         (
           (resource.data.authorUid == request.auth.uid || isAdmin()) &&
@@ -344,13 +344,13 @@ service cloud.firestore {
     // One like per member per fellowship post (document id postId_uid).
     match /fellowshipLikes/{id} {
       allow read: if isFellow() || isAdmin();
-      allow create: if isVerified() && (isFellow() &&
+      allow create: if isFellow() &&
         request.resource.data.keys().hasOnly(['postId', 'uid', 'createdAt']) &&
         request.resource.data.uid == request.auth.uid &&
         request.resource.data.postId is string &&
         id == request.resource.data.postId + '_' + request.auth.uid &&
         request.resource.data.createdAt == request.time &&
-        exists(/databases/$(database)/documents/fellowshipPosts/$(request.resource.data.postId)));
+        exists(/databases/$(database)/documents/fellowshipPosts/$(request.resource.data.postId));
       allow delete: if isFellow() && resource.data.uid == request.auth.uid &&
         id == resource.data.postId + '_' + request.auth.uid;
     }
@@ -358,7 +358,7 @@ service cloud.firestore {
     // Discussion comments on fellowship posts (replies carry a parentId). Edit own text; delete own or admin.
     match /fellowshipComments/{id} {
       allow read: if isFellow() || isAdmin();
-      allow create: if isVerified() && (isFellow() &&
+      allow create: if isFellow() &&
         request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'likeCount', 'createdAt']) &&
         request.resource.data.authorUid == request.auth.uid &&
         request.resource.data.postId is string &&
@@ -368,7 +368,7 @@ service cloud.firestore {
         request.resource.data.text.size() <= 1000 &&
         okStr(request.resource.data.get('authorName', null), 100) &&
         request.resource.data.likeCount == 0 &&
-        request.resource.data.createdAt == request.time);
+        request.resource.data.createdAt == request.time;
       allow update: if isFellow() && (
         (
           resource.data.authorUid == request.auth.uid &&
@@ -395,13 +395,13 @@ service cloud.firestore {
     // One like per member per fellowship comment (document id commentId_uid).
     match /fellowshipCommentLikes/{id} {
       allow read: if isFellow() || isAdmin();
-      allow create: if isVerified() && (isFellow() &&
+      allow create: if isFellow() &&
         request.resource.data.keys().hasOnly(['commentId', 'uid', 'createdAt']) &&
         request.resource.data.uid == request.auth.uid &&
         request.resource.data.commentId is string &&
         id == request.resource.data.commentId + '_' + request.auth.uid &&
         request.resource.data.createdAt == request.time &&
-        exists(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.commentId)));
+        exists(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.commentId));
       allow delete: if isFellow() && resource.data.uid == request.auth.uid &&
         id == resource.data.commentId + '_' + request.auth.uid;
     }
@@ -444,13 +444,13 @@ service cloud.firestore {
     match /friendRequests/{reqId} {
       allow read: if isSignedIn() &&
         (resource == null || resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
-      allow create: if isVerified() && (isSignedIn() &&
+      allow create: if isSignedIn() &&
         request.resource.data.fromUid == request.auth.uid &&
         request.resource.data.toUid != request.auth.uid &&
         request.resource.data.status == 'pending' &&
         okStr(request.resource.data.get('fromName', null), 100) &&
         okStr(request.resource.data.get('toName', null), 100) &&
-        !isBlocked(request.resource.data.toUid, request.auth.uid));
+        !isBlocked(request.resource.data.toUid, request.auth.uid);
       allow update: if isSignedIn() &&
         request.resource.data.fromUid == resource.data.fromUid &&
         request.resource.data.toUid == resource.data.toUid && (
@@ -472,7 +472,7 @@ service cloud.firestore {
       // Only the kinds of notification the app really sends, with only the
       // fields it writes, unread, server-timestamped and of sane length — so
       // the collection can't be used to push arbitrary text at someone.
-      allow create: if isVerified() && (isSignedIn() &&
+      allow create: if isSignedIn() &&
         request.resource.data.fromUid == request.auth.uid &&
         request.resource.data.toUid != request.auth.uid &&
         !isBlocked(request.resource.data.toUid, request.auth.uid) &&
@@ -484,7 +484,7 @@ service cloud.firestore {
         (!('fromName' in request.resource.data) || (request.resource.data.fromName is string &&
           request.resource.data.fromName.size() <= 100)) &&
         (!('postTitle' in request.resource.data) || request.resource.data.postTitle == null ||
-          (request.resource.data.postTitle is string && request.resource.data.postTitle.size() <= 300)));
+          (request.resource.data.postTitle is string && request.resource.data.postTitle.size() <= 300));
       allow update: if isSignedIn() && resource.data.toUid == request.auth.uid &&
         request.resource.data.toUid == resource.data.toUid &&
         request.resource.data.fromUid == resource.data.fromUid &&
@@ -502,12 +502,12 @@ service cloud.firestore {
         (resource == null || request.auth.uid in resource.data.participants);
       // The id must be the two participants' uids, sorted and joined — so nobody
       // can pre-create someone else's conversation under their id.
-      allow create: if isVerified() && (isSignedIn() &&
+      allow create: if isSignedIn() &&
         request.auth.uid in request.resource.data.participants &&
         request.resource.data.participants.size() == 2 &&
         request.resource.data.participants[0] < request.resource.data.participants[1] &&
         convId == request.resource.data.participants[0] + '_' + request.resource.data.participants[1] &&
-        okStr(request.resource.data.get('lastMessage', null), 2000));
+        okStr(request.resource.data.get('lastMessage', null), 2000);
       allow update: if isSignedIn() &&
         request.auth.uid in resource.data.participants &&
         request.resource.data.participants == resource.data.participants &&
@@ -517,7 +517,7 @@ service cloud.firestore {
         // Participants come from the conversation id itself, so a chat works before
         // its conversation record exists (it's created with the first message).
         allow read: if isSignedIn() && request.auth.uid in convId.split('_');
-        allow create: if isVerified() && (isSignedIn() &&
+        allow create: if isSignedIn() &&
           request.auth.uid in convId.split('_') &&
           request.resource.data.keys().hasOnly(['fromUid', 'text', 'createdAt', 'attachmentURL', 'attachmentType', 'attachmentName']) &&
           request.resource.data.fromUid == request.auth.uid &&
@@ -528,7 +528,7 @@ service cloud.firestore {
           (request.resource.data.get('attachmentType', null) == null ||
            request.resource.data.get('attachmentType', null) in ['image', 'video', 'audio', 'document']) &&
           okStr(request.resource.data.get('attachmentName', null), 180) &&
-          !isBlocked(otherOf(convId.split('_'), request.auth.uid), request.auth.uid));
+          !isBlocked(otherOf(convId.split('_'), request.auth.uid), request.auth.uid);
         // You can delete your own messages
         allow delete: if isSignedIn() && resource.data.fromUid == request.auth.uid;
       }
@@ -538,13 +538,13 @@ service cloud.firestore {
     // client, so no client is allowed to write likeCount/commentCount fields.
     match /posts/{postId} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && (isPoster() && request.resource.data.authorUid == request.auth.uid &&
+      allow create: if isPoster() && request.resource.data.authorUid == request.auth.uid &&
         !('likeCount' in request.resource.data) && !('commentCount' in request.resource.data) &&
         request.resource.data.title is string && request.resource.data.title.size() <= 200 &&
         request.resource.data.body is string && request.resource.data.body.size() <= 10000 &&
         okStr(request.resource.data.get('authorName', null), 100) &&
         okUrl(request.resource.data.get('attachmentURL', null)) &&
-        okUrl(request.resource.data.get('photoURL', null)));
+        okUrl(request.resource.data.get('photoURL', null));
       // Authors/admins can edit story content, but cannot modify counters or
       // change ownership/creation time. Counter values on old documents, if any,
       // are immutable and are ignored by the updated client.
@@ -613,13 +613,13 @@ service cloud.firestore {
     // postId_uid so users cannot create multiple likes with custom IDs.
     match /postLikes/{id} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && (isSignedIn() &&
+      allow create: if isSignedIn() &&
         request.resource.data.keys().hasOnly(['postId', 'uid', 'createdAt']) &&
         request.resource.data.uid == request.auth.uid &&
         request.resource.data.postId is string &&
         id == request.resource.data.postId + '_' + request.auth.uid &&
         request.resource.data.createdAt == request.time &&
-        exists(/databases/$(database)/documents/posts/$(request.resource.data.postId)));
+        exists(/databases/$(database)/documents/posts/$(request.resource.data.postId));
       allow delete: if isSignedIn() &&
         resource.data.uid == request.auth.uid &&
         id == resource.data.postId + '_' + request.auth.uid;
@@ -629,7 +629,7 @@ service cloud.firestore {
     // a post's counter. The comment must belong to an existing story.
     match /postComments/{id} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && (isSignedIn() &&
+      allow create: if isSignedIn() &&
         request.resource.data.keys().hasOnly(['postId', 'parentId', 'authorUid', 'authorName', 'text', 'createdAt', 'attachmentURL', 'attachmentType', 'attachmentName']) &&
         request.resource.data.authorUid == request.auth.uid &&
         request.resource.data.postId is string &&
@@ -641,7 +641,7 @@ service cloud.firestore {
         (!('attachmentType' in request.resource.data) || request.resource.data.attachmentType == 'audio') &&
         (!('attachmentName' in request.resource.data) || okStr(request.resource.data.attachmentName, 200)) &&
         okStr(request.resource.data.get('authorName', null), 100) &&
-        request.resource.data.createdAt == request.time);
+        request.resource.data.createdAt == request.time;
       allow update: if isSignedIn() && (
         (
           resource.data.authorUid == request.auth.uid &&
