@@ -13,6 +13,7 @@
 
   var db = null, auth = null, me = null;
   var isAdmin = false;
+  var isMember = false;
   var cursor = null, pageSize = 25;
   var posts = {};            // id -> data (cache for reshares)
   var myLikes = {}, myCommentLikes = {};
@@ -93,7 +94,9 @@
       db.collection('fellowshipRequests').doc(user.uid).get()
     ]).then(function (r) {
       isAdmin = r[0].exists;
-      if (r[1].exists) return openFellowship();
+      isMember = r[1].exists;
+      // Admins can always open the page (to approve people and to join themselves).
+      if (isMember || isAdmin) return openFellowship();
       if (r[2].exists) {
         showGate(gateMessage('Your request to join is waiting for approval. You\u2019ll see the fellowship once it\u2019s approved.'));
         return;
@@ -118,8 +121,27 @@
     gateEl.hidden = true; mainEl.hidden = false;
     adminEl.hidden = !isAdmin;
     if (isAdmin) loadAdmin();
-    renderComposer();
+    if (isMember) renderComposer(); else renderAdminJoin();
     loadPosts(true);
+  }
+
+  // Admins who aren't in the fellowship yet can add themselves here, then they can post.
+  function renderAdminJoin() {
+    composeEl.innerHTML = '';
+    var box = el('div', 'fw-gate-box');
+    box.appendChild(el('p', 'fw-gate-text', 'You\u2019re an admin, but you aren\u2019t a fellowship member yet. Join to post, comment and like. You can also approve other people from the panel above.'));
+    var btn = el('button', 'btn btn-primary', 'Join the fellowship as admin'); btn.type = 'button';
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      viewerName().then(function (name) {
+        return db.collection('fellowshipMembers').doc(me.uid).set({
+          uid: me.uid, name: name, approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }).then(function () { return checkAccess(me); })
+        .catch(function () { btn.disabled = false; setStatus('Couldn\u2019t add you. Check the rules are published and try again.', true); });
+    });
+    box.appendChild(btn);
+    composeEl.appendChild(box);
   }
 
   /* ---------- composer ---------- */
