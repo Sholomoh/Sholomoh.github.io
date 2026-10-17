@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css?v=68">
+  <link rel="stylesheet" href="styles.css?v=69">
   <script src="circuit-bg.js?v=3" defer></script>
   <script data-goatcounter="https://fintechie.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
   <script src="app.js?v=2" defer></script>
@@ -36,22 +36,31 @@
   <nav>
     <a href="index.html" class="nav-logo"><img src="avatar.jpg?v=2" alt="" class="nav-avatar" width="38" height="38"><span class="nav-name"><span class="nav-prefix">~/</span>שלמה</span></a>
     <ul>
-      <li><a href="services.html">Services</a></li>
-      <li><a href="skills.html">Skills</a></li>
-      <li><a href="projects.html">Projects</a></li>
-      <li><a href="certs.html">Certs</a></li>
+      <li><a href="about.html" class="active">About</a></li>
       <li><a href="blog.html">Blog</a></li>
       <li><a href="fellowship.html">Fellowship</a></li>
-      <li><a href="about.html" class="active">About</a></li>
-      <li><a href="contact.html">Contact</a></li>
       <li><a href="members.html">Members</a></li>
     </ul>
   </nav>
 
-  <div class="page">
+  <div class="page about-hub">
     <a href="index.html" class="back-link">← Home</a>
-    <div class="page-label">// 05</div>
-    <h1 class="page-title">About Me</h1>
+    <div class="page-label">// ABOUT</div>
+    <h1 class="page-title">שלמה</h1>
+    <nav class="about-tabs" aria-label="About sections">
+      <div class="about-tabs-inner" role="tablist">
+        <button type="button" role="tab" class="about-tab is-active" data-tab="about" aria-selected="true" aria-controls="about">About</button>
+        <button type="button" role="tab" class="about-tab" data-tab="skills" aria-selected="false" aria-controls="skills">Skills</button>
+        <button type="button" role="tab" class="about-tab" data-tab="projects" aria-selected="false" aria-controls="projects">Projects</button>
+        <button type="button" role="tab" class="about-tab" data-tab="certs" aria-selected="false" aria-controls="certs">Certs</button>
+        <button type="button" role="tab" class="about-tab" data-tab="services" aria-selected="false" aria-controls="services">Services</button>
+        <button type="button" role="tab" class="about-tab" data-tab="contact" aria-selected="false" aria-controls="contact">Contact</button>
+      </div>
+    </nav>
+
+      <section class="about-section" id="about" data-section="about" aria-labelledby="about-title">
+        <h2 id="about-title" class="about-section-title">About Me</h2>
+
     <div class="about-intro">
       <img src="avatar.jpg?v=2" alt="שלמה" width="96" height="96" class="about-photo">
       <p><strong>שלמה</strong><br>IT Support &amp; Cybersecurity · Nakuru, Kenya</p>
@@ -89,8 +98,162 @@
         <span class="exp-tag">Nakuru, Kenya</span>
       </div>
     </div>
+      </section>
+      <section class="about-section" id="skills" data-section="skills" hidden aria-labelledby="skills-title">
+        <h2 id="skills-title" class="about-section-title">Technical Skills</h2>
+
+    <div class="skills-grid">
+      <div class="skill-item"><span class="skill-icon">🖥️</span><span>Windows OS</span></div>
+      <div class="skill-item"><span class="skill-icon">🐧</span><span>Linux (Ubuntu)</span></div>
+      <div class="skill-item"><span class="skill-icon">🌐</span><span>TCP/IP Networking</span></div>
+      <div class="skill-item"><span class="skill-icon">🔍</span><span>Nmap</span></div>
+      <div class="skill-item"><span class="skill-icon">🦈</span><span>Wireshark</span></div>
+      <div class="skill-item"><span class="skill-icon">🔐</span><span>Cybersecurity Basics</span></div>
+      <div class="skill-item"><span class="skill-icon">⚙️</span><span>VirtualBox / VMs</span></div>
+      <div class="skill-item"><span class="skill-icon">💻</span><span>Command Line</span></div>
+      <div class="skill-item"><span class="skill-icon">🛡️</span><span>TryHackMe</span></div>
+      <div class="skill-item"><span class="skill-icon">📋</span><span>IT Troubleshooting</span></div>
+      <div class="skill-item"><span class="skill-icon">🔥</span><span>Firewall Basics</span></div>
+      <div class="skill-item"><span class="skill-icon">📊</span><span>SIEM (Splunk)</span></div>
+      <div class="skill-item"><span class="skill-icon">🔌</span><span>Fibre Optic Cabling</span></div>
+      <div class="skill-item"><span class="skill-icon">🏗️</span><span>Network Infrastructure</span></div>
+      <div class="skill-item"><span class="skill-icon">📡</span><span>ISP Field Operations</span></div>
+    </div>
+      </section>
+      <section class="about-section" id="projects" data-section="projects" hidden aria-labelledby="projects-title">
+        <h2 id="projects-title" class="about-section-title">Projects</h2>
+        <p class="page-intro">Hands-on labs and practice platforms I use to build real security skills.</p>
+
+    <div class="projects-grid">
+      <div class="project-card project-featured">
+        <div class="project-header"><span class="project-type">Home Lab</span><span class="project-status status-active">Active</span></div>
+        <h3>Mobile Cybersecurity Lab</h3>
+        <p>A portable security lab running on my Android phone: Ubuntu 24.04 under proot-distro inside Termux, with a customised zsh shell and a toolkit for network scanning, password auditing, web app testing and packet capture. Used on my own lab and authorised practice targets only.</p>
+        <div class="project-tags"><span class="tag">Termux</span><span class="tag">Ubuntu 24.04</span><span class="tag">Nmap</span><span class="tag">Hydra</span><span class="tag">John the Ripper</span><span class="tag">sqlmap</span><span class="tag">Nikto</span><span class="tag">tshark</span><span class="tag">Git</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-header"><span class="project-type">Practice</span><span class="project-status status-active">In progress</span></div>
+        <h3>pwn.college</h3>
+        <p>Working through pwn.college's hands-on cybersecurity practice environment. Set up SSH key authentication to connect to its challenge machines, and worked through key-pair and key-registration problems along the way.</p>
+        <div class="project-tags"><span class="tag">SSH</span><span class="tag">Linux</span><span class="tag">Key Authentication</span><span class="tag">pwn.college</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-header"><span class="project-type">TryHackMe</span><span class="project-status status-done">Completed</span></div>
+        <h3>What is Networking?</h3>
+        <p>Completed the foundational networking module on TryHackMe. Gained hands-on understanding of how computer networks function, including how devices communicate, IP addressing, and core networking concepts.</p>
+        <div class="project-tags"><span class="tag">Networking</span><span class="tag">TCP/IP</span><span class="tag">TryHackMe</span><span class="tag">Fundamentals</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-header"><span class="project-type">TryHackMe</span><span class="project-status status-done">Completed</span></div>
+        <h3>Offensive Security Intro</h3>
+        <p>Hacked my first website legally in a safe environment, experiencing what an ethical hacker's job looks like in practice. Learned the basics of offensive security techniques and mindset.</p>
+        <div class="project-tags"><span class="tag">Ethical Hacking</span><span class="tag">Offensive Security</span><span class="tag">TryHackMe</span><span class="tag">Penetration Testing</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-header"><span class="project-type">TryHackMe</span><span class="project-status status-done">Completed</span></div>
+        <h3>Defensive Security Intro</h3>
+        <p>Practiced defending a simulated bank (FakeBank) from an ongoing cyberattack. Learned the fundamentals of defensive security including threat monitoring, incident response, and protection strategies.</p>
+        <div class="project-tags"><span class="tag">Defensive Security</span><span class="tag">Incident Response</span><span class="tag">SOC</span><span class="tag">TryHackMe</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-header"><span class="project-type">TryHackMe</span><span class="project-status status-done">Completed</span></div>
+        <h3>Careers in Cyber</h3>
+        <p>Explored the different career paths available in cybersecurity — from SOC Analyst to Penetration Tester. Used this knowledge to map out my own professional roadmap in the security field.</p>
+        <div class="project-tags"><span class="tag">Career Development</span><span class="tag">Cybersecurity</span><span class="tag">TryHackMe</span><span class="tag">SOC Analyst</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-header"><span class="project-type">More</span></div>
+        <h3>See more of my work</h3>
+        <p>My code is on GitHub, and my full room history and badges are on TryHackMe.</p>
+        <div class="project-links">
+          <a href="https://github.com/Sholomoh" class="project-link" target="_blank" rel="noopener">🐙 GitHub</a>
+          <a href="https://tryhackme.com/p/kenyattafidel" class="project-link" target="_blank" rel="noopener">🛡️ TryHackMe profile</a>
+        </div>
+      </div>
+    </div>
+      </section>
+      <section class="about-section" id="certs" data-section="certs" hidden aria-labelledby="certs-title">
+        <h2 id="certs-title" class="about-section-title">Certifications</h2>
+
+    <div class="certs-grid">
+      <div class="cert-card"><div class="cert-badge">🎓</div><h3>BSc Information Technology</h3><p>Kabarak University</p><span class="cert-status status-progress">AWAITING GRADUATION</span></div>
+      <div class="cert-card"><div class="cert-badge">🏆</div><h3>CompTIA A+</h3><p>CompTIA</p><span class="cert-status status-progress">IN PROGRESS</span></div>
+      <div class="cert-card"><div class="cert-badge">🌐</div><h3>CompTIA Network+</h3><p>CompTIA</p><span class="cert-status status-planned">PLANNED</span></div>
+      <div class="cert-card"><div class="cert-badge">🔒</div><h3>CompTIA Security+</h3><p>CompTIA</p><span class="cert-status status-planned">PLANNED</span></div>
+      <div class="cert-card"><div class="cert-badge">🎯</div><h3>First Four Badge</h3><p>TryHackMe — Top 24.5%</p><span class="cert-status status-earned">EARNED</span></div>
+    </div>
+      </section>
+      <section class="about-section" id="services" data-section="services" hidden aria-labelledby="services-title">
+        <h2 id="services-title" class="about-section-title">IT Services</h2>
+
+    <div class="services-grid">
+      <div class="service-card card-green">
+        <span class="service-icon">🖥️</span>
+        <h3>PC Repair &amp; Error Diagnosis</h3>
+        <p>Diagnosing and fixing hardware and software problems — slow machines, boot failures, blue screens, crashes, corrupted files, driver issues and unexpected shutdowns. Fixed properly, not just temporarily.</p>
+        <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+        <a href="https://wa.me/254714550754?text=Hi%20Fidel%2C%20I%27d%20like%20help%20with%20PC%20Repair%20%26%20Error%20Diagnosis." class="service-cta">Get in touch →</a>
+      </div>
+      <div class="service-card card-red">
+        <span class="service-icon">🦠</span>
+        <h3>Malware Removal & Cleanup</h3>
+        <p>Identifying and removing viruses, ransomware, spyware, and other malicious software, followed by security hardening to prevent reinfection.</p>
+        <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+        <a href="https://wa.me/254714550754?text=Hi%20Fidel%2C%20I%27d%20like%20help%20with%20Malware%20Removal%20%26%20Cleanup." class="service-cta">Get in touch →</a>
+      </div>
+      <div class="service-card card-blue">
+        <span class="service-icon">🌐</span>
+        <h3>Network Setup</h3>
+        <p>Setting up home and small office networks, configuring routers, securing Wi-Fi, and ensuring reliable, safe connectivity for all your devices.</p>
+        <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">🏠 On-Premise</span></div>
+        <a href="https://wa.me/254714550754?text=Hi%20Fidel%2C%20I%27d%20like%20help%20with%20Network%20Setup." class="service-cta">Get in touch →</a>
+      </div>
+      <div class="service-card card-yellow">
+        <span class="service-icon">🔌</span>
+        <h3>Fibre Connectivity Setup</h3>
+        <p>Hands-on fibre optic installation and troubleshooting from real ISP field experience at VGG Connect. I help homes and small offices get their fibre connections set up, tested, and running reliably.</p>
+        <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">🏠 On-Premise</span></div>
+        <a href="https://wa.me/254714550754?text=Hi%20Fidel%2C%20I%27d%20like%20help%20with%20Fibre%20Connectivity%20Setup." class="service-cta">Get in touch →</a>
+      </div>
+      <div class="service-card card-purple">
+        <span class="service-icon">🔐</span>
+        <h3>Cybersecurity Consultation</h3>
+        <p>Advising individuals and small businesses on how to protect their systems and data — password policies, safe browsing, phishing awareness, and basic security practices.</p>
+        <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+        <a href="https://wa.me/254714550754?text=Hi%20Fidel%2C%20I%27d%20like%20help%20with%20Cybersecurity%20Consultation." class="service-cta">Get in touch →</a>
+      </div>
+      <div class="service-card card-orange">
+        <span class="service-icon">💿</span>
+        <h3>OS Installation & Setup</h3>
+        <p>Clean installation and configuration of Windows or Linux. Includes driver setup, updates, and basic software installation to get your machine running perfectly.</p>
+        <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">🏠 On-Premise</span><span class="audience-tag">📞 Remote</span></div>
+        <a href="https://wa.me/254714550754?text=Hi%20Fidel%2C%20I%27d%20like%20help%20with%20OS%20Installation%20%26%20Setup." class="service-cta">Get in touch →</a>
+      </div>
+      <div class="service-card card-blue">
+        <span class="service-icon">💾</span>
+        <h3>Data Backup & Recovery</h3>
+        <p>Recovering lost or deleted files and setting up reliable backup systems so you never lose important data again. Prevention and recovery — both covered.</p>
+        <div class="service-audience"><span class="audience-tag">Individuals</span><span class="audience-tag">Small Business</span><span class="audience-tag">📞 Remote</span><span class="audience-tag">🏠 On-Premise</span></div>
+        <a href="https://wa.me/254714550754?text=Hi%20Fidel%2C%20I%27d%20like%20help%20with%20Data%20Backup%20%26%20Recovery." class="service-cta">Get in touch →</a>
+      </div>
+    </div>
+    <div class="services-note">💡 <span>Pricing is flexible</span> — reach out via WhatsApp or email and I reply within a day. Available <span>on-premise in Nakuru</span> and <span>remotely across Kenya</span>.</div>
+      </section>
+      <section class="about-section" id="contact" data-section="contact" hidden aria-labelledby="contact-title">
+        <h2 id="contact-title" class="about-section-title">Get In Touch</h2>
+
+    <p class="contact-note">Replies within a day · On-site in Nakuru · Remote support across Kenya</p>
+    <div class="contact-grid">
+      <a href="https://wa.me/254714550754" class="contact-card"><span class="contact-icon">💬</span><div class="contact-info"><h4>WhatsApp</h4><p>+254 714 550 754</p></div></a>
+      <a href="mailto:kenyattafidel@proton.me" class="contact-card"><span class="contact-icon">📧</span><div class="contact-info"><h4>Email</h4><p>kenyattafidel@proton.me</p></div></a>
+      <a href="https://ke.linkedin.com/in/fidel-kenyatta-97004a287" class="contact-card"><span class="contact-icon">💼</span><div class="contact-info"><h4>LinkedIn</h4><p>שלמה</p></div></a>
+      <a href="https://github.com/Sholomoh" class="contact-card"><span class="contact-icon">🐙</span><div class="contact-info"><h4>GitHub</h4><p>github.com/Sholomoh</p></div></a>
+      <a href="https://tryhackme.com/p/kenyattafidel" class="contact-card"><span class="contact-icon">🛡️</span><div class="contact-info"><h4>TryHackMe</h4><p>tryhackme.com/p/kenyattafidel</p></div></a>
+    </div>
+      </section>
   </div>
 
   <footer><p>© 2026 <span>שלמה</span> · Nakuru, Kenya</p></footer>
+  <script src="about.js?v=1" defer></script>
 </body>
 </html>
