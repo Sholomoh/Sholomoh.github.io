@@ -84,7 +84,7 @@
 
   function checkAccess(user) {
     if (!user) {
-      showGate(gateMessage('Warrior Fellowship is for approved members. Sign in with your Members account to continue.',
+      showGate(gateMessage('Warrior Fellowship is a faith community for approved members. Sign in with your Members account to continue.',
         linkBtn('Sign in with Members', 'members.html', true)));
       return Promise.resolve();
     }
@@ -111,7 +111,7 @@
         }).then(function () { return checkAccess(me); })
           .catch(function () { btn.disabled = false; setStatus('Couldn\u2019t send your request. Try again.', true); });
       });
-      showGate(gateMessage('Warrior Fellowship is by approval. Send a request and it will be reviewed.', btn));
+      showGate(gateMessage('Warrior Fellowship is a faith community, by approval. Send a request and it will be reviewed.', btn));
     }).catch(function () {
       showGate(gateMessage('Couldn\u2019t check your access. Check your connection and refresh.'));
     });
@@ -158,7 +158,7 @@
   function renderComposer() {
     composeEl.innerHTML = '';
     var box = el('form', 'fw-composer');
-    var ta = el('textarea', 'story-input'); ta.rows = 3; ta.maxLength = 4000; ta.placeholder = 'Share something with the fellowship…';
+    var ta = el('textarea', 'story-input'); ta.rows = 3; ta.maxLength = 4000; ta.placeholder = 'Share an encouragement, testimony, prayer request or teaching…';
     ta.setAttribute('aria-label', 'Your post');
     var fileIn = el('input'); fileIn.type = 'file'; fileIn.multiple = true;
     fileIn.accept = 'image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv';
