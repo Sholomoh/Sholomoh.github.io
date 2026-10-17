@@ -230,6 +230,20 @@ service cloud.firestore {
         id == resource.data.commentId + '_' + request.auth.uid;
     }
 
+    // Fellowship profiles: a separate name, bio and photo for the fellowship. Approved members only.
+    // Each member writes only their own; the photo must be from this site's own Cloudinary account.
+    match /fellowshipProfiles/{uid} {
+      allow read: if isFellow() || isAdmin();
+      allow create, update: if isFellow() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['uid', 'displayName', 'bio', 'photoURL', 'updatedAt']) &&
+        request.resource.data.uid == uid &&
+        request.resource.data.displayName is string && request.resource.data.displayName.size() > 0 &&
+        request.resource.data.displayName.size() <= 60 &&
+        okStr(request.resource.data.get('bio', null), 300) &&
+        okUrl(request.resource.data.get('photoURL', null));
+      allow delete: if isFellow() && request.auth.uid == uid;
+    }
+
     // Join requests. A member asks to join (one request per person); an admin approves or declines.
     // Declining deletes the request, so the person can ask again later.
     match /fellowshipRequests/{uid} {
