@@ -1436,3 +1436,6 @@ audio[hidden], video[hidden] { display: none !important; }
 /* FELLOWSHIP: scripture opening */
 .fw-verse { margin: 1.2rem 0 1.6rem; padding: 0.9rem 1.1rem; border-left: 3px solid var(--fw-gold, #d4a72c); background: rgba(212,167,44,0.06); border-radius: 0 10px 10px 0; color: var(--text); font-style: italic; line-height: 1.7; font-size: 0.95rem; }
 .fw-verse cite { display: block; margin-top: 0.5rem; font-style: normal; font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: var(--fw-gold, #d4a72c); }
+
+.fw-verse-ref { color: var(--text); margin-bottom: 0.4rem; }
+.fw-verse-links a { color: var(--fw-gold, #d4a72c); text-decoration: underline; }
