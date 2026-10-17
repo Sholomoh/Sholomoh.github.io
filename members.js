@@ -346,6 +346,7 @@
     var email = document.getElementById('signup-email').value.trim();
     var pw = document.getElementById('signup-password').value;
     auth.createUserWithEmailAndPassword(email, pw).then(function (cred) {
+      cred.user.sendEmailVerification().catch(function () {});
       return cred.user.updateProfile({ displayName: name }).then(function () {
         return db.collection('users').doc(cred.user.uid).set({
           displayName: name,
@@ -1845,6 +1846,36 @@
     });
     return btn;
   }
+
+  /* ---------- admin: grandfather accounts that existed before email verification ---------- */
+  var grandBtn = document.getElementById('grandfather-btn');
+  var grandStatus = document.getElementById('grandfather-status');
+  grandBtn.addEventListener('click', function () {
+    if (!window.confirm('Mark every existing account as grandfathered? Do this once, before the verification rules are turned on.')) return;
+    grandBtn.disabled = true;
+    grandStatus.className = 'form-note';
+    grandStatus.textContent = 'Working…';
+    db.collection('users').get().then(function (snap) {
+      var ids = [];
+      snap.forEach(function (d) { ids.push(d.id); });
+      var index = 0;
+      function nextBatch() {
+        if (index >= ids.length) return Promise.resolve(ids.length);
+        var batch = db.batch(), end = Math.min(index + 400, ids.length);
+        for (; index < end; index++) {
+          batch.set(db.collection('legacyAccounts').doc(ids[index]), { grandfathered: true, createdAt: FieldValue.serverTimestamp() }, { merge: true });
+        }
+        return batch.commit().then(nextBatch);
+      }
+      return nextBatch();
+    }).then(function (n) {
+      grandStatus.className = 'form-success';
+      grandStatus.textContent = '\u2713 ' + n + ' existing accounts marked. Safe to turn on verification now.';
+    }).catch(function (err) {
+      grandStatus.className = 'form-error';
+      grandStatus.textContent = 'Couldn\u2019t finish' + (err && err.code ? ' (' + err.code + ')' : '') + '. Publish the stage-1 rules first, then try again.';
+    }).then(function () { grandBtn.disabled = false; });
+  });
 
   /* ---------- admin: scrub emails saved as author names ---------- */
   var scrubResult = document.getElementById('scrub-result');

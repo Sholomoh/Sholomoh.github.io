@@ -2,6 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() { return request.auth != null; }
+    // Verified means: the email is verified, or the account was grandfathered before verification existed.
+    function isVerified() {
+      return isSignedIn() &&
+        (request.auth.token.email_verified == true ||
+         exists(/databases/$(database)/documents/legacyAccounts/$(request.auth.uid)));
+    }
+
     function isAdmin() {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
@@ -397,6 +404,15 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/fellowshipComments/$(request.resource.data.commentId));
       allow delete: if isFellow() && resource.data.uid == request.auth.uid &&
         id == resource.data.commentId + '_' + request.auth.uid;
+    }
+
+    // Accounts from before email verification was introduced. Written once by an admin (Members > Admin).
+    match /legacyAccounts/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['grandfathered', 'createdAt']) &&
+        request.resource.data.grandfathered == true;
+      allow delete: if isAdmin();
     }
 
     // Admin allowlist. Add yourself here manually in the Firebase console

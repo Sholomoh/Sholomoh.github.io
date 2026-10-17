@@ -1648,3 +1648,10 @@ img.fw-prof-avatar { background: #0a1420; }
 .fw-prof-bio { color: var(--text); line-height: 1.6; margin: 0; white-space: pre-wrap; word-break: break-word; }
 .fw-prof-facts { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .fw-prof-link { margin-top: 0.3rem; }
+
+/* Email verification banner */
+.verify-banner { background: rgba(212,167,44,0.08); border: 1px solid rgba(212,167,44,0.55); border-radius: 12px; padding: 0.9rem 1rem; margin: 0 0 1.2rem; }
+.verify-banner[hidden] { display: none; }
+.verify-text { color: var(--text); line-height: 1.6; margin: 0 0 0.7rem; font-size: 0.92rem; }
+.verify-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.verify-status { font-family: 'Share Tech Mono', monospace; font-size: 0.74rem; color: var(--muted); margin: 0.6rem 0 0; }
